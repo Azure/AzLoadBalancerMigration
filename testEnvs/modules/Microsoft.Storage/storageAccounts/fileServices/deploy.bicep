@@ -35,7 +35,7 @@ param diagnosticEventHubName string = ''
 param shares array = []
 
 @description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. The name of logs that will be streamed.')
 @allowed([
