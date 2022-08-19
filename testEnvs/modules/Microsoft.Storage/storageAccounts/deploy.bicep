@@ -114,7 +114,7 @@ param lock string = ''
 param tags object = {}
 
 @description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Generated. Do not provide a value! This date value is used to generate a SAS token to access the modules.')
 param basetime string = utcNow('u')
