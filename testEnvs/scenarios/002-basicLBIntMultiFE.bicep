@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 var location = 'eastus'
-var resourceGroupName = 'rg-001-basicLBIntMultiFE'
+var resourceGroupName = 'rg-002-basicLBIntMultiFE'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -64,18 +64,18 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule'
+        name: 'rule1'
         probeName: 'probe1'
         protocol: 'Tcp'
       }
       {
-        backendAddressPoolName: 'be2'
+        backendAddressPoolName: 'be1'
         backendPort: 81
         frontendIPConfigurationName: 'fe2'
         frontendPort: 81
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule'
+        name: 'rule2'
         probeName: 'probe1'
         protocol: 'Tcp'
       }
