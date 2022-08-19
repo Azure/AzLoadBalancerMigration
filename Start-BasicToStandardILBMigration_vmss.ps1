@@ -108,11 +108,11 @@ ForEach ($backendPool in $backendConfigs_Basic) {
             $ipConfig = $vmssObj.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipConfigurations.Where({$_.name -eq $ipConfigName})[0]
 
             # update vmss with blank BEP to avoid a mix of basic and standard LB references Error: DifferentSkuLoadBalancersAndPublicIPAddressNotAllowed
+            $ipConfig.LoadBalancerBackendAddressPools = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
             Update-AzVmss -ResourceGroupName $vmssObj.ResourceGroupName -VMScaleSetName $vmssObj.Name -VirtualMachineScaleSet $vmssObj
 
             #$ipConfig.LoadBalancerBackendAddressPools.Add($backendPool.Id) # cant add basic and standard beps to same config
                         
-            $ipConfig.LoadBalancerBackendAddressPools = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
             $ipConfig.LoadBalancerBackendAddressPools.Add(($backendPool.Id -replace $oldBasicLBName,$newStandardLBName))
 
             Update-AzVmss -ResourceGroupName $vmssObj.ResourceGroupName -VMScaleSetName $vmssObj.Name -VirtualMachineScaleSet $vmssObj
