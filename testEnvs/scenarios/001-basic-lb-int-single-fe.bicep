@@ -1,6 +1,8 @@
 targetScope = 'subscription'
-var location = 'eastus'
-var resourceGroupName = 'rg-001-basicLBSingleFE'
+param location string = 'eastus'
+param resourceGroupName string = 'rg-001-basic-lb-int-single-fe'
+param keyVaultName string
+param keyVaultResourceGroupName string = 'rg-vmsstestingconfig'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -21,7 +23,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     addressPrefixes: [
       '10.0.0.0/16'
     ]
-    name: 'vnet'
+    name: 'vnet-01'
     subnets: [
       {
         name: 'subnet1'
@@ -29,62 +31,66 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
       }
     ]
   }
-  dependsOn: [rg]
+  dependsOn: [
+    rg
+  ]
 }
 
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
-  name: 'lb-basic01'
+  name: 'lb-basic-01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-basic01'
+    name: 'lb-basic-01'
     location: location
     frontendIPConfigurations: [
-      { 
-        name: 'fe1'
+      {
+        name: 'fe-01'
         subnetId: virtualNetworks.outputs.subnetResourceIds[0]
       }
     ]
     backendAddressPools: [
       {
-        name: 'be1'
+        name: 'be-01'
       }
     ]
     inboundNatRules: []
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
-        backendAddressPoolName: 'be1'
+        backendAddressPoolName: 'be-01'
         backendPort: 80
-        frontendIPConfigurationName: 'fe1'
+        frontendIPConfigurationName: 'fe-01'
         frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule'
-        probeName: 'probe1'
+        name: 'rule-01'
+        probeName: 'probe-01'
         protocol: 'Tcp'
       }
     ]
     probes: [
       {
         intervalInSeconds: 5
-        name: 'probe1'
+        name: 'probe-01'
         numberOfProbes: 2
         port: '80'
         protocol: 'Tcp'
       }
     ]
   }
-  dependsOn: [rg]
+  dependsOn: [
+    rg
+  ]
 }
 
 resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: 'kvvmss${uniqueString(subscription().id)}'
-  scope: resourceGroup('rg-vmsstestingconfig')
+  name: keyVaultName
+  scope: resourceGroup(keyVaultResourceGroupName)
 }
 
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
-  name: 'vmss'
+  name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
@@ -99,7 +105,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
       sku: '2022-Datacenter'
       version: 'latest'
     }
-    name: 'vmss'
+    name: 'vmss-01'
     osDisk: {
       createOption: 'fromImage'
       diskSizeGB: '128'
@@ -128,10 +134,11 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
         ]
-        nicSuffix: '-nic01'
+        nicSuffix: '-nic-01'
       }
     ]
   }
   dependsOn: [
-    rg]
+    rg
+  ]
 }
