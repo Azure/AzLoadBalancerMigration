@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 var location = 'eastus'
-var resourceGroupName = 'rg-004-basicLBExtMultiFE'
+var resourceGroupName = 'rg-006-basicLBNATRule'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -9,29 +9,6 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
     name: resourceGroupName
     location: location
   }
-}
-
-//pip
-module pip1 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-pip1'
-  scope: resourceGroup(resourceGroupName)
-  params: {
-    location: location
-    skuName: 'Basic'
-    name: 'pip1'
-  }
-  dependsOn: [rg]
-}
-
-module pip2 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-pip2'
-  scope: resourceGroup(resourceGroupName)
-  params: {
-    location: location
-    skuName: 'Basic'
-    name: 'pip2'
-  }
-  dependsOn: [rg]
 }
 
 // vnet
@@ -65,11 +42,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     frontendIPConfigurations: [
       { 
         name: 'fe1'
-        publicIPAddressId: pip1.outputs.resourceId
-      }
-      { 
-        name: 'fe2'
-        publicIPAddressId: pip2.outputs.resourceId
+        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
       }
     ]
     backendAddressPools: [
@@ -77,7 +50,16 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         name: 'be1'
       }
     ]
-    inboundNatRules: []
+    inboundNatRules: [
+      {
+        
+          backendPort: 8080
+          frontendIPConfigurationName: 'fe1'
+          frontendPort: 8080
+          name: 'natrule'
+        
+      }
+    ]
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
@@ -87,18 +69,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule1'
-        probeName: 'probe1'
-        protocol: 'Tcp'
-      }
-      {
-        backendAddressPoolName: 'be1'
-        backendPort: 81
-        frontendIPConfigurationName: 'fe2'
-        frontendPort: 81
-        idleTimeoutInMinutes: 4
-        loadDistribution: 'Default'
-        name: 'rule2'
+        name: 'rule'
         probeName: 'probe1'
         protocol: 'Tcp'
       }
@@ -126,11 +97,11 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
+    // Required parameters
     encryptionAtHost: false
+    adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
     upgradePolicyMode: 'Automatic'
-    // Required parameters
-    adminUsername: kv1.getSecret('adminUsername')
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
@@ -170,5 +141,6 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
       }
     ]
   }
-  dependsOn: [rg]
+  dependsOn: [
+    rg]
 }

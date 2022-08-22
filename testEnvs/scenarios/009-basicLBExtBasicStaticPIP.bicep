@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 var location = 'eastus'
-var resourceGroupName = 'rg-004-basicLBExtMultiFE'
+var resourceGroupName = 'rg-009-basicLBExtBasicStaticPIP'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -12,24 +12,14 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
 }
 
 //pip
-module pip1 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-pip1'
+module pip '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+  name: '${uniqueString(deployment().name)}-pip'
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
     skuName: 'Basic'
-    name: 'pip1'
-  }
-  dependsOn: [rg]
-}
-
-module pip2 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-pip2'
-  scope: resourceGroup(resourceGroupName)
-  params: {
-    location: location
-    skuName: 'Basic'
-    name: 'pip2'
+    name: 'pip'
+    publicIPAllocationMethod: 'Static'
   }
   dependsOn: [rg]
 }
@@ -65,11 +55,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     frontendIPConfigurations: [
       { 
         name: 'fe1'
-        publicIPAddressId: pip1.outputs.resourceId
-      }
-      { 
-        name: 'fe2'
-        publicIPAddressId: pip2.outputs.resourceId
+        publicIPAddressId: pip.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -88,17 +74,6 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
         name: 'rule1'
-        probeName: 'probe1'
-        protocol: 'Tcp'
-      }
-      {
-        backendAddressPoolName: 'be1'
-        backendPort: 81
-        frontendIPConfigurationName: 'fe2'
-        frontendPort: 81
-        idleTimeoutInMinutes: 4
-        loadDistribution: 'Default'
-        name: 'rule2'
         probeName: 'probe1'
         protocol: 'Tcp'
       }
