@@ -112,25 +112,6 @@ ForEach ($backendPool in $backendConfigs_Basic) {
             $ipConfig.LoadBalancerBackendAddressPools = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
             Update-AzVmss -ResourceGroupName $vmssObj.ResourceGroupName -VMScaleSetName $vmssObj.Name -VirtualMachineScaleSet $vmssObj
 
-            # check that all VM NICs have removed the basic lb
-            Write-Verbose "Checking that all VMSS VM instances have completed update to standard LB backend pool"
-            do {
-                ForEach ($vmssVM in $vmssVMs) {
-                    $uri = 'https://management.azure.com/{0}/networkInterfaces?api-version=2018-10-01' -f $vmssVM.id
-                    $vmNics = Invoke-AzRestMethod -Uri $uri -Method GET
-                    If ($vmNics.value.properties.ipConfigurations.loadBalancerBackendAddressPools.id -icontains $backendPool.id) {
-                        $vmsStillUpdating = $true
-                        Start-Sleep -Seconds 10
-                        continue
-                    }
-                    Else {
-                        $vmsStillUpdating = $false
-                    }
-                }
-
-                Get-AzVmss -ResourceGroupName $vmss.ResourceGroup -VMScaleSetName $vmss.name | convertto-json -depth 30
-            }
-            until ($vmsStillUpdating -ne $true)
             #$ipConfig.LoadBalancerBackendAddressPools.Add($backendPool.Id) # cant add basic and standard beps to same config
             Start-Sleep -Seconds 60
             $ipConfig.LoadBalancerBackendAddressPools.Add(($backendPool.Id -replace $oldBasicLBName,$newStandardLBName))
@@ -141,8 +122,8 @@ ForEach ($backendPool in $backendConfigs_Basic) {
             catch {
                 If ($_.Exception.Data.AzPSCloudErrorCode -eq 'DifferentSkuLoadBalancersAndPublicIPAddressNotAllowed') {
                     # failed to update VMSS to standard LB
-                    Get-AzVmss -ResourceGroupName $vmss.ResourceGroup -VMScaleSetName $vmss.name | convertto-json -depth 30
-
+                    #TO-DO: handle
+                    Write-Error $_
                 }
             }
         }
