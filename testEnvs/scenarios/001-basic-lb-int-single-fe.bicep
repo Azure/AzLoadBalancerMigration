@@ -1,8 +1,8 @@
 targetScope = 'subscription'
-param location string = 'eastus'
-param resourceGroupName string = 'rg-001-basic-lb-int-single-fe'
+param location string
+param resourceGroupName string
 param keyVaultName string
-param keyVaultResourceGroupName string = 'rg-vmsstestingconfig'
+param keyVaultResourceGroupName string
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {

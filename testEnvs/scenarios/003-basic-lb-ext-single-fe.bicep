@@ -1,8 +1,8 @@
 targetScope = 'subscription'
-param location string = 'eastus'
-param resourceGroupName string = 'rg-001-basic-lb-ext-single-fe'
+param location string
+param resourceGroupName string
 param keyVaultName string
-param keyVaultResourceGroupName string = 'rg-vmsstestingconfig'
+param keyVaultResourceGroupName string
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -58,8 +58,8 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     location: location
     frontendIPConfigurations: [
       {
+        name: 'fe-01'
         properties: {
-          name: 'fe-01'
           publicIPAddress: {
             id: publicIp01.outputs.resourceId
           }
@@ -92,7 +92,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule-01'
+        name: 'rule-02'
         probeName: 'probe-01'
         protocol: 'Tcp'
       }
