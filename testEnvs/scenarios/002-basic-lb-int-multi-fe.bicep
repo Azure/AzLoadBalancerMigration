@@ -1,8 +1,8 @@
 targetScope = 'subscription'
-param location string = 'eastus'
-param resourceGroupName string = 'rg-002-basic-lb-int-multi-fe'
+param location string
+param resourceGroupName string
 param keyVaultName string
-param keyVaultResourceGroupName string = 'rg-vmsstestingconfig'
+param keyVaultResourceGroupName string
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -69,7 +69,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
         name: 'rule-01'
-        probeName: 'probe0-01'
+        probeName: 'probe-01'
         protocol: 'Tcp'
       }
       {

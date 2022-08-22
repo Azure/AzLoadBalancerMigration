@@ -1,11 +1,35 @@
-$location = 'australiaeast'
-$keyVaultResourceGroupName = 'rg-vmsstestingconfig'
+Param (
+    [string]$Location = 'australiaeast',
+    [string]$KeyVaultResourceGroupName = 'rg-vmsstestingconfig',
+    [switch]$Cleanup
+)
+
+$ErrorActionPreference = 'Stop'
+
+$templates = Get-ChildItem -Path ../scenarios -Filter *.bicep
+
+# if '-Cleanup' switch is supplied, remove the resource groups and exit
+if ($Cleanup -and $null -ne $templates) {
+    $jobs = $templates | Foreach-Object {
+        "Removing Resource Group rg-$($_.BaseName)"
+        Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob }
+
+    $jobs | Wait-Job | Receive-Job
+    $jobs | Stop-Job -PassThru | Remove-Job
+    return
+}
 
 # deploy keyvault
-New-AzDeployment -Name 'prereq-deployment' `
-    -TemplateFile ./prereqs.bicep `
-    -ResourceGroupName $keyVaultResourceGroupName `
-    -Location $location
+$params = @{
+    Name                    = 'prereq-deployment'
+    TemplateFile            = './prereqs.bicep'
+    TemplateParameterObject = @{
+        Location          = $Location
+        ResourceGroupName = $keyVaultResourceGroupName
+    }
+}
+
+New-AzSubscriptionDeployment -Location $location @params
 
 $keyVaultName = (
     Get-AzResourceGroupDeployment `
@@ -13,21 +37,26 @@ $keyVaultName = (
         -ResourceGroupName $keyVaultResourceGroupName `
 ).Outputs.name.value
 
-# deploy scenarios
-$templates = Get-ChildItem -Path ../scenarios -Filter *.bicep
+# deploy scenarioset-
 $jobs = @()
 
 foreach ($template in $templates) {
-    $jobs = New-AzDeployment `
-        -Name $template.Name `
-        -ResourceGroupName "rg-$($template.BaseName)" `
-        -TemplateFile "./$($template.Name)" `
-        -keyVaultName $keyVaultName `
-        -location $location `
-        -AsJob
+
+    $params = @{
+        Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
+        TemplateFile            = $template.FullName
+        TemplateParameterObject = @{
+            Location                  = $Location
+            ResourceGroupName         = "rg-$($template.BaseName)"
+            KeyVaultName              = $keyVaultName
+            KeyVaultResourceGroupName = $KeyVaultResourceGroupName
+        }
+    }
+
+    $jobs = New-AzSubscriptionDeployment -Location $location @params -AsJob
 }
 
-$jobs | Wait-Job
+Get-Job | Wait-Job
 
 # ensure test environments meet requirements
 Describe "Verify basic load balancer & VM scale set initial state" {
