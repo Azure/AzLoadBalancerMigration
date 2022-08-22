@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 var location = 'eastus'
-var resourceGroupName = 'rg-004-basicLBExtMultiFE'
+var resourceGroupName = 'rg-012-basicLBExtIPv6FE'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -18,7 +18,8 @@ module pip1 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
   params: {
     location: location
     skuName: 'Basic'
-    name: 'pip1'
+    name: 'pipv4'
+    publicIPAddressVersion: 'IPv4'
   }
   dependsOn: [rg]
 }
@@ -29,7 +30,8 @@ module pip2 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
   params: {
     location: location
     skuName: 'Basic'
-    name: 'pip2'
+    name: 'pipv6'
+    publicIPAddressVersion: 'IPv6'
   }
   dependsOn: [rg]
 }
@@ -88,17 +90,6 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
         name: 'rule1'
-        probeName: 'probe1'
-        protocol: 'Tcp'
-      }
-      {
-        backendAddressPoolName: 'be1'
-        backendPort: 81
-        frontendIPConfigurationName: 'fe2'
-        frontendPort: 81
-        idleTimeoutInMinutes: 4
-        loadDistribution: 'Default'
-        name: 'rule2'
         probeName: 'probe1'
         protocol: 'Tcp'
       }
