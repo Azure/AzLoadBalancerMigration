@@ -192,8 +192,8 @@ output name string = publicIpAddress.name
 @description('The resource ID of the public IP address.')
 output resourceId string = publicIpAddress.id
 
-@description('The public IP address of the public IP address resource.')
-output ipAddress string = publicIpAddress.properties.ipAddress
+//@description('The public IP address of the public IP address resource.')
+//output ipAddress string = publicIpAddress.properties.ipAddress
 
 @description('The location the resource was deployed into.')
 output location string = publicIpAddress.location
