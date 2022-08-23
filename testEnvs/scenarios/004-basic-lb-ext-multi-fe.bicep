@@ -47,6 +47,9 @@ module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' 
     publicIPAllocationMethod: 'Dynamic'
   }
   scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
 }
 
 module publicIp02 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
@@ -60,6 +63,9 @@ module publicIp02 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' 
     publicIPAllocationMethod: 'Dynamic'
   }
   scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
 }
 
 // basic lb
@@ -72,19 +78,11 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        properties: {
-          publicIPAddress: {
-            id: publicIp01.outputs.resourceId
-          }
-        }
+        publicIPAddressId: publicIp01.outputs.resourceId
       }
       {
         name: 'fe-02'
-        properties: {
-          publicIPAddress: {
-            id: publicIp02.outputs.resourceId
-          }
-        }
+        publicIPAddressId: publicIp02.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -130,7 +128,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         intervalInSeconds: 5
         name: 'probe-02'
         numberOfProbes: 2
-        port: '80'
+        port: '81'
         protocol: 'Tcp'
       }
     ]
