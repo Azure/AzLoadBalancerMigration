@@ -26,7 +26,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet1'
+        name: 'subnet-01'
         addressPrefix: '10.0.1.0/24'
       }
     ]
