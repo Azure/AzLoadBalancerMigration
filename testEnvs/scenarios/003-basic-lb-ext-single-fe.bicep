@@ -1,6 +1,8 @@
 targetScope = 'subscription'
-var location = 'eastus'
-var resourceGroupName = 'rg-002-basicLBIntMultiFE'
+param location string
+param resourceGroupName string
+param keyVaultName string
+param keyVaultResourceGroupName string
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -21,7 +23,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     addressPrefixes: [
       '10.0.0.0/16'
     ]
-    name: 'vnet'
+    name: 'vnet-01'
     subnets: [
       {
         name: 'subnet1'
@@ -29,7 +31,22 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
       }
     ]
   }
-  dependsOn: [rg]
+  dependsOn: [
+    rg
+  ]
+}
+
+module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+  name: 'pip-01'
+  params: {
+    name: 'pip-01'
+    location: location
+    publicIPAddressVersion: 'IPv4'
+    skuTier: 'Regional'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
+  }
+  scope: resourceGroup(resourceGroupName)
 }
 
 // basic lb
@@ -37,84 +54,86 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
   name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-basic01'
+    name: 'lb-basic001'
     location: location
     frontendIPConfigurations: [
-      { 
-        name: 'fe1'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
-      }
-      { 
-        name: 'fe2'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+      {
+        name: 'fe-01'
+        properties: {
+          publicIPAddress: {
+            id: publicIp01.outputs.resourceId
+          }
+        }
       }
     ]
     backendAddressPools: [
       {
-        name: 'be1'
+        name: 'be-01'
       }
     ]
     inboundNatRules: []
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
-        backendAddressPoolName: 'be1'
+        backendAddressPoolName: 'be-01'
         backendPort: 80
-        frontendIPConfigurationName: 'fe1'
+        frontendIPConfigurationName: 'fe-01'
         frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule1'
-        probeName: 'probe1'
+        name: 'rule-01'
+        probeName: 'probe-01'
         protocol: 'Tcp'
       }
       {
-        backendAddressPoolName: 'be1'
-        backendPort: 81
-        frontendIPConfigurationName: 'fe2'
-        frontendPort: 81
+        backendAddressPoolName: 'be-01'
+        backendPort: 80
+        frontendIPConfigurationName: 'fe-01'
+        frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule2'
-        probeName: 'probe1'
+        name: 'rule-02'
+        probeName: 'probe-01'
         protocol: 'Tcp'
       }
     ]
     probes: [
       {
         intervalInSeconds: 5
-        name: 'probe1'
+        name: 'probe-01'
         numberOfProbes: 2
         port: '80'
         protocol: 'Tcp'
       }
     ]
   }
-  dependsOn: [rg]
+  dependsOn: [
+    rg
+  ]
 }
 
 resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: 'kvvmss${uniqueString(subscription().id)}'
-  scope: resourceGroup('rg-vmsstestingconfig')
+  name: keyVaultName
+  scope: resourceGroup(keyVaultResourceGroupName)
 }
 
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
-  name: 'vmss'
+  name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
+    // Required parameters
     encryptionAtHost: false
+    adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
     upgradePolicyMode: 'Automatic'
-    // Required parameters
-    adminUsername: kv1.getSecret('adminUsername')
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
       sku: '2022-Datacenter'
       version: 'latest'
     }
-    name: 'vmss'
+    name: 'vmss-01'
     osDisk: {
       createOption: 'fromImage'
       diskSizeGB: '128'
@@ -143,9 +162,11 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
         ]
-        nicSuffix: '-nic01'
+        nicSuffix: '-nic-01'
       }
     ]
   }
-  dependsOn: [rg]
+  dependsOn: [
+    rg
+  ]
 }
