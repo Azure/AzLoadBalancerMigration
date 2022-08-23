@@ -13,6 +13,21 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
   }
 }
 
+//pip
+module pip '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+  name: '${uniqueString(deployment().name)}-pip'
+  scope: resourceGroup(resourceGroupName)
+  params: {
+    location: location
+    skuName: 'Basic'
+    name: 'pip'
+    publicIPAllocationMethod: 'Static'
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
 // vnet
 module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bicep' = {
   name: '${uniqueString(deployment().name)}-virtualNetworks'
@@ -26,7 +41,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
       }
     ]
@@ -46,7 +61,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: pip.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -94,11 +109,11 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
-    // Required parameters
     encryptionAtHost: false
-    adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
     upgradePolicyMode: 'Automatic'
+    // Required parameters
+    adminUsername: kv1.getSecret('adminUsername')
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'

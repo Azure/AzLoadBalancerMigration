@@ -26,13 +26,13 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
       }
     ]
   }
-  dependsOn: [
-    rg
+  dependsOn: [ 
+    rg 
   ]
 }
 
@@ -52,6 +52,9 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     backendAddressPools: [
       {
         name: 'be-01'
+      }
+      {
+        name: 'be-02'
       }
     ]
     inboundNatRules: []

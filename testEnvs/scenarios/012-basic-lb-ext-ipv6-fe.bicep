@@ -13,6 +13,35 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
   }
 }
 
+//pip
+module pip1 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+  name: '${uniqueString(deployment().name)}-pip-1'
+  scope: resourceGroup(resourceGroupName)
+  params: {
+    location: location
+    skuName: 'Basic'
+    name: 'pip-v4'
+    publicIPAddressVersion: 'IPv4'
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
+module pip2 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+  name: '${uniqueString(deployment().name)}-pip-2'
+  scope: resourceGroup(resourceGroupName)
+  params: {
+    location: location
+    skuName: 'Basic'
+    name: 'pip-v6'
+    publicIPAddressVersion: 'IPv6'
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
 // vnet
 module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bicep' = {
   name: '${uniqueString(deployment().name)}-virtualNetworks'
@@ -26,7 +55,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
       }
     ]
@@ -38,15 +67,19 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
 
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
-  name: 'lb-basic-01'
+  name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-basic-01'
+    name: 'lb-basi-c01'
     location: location
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: pip1.outputs.resourceId
+      }
+      {
+        name: 'fe-02'
+        publicIPAddressId: pip2.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -94,11 +127,11 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
-    // Required parameters
     encryptionAtHost: false
-    adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
     upgradePolicyMode: 'Automatic'
+    // Required parameters
+    adminUsername: kv1.getSecret('adminUsername')
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'

@@ -24,6 +24,9 @@ param loadBalancingRules array = []
 @description('Optional. Array of objects containing all probes, these are references in the load balancing rules.')
 param probes array = []
 
+@description('Optional. Array of objects containing all inboundNatPools which are mutually exclusive with inboundNatRules')
+param inboundNatPools array = []
+
 @description('Optional. Specifies the number of days that logs will be kept for; a value of 0 will retain data indefinitely.')
 @minValue(0)
 @maxValue(365)
@@ -141,6 +144,22 @@ var backendAddressPoolNames = [for backendAddressPool in backendAddressPools: {
   name: backendAddressPool.name
 }]
 
+var inboundNatPools_var = [for natPool in inboundNatPools: {
+  name: natPool.name
+  properties: {
+    backendPort: natPool.backendPort
+    enableFloatingIP: natPool.enableFloatingIP
+    enableTcpReset: contains(natPool, 'enableTcpReset') ? natPool.enableTcpReset : false
+    frontendIPConfiguration: {
+      id: natPool.frontendIPConfigurationID
+    }
+    frontendPortRangeEnd: natPool.frontendPortRangeEnd
+    frontendPortRangeStart: natPool.frontendPortRangeStart
+    idleTimeoutInMinutes: natPool.idleTimeoutInMinutes
+    protocol: natPool.protocol
+  }
+}]
+
 @description('Optional. The name of metrics that will be streamed.')
 @allowed([
   'AllMetrics'
@@ -189,6 +208,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-08-01' = {
     backendAddressPools: backendAddressPoolNames
     outboundRules: outboundRules_var
     probes: probes_var
+    inboundNatPools: inboundNatPools_var
   }
 }
 
