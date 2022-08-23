@@ -10,12 +10,15 @@ $templates = Get-ChildItem -Path ../scenarios -Filter *.bicep
 
 # if '-Cleanup' switch is supplied, remove the resource groups and exit
 if ($Cleanup -and $null -ne $templates) {
-    $jobs = $templates | Foreach-Object {
+    $jobs = @()
+
+    $templates | 
+    Foreach-Object {
         "Removing Resource Group rg-$($_.BaseName)"
-        Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob }
+        $jobs += $(Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob)
+    }
 
     $jobs | Wait-Job | Receive-Job
-    $jobs | Stop-Job -PassThru | Remove-Job
     return
 }
 
@@ -53,10 +56,10 @@ foreach ($template in $templates) {
         }
     }
 
-    $jobs = New-AzSubscriptionDeployment -Location $location @params -AsJob
+    $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
 }
 
-Get-Job | Wait-Job
+$jobs | Wait-Job
 
 # ensure test environments meet requirements
 Describe "Verify basic load balancer & VM scale set initial state" {
@@ -71,23 +74,23 @@ Describe "Verify basic load balancer & VM scale set initial state" {
     Context "Basic Load Balancer" {
 
         foreach ($loadBalancer in $loadBalancers) {
-            It "'$($loadBalancer.Name)' Should be Basic SKU" {
+            It "load balancer '$($loadBalancer.Name)' in resource group '$($loadBalancer.ResourceGroupName)' Should be Basic SKU" {
                 $loadBalancer.Sku.Name | Should Be "Basic" 
             }
             
-            It "'$($loadBalancer.Name)' Should have at least one load balancing rule" {
+            It "load balancer '$($loadBalancer.Name)' in resource group '$($loadBalancer.ResourceGroupName)' Should have at least one load balancing rule" {
                 $loadBalancer.LoadBalancingRules.Count | Should BeGreaterThan 0
             }
 
-            It "'$($loadBalancer.Name)' Should have at least one probe" {
+            It "load balancer '$($loadBalancer.Name)' in resource group '$($loadBalancer.ResourceGroupName)' Should have at least one probe" {
                 $loadBalancer.Probes.Count | Should BeGreaterThan 0
             }
 
-            It "'$($loadBalancer.Name)' Should have at least one frontend configuration" {
+            It "load balancer '$($loadBalancer.Name)' in resource group '$($loadBalancer.ResourceGroupName)' Should have at least one frontend configuration" {
                 $loadBalancer.FrontendIpConfigurations.Count | Should BeGreaterThan 0
             }
 
-            It "'$($loadBalancer.Name)' Should have at least one backend address pool" {
+            It "load balancer '$($loadBalancer.Name)' in resource group '$($loadBalancer.ResourceGroupName)' Should have at least one backend address pool" {
                 $loadBalancer.BackendAddressPools.Count | Should BeGreaterThan 0
             }
         }
@@ -95,10 +98,12 @@ Describe "Verify basic load balancer & VM scale set initial state" {
 
     Context "VM Scale Set" {
         foreach ($vmScaleSet in $vmScaleSets) {
-            It "'$($vmScaleSet.Name)' Should have at least one associated load balancer backend address pool" {
+            It "vm scale set '$($vmScaleSet.Name)' in resource group '$($vmScaleSet.ResourceGroupName)' Should have at least one associated load balancer backend address pool" {
                 $vmScaleSet.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
                 Should BeGreaterThan 0
             }
         }
     }
 }
+
+
