@@ -6,7 +6,7 @@ Param (
 
 $ErrorActionPreference = 'Stop'
 
-$templates = Get-ChildItem -Path ../scenarios -Filter *.bicep
+$templates = Get-ChildItem -Path ../scenarios -Filter *.bicep  -Exclude *MANUAL* -Recurse -Depth 0
 
 # if '-Cleanup' switch is supplied, remove the resource groups and exit
 if ($Cleanup -and $null -ne $templates) {
