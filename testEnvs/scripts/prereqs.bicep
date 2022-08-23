@@ -1,6 +1,7 @@
+param location string
+param resourceGroupName string
+
 targetScope = 'subscription'
-var location = 'eastus'
-var resourceGroupName = 'rg-vmsstestingconfig'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -13,9 +14,9 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
 
 module kv '../modules/Microsoft.KeyVault/vaults/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
-  name: 'kvvmss${uniqueString(subscription().id)}'
+  name: 'keyvault-deployment'
   params: {
-    name: 'kvvmss${uniqueString(subscription().id)}'
+    name: 'kv${uniqueString(subscription().id, resourceGroupName)}'
     location: location
     enableVaultForDeployment: true
     secrets: {
