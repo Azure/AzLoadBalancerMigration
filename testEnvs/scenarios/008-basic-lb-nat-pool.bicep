@@ -4,6 +4,8 @@ param resourceGroupName string
 param keyVaultName string
 param keyVaultResourceGroupName string
 
+var frontEndIpConfigurationID = resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'lb-basic-01', 'fe-01')
+
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
   name: resourceGroupName
@@ -11,6 +13,22 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
     name: resourceGroupName
     location: location
   }
+}
+
+module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+  name: 'pip-01'
+  params: {
+    name: 'pip-01'
+    location: location
+    publicIPAddressVersion: 'IPv4'
+    skuTier: 'Regional'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
+  }
+  scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
 }
 
 // vnet
@@ -26,7 +44,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
       }
     ]
@@ -46,7 +64,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: publicIp01.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -54,7 +72,21 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         name: 'be-01'
       }
     ]
-    inboundNatRules: []
+    inboundNatPools: [
+      {
+        name: 'nat-pool-01'
+        backendPort: 8080
+        enableFloatingIP: false
+        enableTcpReset: false
+        frontendIPConfigurationID: frontEndIpConfigurationID
+        frontendPortRangeStart: 80
+        frontendPortRangeEnd: 90
+        idleTimeoutInMinutes: 4
+        protocol: 'Tcp'
+      }
+    ]
+    inboundNatRules: [
+    ]
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
