@@ -1,6 +1,7 @@
 
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\UpdateVmssInstances\UpdateVmssInstances.psd1")
 function RemoveLBFromVMSS {
     param (
         [Parameter(Mandatory = $True)][string[]] $vmssIds,
@@ -26,12 +27,7 @@ function RemoveLBFromVMSS {
         }
         log -Message "[RemoveLBFromVMSS] Updating VMSS $vmssName"
         Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss
-        log -Message "[RemoveLBFromVMSS] Updating VMSS Instances"
-        $vmssIntances = Get-AzVmssVM -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
-        foreach ($vmssInstance in $vmssIntances) {
-            log -Message "[RemoveLBFromVMSS] Updating VMSS Instance $($vmssInstance.Name)"
-            Update-AzVmssInstance -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -InstanceId $vmssInstance.InstanceId
-        }
+        UpdateVmssInstances -vmss $vmss
     }
     log -Message "[RemoveLBFromVMSS] Removing Basic Loadbalancer $($BasicLoadBalancer.Name) from Resource Group $($BasicLoadBalancer.ResourceGroupName)"
     Remove-AzLoadBalancer -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Name $BasicLoadBalancer.Name -Force
