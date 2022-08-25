@@ -12,7 +12,7 @@ function PublicFEMigration {
     foreach ($feConfig in $basicLoadBalancerFeConfig) {
         $pip = Get-AzPublicIpAddress -ResourceGroupName $feConfig.PublicIpAddress.Id.Split('/')[4] -Name $feConfig.PublicIpAddress.Id.Split('/')[-1]
         if ($pip.PublicIpAllocationMethod -ne "Static" -or $pip.Sku.Name -ne "Standard") {
-            log -Message "[PublicFEMigration] $pip.Name was using Dynamic IP or Basic SKU, changing to Static IP allocation method and Standard SKU." -Severity "Warning"
+            log -Message "[PublicFEMigration] $($pip.Name) was using Dynamic IP or Basic SKU, changing to Static IP allocation method and Standard SKU." -Severity "Warning"
             $pip.PublicIpAllocationMethod = "Static"
             $pip.Sku.Name = "Standard"
             Set-AzPublicIpAddress -PublicIpAddress $pip
