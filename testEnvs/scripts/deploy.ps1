@@ -1,12 +1,21 @@
 Param (
     [string]$Location = 'australiaeast',
     [string]$KeyVaultResourceGroupName = 'rg-vmsstestingconfig',
+    [switch]$AllTemplates,
     [switch]$Cleanup
 )
 
 $ErrorActionPreference = 'Stop'
 
-$templates = Get-ChildItem -Path ../scenarios -Filter *.bicep
+If ($AllTemplates.IsPresent) {
+    Write-Warning "Deploying all templates, including scenario 022 which requires manual configuration of instance protection post-deployment and 023, which will deploy a high instance count VMSS and incur related costs!"
+    Read-Host "Press ENTER to continue or CTRL+C to cancel"
+    
+    $templates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
+}
+Else {
+    $templates = Get-ChildItem -Path ../scenarios -Filter *.bicep -Exclude *MANUAL.bicep -Recurse -Depth 0
+}
 
 # if '-Cleanup' switch is supplied, remove the resource groups and exit
 if ($Cleanup -and $null -ne $templates) {
