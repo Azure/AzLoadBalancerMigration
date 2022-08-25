@@ -7,7 +7,7 @@ function BackupBasicLoadBalancer {
     log -Message "[BackupBasicLoadBalancer] Initiating Backup of Basic Load Balancer Configurations"
     $backupDateTime = Get-Date -Format FileDateTime
     ConvertTo-Json -Depth 100 $BasicLoadBalancer | Out-File -FilePath ($BasicLoadBalancer.Name + "-" + $backupDateTime + ".json")
-    log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer ($BasicLoadBalancer.Name + "-" + $backupDateTime + ".json") Completed"
+    log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer $($BasicLoadBalancer.Name + "-" + $backupDateTime + ".json") Completed"
     Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization  | Out-Null
     Move-Item ($BasicLoadBalancer.ResourceGroupName + ".json") ("ARM-" + $BasicLoadBalancer.Name + "-" + $backupDateTime + ".json")
     log -Message "[BackupBasicLoadBalancer] ARM Template Backup Basic Load Balancer $("ARM-" + $BasicLoadBalancer.Name + "-" + $backupDateTime + ".json") Completed"

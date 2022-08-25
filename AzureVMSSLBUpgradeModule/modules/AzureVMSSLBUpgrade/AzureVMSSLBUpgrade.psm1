@@ -43,6 +43,8 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PublicFEMigration\PublicFEMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\RemoveLBFromVMSS\RemoveLBFromVMSS.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackendPoolMigration\BackendPoolMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NatRulesMigration\NatRulesMigration.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
@@ -58,7 +60,6 @@ function AzureVMSSLBUpgrade {
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
     $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
     $vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
-    # Need to fix, it should only return a single unique VMSS even if it has multiple Instances
     #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
 
@@ -80,13 +81,13 @@ function AzureVMSSLBUpgrade {
     # Migration of Frontend IP Configurations
     PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # Migration of Backend Address Pools
+    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
     # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # *** We need to check InboundNatPools
-
-    # Migration of Backend Address Pools
-        # Create empty backend pool with original name
-        # Add VMSS network profiles to backend pool
 
     # Migration of Probes
 

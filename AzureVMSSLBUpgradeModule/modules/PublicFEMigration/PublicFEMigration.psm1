@@ -17,8 +17,11 @@ function PublicFEMigration {
             $pip.Sku.Name = "Standard"
             Set-AzPublicIpAddress -PublicIpAddress $pip
         }
-        $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id | Set-AzLoadBalancer
+        #$StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id | Set-AzLoadBalancer
+        $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id
     }
+    log -Message "[PublicFEMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
+    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer
     log -Message "[PublicFEMigration] Public Frontend Migration Completed"
 }
 
