@@ -42,6 +42,7 @@
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PublicFEMigration\PublicFEMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\RemoveLBFromVMSS\RemoveLBFromVMSS.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
@@ -56,23 +57,23 @@ function AzureVMSSLBUpgrade {
     # Load Azure Resources
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
     $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+    $vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
+    # Need to fix, it should only return a single unique VMSS even if it has multiple Instances
+    #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer
-    log -Message "[AzureVMSSLBUpgrade] Removing Basic Load Balancer"
-    ##########################################################
-    # STOPPED RIGHT HERE --> CURRENTLY WRITING A MODULE TO REMOVE THE VMSS FROM THE BASIC LOAD BALANCER AND THEN REMOVE THE BASIC LOAD BALANCER
-    ##########################################################
-    Remove-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName -Force
+    RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
     $StdLoadBalancerDef = @{
-        ResourceGroupName = $newRgName
-        Name = $newLbName
+        ResourceGroupName = $ResourceGroupName
+        Name = $StdLoadBalancerName
         SKU = "Standard"
-        location = $newlocation
+        location = $BasicLoadBalancer.Location
     }
     $StdLoadBalancer = New-AzLoadBalancer @StdLoadBalancerDef
 
