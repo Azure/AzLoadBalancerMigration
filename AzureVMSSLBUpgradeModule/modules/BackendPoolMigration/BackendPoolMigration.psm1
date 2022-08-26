@@ -8,9 +8,9 @@ function BackendPoolMigration {
     )
     log -Message "[BackendPoolMigration] Initiating Backend Pool Migration"
     log -Message "[BackendPoolMigration] Looping all BackendAddressPools"
-    foreach ($BackendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
-        log -Message "[BackendPoolMigration] Adding BackendAddressPool $($BackendAddressPool.Name)"
-        $StdLoadBalancer | Add-AzLoadBalancerBackendAddressPoolConfig -Name $BackendAddressPool.Name | Set-AzLoadBalancer
+    foreach ($basicBackendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
+        log -Message "[BackendPoolMigration] Adding BackendAddressPool $($basicBackendAddressPool.Name)"
+        $StdLoadBalancer | Add-AzLoadBalancerBackendAddressPoolConfig -Name $basicBackendAddressPool.Name | Set-AzLoadBalancer
         log -Message "[BackendPoolMigration] Adding Standard Load Balancer back to the VMSS"
         $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
         $BackendIpConfigurationName = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("/")[-1]} | Select-Object -Unique
@@ -21,15 +21,19 @@ function BackendPoolMigration {
             log -Message "[BackendPoolMigration] Adding BackendAddressPool to VMSS $($vmss.Name)"
             foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
                 foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
-                    if ($ipConfiguration.Name -eq $BackendIpConfigurationName) {
-                        # Fail with error:
-                        #SetValueInvocationException: Exception setting "loadBalancerBackendAddressPools":
-                        #"Cannot convert the "Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool"
-                        # value of type "Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool" to type
-                        #"System.Collections.Generic.IList`1[Microsoft.Azure.Management.Compute.Models.SubResource]"."
+                    if ($ipConfiguration.Name -contains $BackendIpConfigurationName) {
+                        $vmssipConfigDef = @{
+                            Name = $ipConfiguration.Name
+                            # ***Need to check what to do about InboundNatPools
+                            #LoadBalancerInboundNatPoolsId = $null
+                            LoadBalancerBackendAddressPoolsId = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $basicBackendAddressPool.Name}).Id
+                            SubnetId = $ipConfiguration.Subnet.Id
+                        }
+                        $vmssipConfig = New-azVmssIPConfig @vmssipConfigDef
 
-                        # Found a reference Here that might fix the issue: https://github.com/jagilber/powershellScripts/blob/master/azure-az-vmss-add-appgw.ps1
-                        $ipConfiguration.loadBalancerBackendAddressPools = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $BackendAddressPool.Name})
+                        $nicconfigname = $networkInterfaceConfiguration.Name
+                        Remove-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname
+                        Add-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname -Primary $true -IPConfiguration $vmssipConfig
                     }
                 }
             }

@@ -6,7 +6,7 @@ function UpdateVmssInstances {
     )
     log -Message "[UpdateVmssInstances] Initiating Update Vmss Instances"
 
-    log -Message "[UpdateVmssInstances] Updating VMSS Instances"
+    log -Message "[UpdateVmssInstances] Updating VMSS Instances. This process may take a while depending of how many instances."
     $vmssIntances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
     foreach ($vmssInstance in $vmssIntances) {
         log -Message "[UpdateVmssInstances] Updating VMSS Instance $($vmssInstance.Name)"
