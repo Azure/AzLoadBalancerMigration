@@ -17,9 +17,10 @@ function BackendPoolMigration {
         foreach ($vmssId in $vmssIds) {
             $vmssName = $vmssId.split("/")[8]
             $vmssRg = $vmssId.Split('/')[4]
+            $vmssStatic = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
             $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
             log -Message "[BackendPoolMigration] Adding BackendAddressPool to VMSS $($vmss.Name)"
-            foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+            foreach ($networkInterfaceConfiguration in $vmssStatic.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
                 foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
                     if ($ipConfiguration.Name -contains $BackendIpConfigurationName) {
                         $vmssipConfigDef = @{
@@ -30,7 +31,6 @@ function BackendPoolMigration {
                             SubnetId = $ipConfiguration.Subnet.Id
                         }
                         $vmssipConfig = New-azVmssIPConfig @vmssipConfigDef
-
                         $nicconfigname = $networkInterfaceConfiguration.Name
                         Remove-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname
                         Add-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname -Primary $true -IPConfiguration $vmssipConfig
@@ -43,6 +43,7 @@ function BackendPoolMigration {
             UpdateVmssInstances -vmss $vmss
         }
     }
+    #log -Message "[BackendPoolMigration] StackTrace $($StackTrace)" -Severity "Debug"
     log -Message "[BackendPoolMigration] Backend Pool Migration Completed"
 }
 
