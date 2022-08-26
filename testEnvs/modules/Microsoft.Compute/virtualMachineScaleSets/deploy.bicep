@@ -286,6 +286,9 @@ param diagnosticMetricsToEnable array = [
 @description('Optional. The name of the diagnostic setting, if deployed.')
 param publicIpDiagnosticSettingsName string = '${name}-diagnosticSettings'
 
+@description('VMSS health probe reference')
+param healthProbe object = {}
+
 var diagnosticsMetrics = [for metric in diagnosticMetricsToEnable: {
   category: metric
   timeGrain: null
@@ -426,6 +429,9 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2021-04-01' = {
         }]
       }
       networkProfile: {
+        healthProbe: !empty(healthProbe) ? {
+          id: healthProbe.id
+        } : null
         networkInterfaceConfigurations: [for (nicConfiguration, index) in nicConfigurations: {
           name: '${name}${nicConfiguration.nicSuffix}configuration-${index}'
           properties: {
