@@ -8,6 +8,7 @@ function NatRulesMigration {
     log -Message "[NatRulesMigration] Initiating Nat Rules Migration Migration"
     $inboundNatRules = $BasicLoadBalancer.InboundNatRules
     foreach ($inboundNatRule in $inboundNatRules) {
+        log -Message "[NatRulesMigration] Adding Nat Rule $($inboundNatRule.Name) to Standard Load Balancer"
         $inboundNatRuleConfig = @{
             Name = $inboundNatRule.Name
             Protocol = $inboundNatRule.Protocol
