@@ -93,6 +93,7 @@ function AzureVMSSLBUpgrade {
 
     # Migration of Load Balancing Rules
         # Use default outbound access configuration **does default outbound use the standard LB public IP (matching the basic LB behavior)?
+    log -Message "############################## Migration Completed ##############################"
 }
 
 Export-ModuleMember -Function AzureVMSSLBUpgrade
