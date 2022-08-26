@@ -1,27 +1,40 @@
 Param (
     [string]$Location = 'australiaeast',
     [string]$KeyVaultResourceGroupName = 'rg-vmsstestingconfig',
-    [switch]$AllTemplates,
+    [parameter(Mandatory = $false)][ValidatePattern('^\d\d\d$')][string[]]$ScenarioNumber,
+    [switch]$includeHighCostScenarios,
+    [switch]$includeManualConfigScenarios,
     [switch]$Cleanup
 )
 
 $ErrorActionPreference = 'Stop'
 
-If ($AllTemplates.IsPresent) {
-    Write-Warning "Deploying all templates, including scenario 022 which requires manual configuration of instance protection post-deployment and 023, which will deploy a high instance count VMSS and incur related costs!"
-    Read-Host "Press ENTER to continue or CTRL+C to cancel"
-    
-    $templates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
+$allTemplates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
+
+If ($ScenarioNumber) {
+    $pattern = '^({0})\-' -f $ScenarioNumber -join '|'
+    $filteredTemplates = $allTemplates | Where-Object {$_.Name -match $pattern}
+}
+ElseIf ($includeHighCostScenarios.IsPresent -and $includeManualConfigScenarios.IsPresent) {
+    $filteredTemplates = $allTemplates
+}
+ElseIf ($includeHighCostScenarios.IsPresent) {
+    $filteredTemplates = $allTemplates | Where-Object {$_.Name -notmatch 'MANUALCONFIG'}
+}
+ElseIf ($includeManualConfigScenarios.IsPresent) {
+    $filteredTemplates = $allTemplates | Where-Object {$_.Name -notmatch 'HIGHCOST'}
 }
 Else {
-    $templates = Get-ChildItem -Path ../scenarios -Filter *.bicep -Exclude *MANUAL.bicep -Recurse -Depth 0
+    $filteredTemplates = $allTemplates | Where-Object {$_.Name -notmatch 'HIGHCOST|MANUALCONFIG'}
 }
 
+Write-Verbose "Deploying templates: $($filteredTemplates.Name)"
+
 # if '-Cleanup' switch is supplied, remove the resource groups and exit
-if ($Cleanup -and $null -ne $templates) {
+if ($Cleanup -and $null -ne $filteredTemplates) {
     $jobs = @()
 
-    $templates | 
+    $filteredTemplates | 
     Foreach-Object {
         "Removing Resource Group rg-$($_.BaseName)"
         $jobs += $(Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob)
@@ -52,7 +65,7 @@ $keyVaultName = (
 # deploy scenarioset-
 $jobs = @()
 
-foreach ($template in $templates) {
+foreach ($template in $filteredTemplates) {
 
     $params = @{
         Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
@@ -75,7 +88,7 @@ Describe "Verify basic load balancer & VM scale set initial state" {
     $loadBalancers = @()
     $vmScaleSets = @()
 
-    foreach ($template in $templates) {
+    foreach ($template in $filteredTemplates) {
         $loadBalancers += $(Get-AzLoadBalancer -ResourceGroup "rg-$($template.BaseName)")
         $vmScaleSets += $(Get-AzVMSS -ResourceGroup "rg-$($template.BaseName)")
     }    
