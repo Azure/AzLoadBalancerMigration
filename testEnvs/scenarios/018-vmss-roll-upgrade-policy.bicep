@@ -99,6 +99,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
     upgradePolicyMode: 'Rolling'
+    
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
@@ -117,6 +118,9 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     skuName: 'Standard_DS1_v2'
     // Non-required parameters
     adminPassword: kv1.getSecret('adminPassword')
+    healthProbe: {
+      id: '${loadbalancer.outputs.resourceId}/probes/probe-01'
+    }
     nicConfigurations: [
       {
         ipConfigurations: [
@@ -137,6 +141,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
         nicSuffix: '-nic-01'
       }
     ]
+
   }
   dependsOn: [
     rg
