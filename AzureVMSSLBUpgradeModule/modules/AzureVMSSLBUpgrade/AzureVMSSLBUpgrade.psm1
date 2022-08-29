@@ -43,12 +43,17 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PublicFEMigration\PublicFEMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\RemoveLBFromVMSS\RemoveLBFromVMSS.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackendPoolMigration\BackendPoolMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NatRulesMigration\NatRulesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
         [Parameter(Mandatory = $True)][string] $ResourceGroupName,
         [Parameter(Mandatory = $True)][string] $BasicLoadBalancerName,
         #Parameters for new Standard Load Balancer
+        # *** We still need to decide if we will allow the user to change the name of the LB or use the same name***
         [Parameter(Mandatory = $True)][string] $StdLoadBalancerName
         )
 
@@ -57,8 +62,7 @@ function AzureVMSSLBUpgrade {
     # Load Azure Resources
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
     $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
-    $vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
-    # Need to fix, it should only return a single unique VMSS even if it has multiple Instances
+    #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
     #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
 
@@ -80,18 +84,23 @@ function AzureVMSSLBUpgrade {
     # Migration of Frontend IP Configurations
     PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of NAT Rules
-
-    # *** We need to check InboundNatPools
-
     # Migration of Backend Address Pools
-        # Create empty backend pool with original name
-        # Add VMSS network profiles to backend pool
+    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # *** We need to check InboundNatPools, it might require a change in BackendPoolMigration module
 
     # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Load Balancing Rules
-        # Use default outbound access configuration **does default outbound use the standard LB public IP (matching the basic LB behavior)?
+        # *** Use default outbound access configuration **does default outbound use the standard LB public IP (matching the basic LB behavior)?
+        # We need to check if we will create an outbound rule for the Standard LB or not
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    log -Message "############################## Migration Completed ##############################"
 }
 
 Export-ModuleMember -Function AzureVMSSLBUpgrade

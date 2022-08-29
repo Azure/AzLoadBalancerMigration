@@ -12,3 +12,13 @@ New-ModuleManifest -Path PublicFEMigration.psd1 -RootModule PublicFEMigration -A
 
 New-ModuleManifest -Path RemoveLBFromVMSS.psd1 -RootModule RemoveLBFromVMSS -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
 
+New-ModuleManifest -Path BackendPoolMigration.psd1 -RootModule BackendPoolMigration -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path NatRulesMigration.psd1 -RootModule NatRulesMigration -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path UpdateVmssInstances.psd1 -RootModule UpdateVmssInstances -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path ProbesMigration.psd1 -RootModule ProbesMigration -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path LoadBalacingRulesMigration.psd1 -RootModule LoadBalacingRulesMigration -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
