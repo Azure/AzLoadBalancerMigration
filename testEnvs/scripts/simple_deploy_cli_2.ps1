@@ -1,15 +1,15 @@
-$rg='BasicLB'
+$rg='BasicLB2'
 $location='centralus'
-$vnetName='BasicLB-VNet'
+$vnetName='BasicLB2-VNet'
 $vnetAddressPrefix='10.130.0.0/16'
 
 $subnetBasicLBName='VMSS-Subnet'
 $subnetBasicLBAddressPrefix='10.130.2.0/24'
 
-$lbIPName='BasicLB-LoadBalancer-PIP'
-$lbName='BasicLB-LoadBalancer'
+$lbIPName='BasicLB2-LoadBalancer-PIP'
+$lbName='BasicLB2-LoadBalancer'
 
-$vmssBasicLBName='BasicLB-VMSS'
+$vmssBasicLBName='BasicLB2-VMSS'
 
 ##########################################
 # Create Azure Resource Group
@@ -41,6 +41,11 @@ az network vnet subnet create `
 az network public-ip create `
     --resource-group $rg `
     --name $lbIPName `
+    --sku 'Basic'
+
+az network public-ip create `
+    --resource-group $rg `
+    --name ($lbIPName+"2") `
     --sku 'Basic'
 
 # Create Azure Load Balancer for BasicLB VMSS
@@ -154,3 +159,18 @@ az vmss create `
     --vnet-address-prefix $vnetAddressPrefix `
     --subnet $subnetBasicLBName `
     --subnet-address-prefix $subnetBasicLBAddressPrefix
+
+# az vmss create `
+#     --resource-group $rg `
+#     --name ($vmssBasicLBName+"2") `
+#     --image UbuntuLTS `
+#     --upgrade-policy-mode Manual `
+#     --vm-sku Standard_A0 `
+#     --instance-count 2 `
+#     --admin-username victor `
+#     --admin-password "H2OBarrentA@" `
+#     --load-balancer $lbName `
+#     --vnet-name $vnetName `
+#     --vnet-address-prefix $vnetAddressPrefix `
+#     --subnet $subnetBasicLBName `
+#     --subnet-address-prefix $subnetBasicLBAddressPrefix

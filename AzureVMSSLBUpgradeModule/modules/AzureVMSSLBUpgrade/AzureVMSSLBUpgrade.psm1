@@ -48,6 +48,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NatRulesMigration\NatRulesMi
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\InboundNatPoolsMigration\InboundNatPoolsMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\OutboundRulesCreation\OutboundRulesCreation.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
@@ -101,6 +102,9 @@ function AzureVMSSLBUpgrade {
         # *** Use default outbound access configuration **does default outbound use the standard LB public IP (matching the basic LB behavior)?
         # We need to check if we will create an outbound rule for the Standard LB or not
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Creating Outbound Rules for SNAT
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
 
     log -Message "############################## Migration Completed ##############################"
 }
