@@ -23,10 +23,38 @@ function LoadBalacingRulesMigration {
             BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
             Probe = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
         }
-        $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
+
+        try {
+            $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig -ErrorAction Stop > $null
+        }
+        catch {
+            $message = @"
+                An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load
+                balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic 
+                load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
+                pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
+                file for original pool membership), and retry the migration.  Error: $_ 
+"@
+            log "Error" $message
+            Exit
+        }
     }
     log -Message "[LoadBalacingRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer  > $null
+
+    try {
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -ErrorAction Stop  > $null
+    }
+    catch {
+        $message = @"
+        An error occured when adding Load Balancing Rules configuration to new Standard load
+        balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic 
+        load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
+        pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
+        file for original pool membership), and retry the migration.  Error: $_ 
+"@
+        log "Error" $message
+        Exit   
+    }
     log -Message "[LoadBalacingRulesMigration] LoadBalacing Rules Migration Completed"
 }
 
