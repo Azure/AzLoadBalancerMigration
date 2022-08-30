@@ -67,7 +67,11 @@ function AzureVMSSLBUpgrade {
         $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName -ErrorAction Stop
     }
     catch {
-        $message = "Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. Error text: $_"
+        $message = @"
+            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription 
+            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. 
+            Error text: $_
+"@
         log -severity Error -message $message
 
         Exit
@@ -94,7 +98,7 @@ function AzureVMSSLBUpgrade {
     }
     catch {
         $message = @"
-            An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover, 
+            [AzureVMSSLBUpgrade] An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover, 
             redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
             file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
             BackendIpConfigurations), address the following error, and try again. Error message: $_
