@@ -61,7 +61,16 @@ function AzureVMSSLBUpgrade {
 
     # Load Azure Resources
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
-    $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+
+    try {
+        $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName -ErrorAction Stop
+    }
+    catch {
+        $message = "Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription '$((Get-AzContext).Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. Error text: $_"
+        log -severity Error -message $message
+
+        Exit
+    }
     #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
     #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
@@ -79,7 +88,19 @@ function AzureVMSSLBUpgrade {
         SKU = "Standard"
         location = $BasicLoadBalancer.Location
     }
-    $StdLoadBalancer = New-AzLoadBalancer @StdLoadBalancerDef
+    try {
+        $StdLoadBalancer = New-AzLoadBalancer @StdLoadBalancerDef -ErrorAction Stop
+    }
+    catch {
+        $message = @"
+            An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover, 
+            redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
+            file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
+            BackendIpConfigurations), address the following error, and try again. Error message: $_
+"@
+        log 'Error' $message
+        Exit
+    }
 
     # Migration of Frontend IP Configurations
     PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
