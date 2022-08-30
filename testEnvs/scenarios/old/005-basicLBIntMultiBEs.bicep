@@ -95,7 +95,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     encryptionAtHost: false
     adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
-    upgradePolicyMode: 'Automatic'
+    upgradePolicyMode: 'Manual'
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
