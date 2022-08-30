@@ -45,6 +45,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PublicFEMigration\PublicFEMi
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\RemoveLBFromVMSS\RemoveLBFromVMSS.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackendPoolMigration\BackendPoolMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NatRulesMigration\NatRulesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\InboundNatPoolsMigration\InboundNatPoolsMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
 
@@ -111,7 +112,8 @@ function AzureVMSSLBUpgrade {
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # *** We need to check InboundNatPools, it might require a change in BackendPoolMigration module
+    # Migration of Inbound NAT Pools
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Probes
     ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
