@@ -22,10 +22,10 @@ function NatRulesMigration {
             FrontendPortRangeEnd = $inboundNatRule.FrontendPortRangeEnd
             BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
         }
-        $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig
+        $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
     }
     log -Message "[NatRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer
+    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     log -Message "[NatRulesMigration] Nat Rules Migration Completed"
 }
 

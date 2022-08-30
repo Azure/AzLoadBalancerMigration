@@ -15,13 +15,13 @@ function PublicFEMigration {
             log -Message "[PublicFEMigration] $($pip.Name) was using Dynamic IP or Basic SKU, changing to Static IP allocation method and Standard SKU." -Severity "Warning"
             $pip.PublicIpAllocationMethod = "Static"
             $pip.Sku.Name = "Standard"
-            Set-AzPublicIpAddress -PublicIpAddress $pip
+            Set-AzPublicIpAddress -PublicIpAddress $pip > $null
         }
         #$StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id | Set-AzLoadBalancer
-        $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id
+        $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id > $null
     }
     log -Message "[PublicFEMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer
+    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     log -Message "[PublicFEMigration] Public Frontend Migration Completed"
 }
 

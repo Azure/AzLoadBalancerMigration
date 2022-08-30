@@ -26,12 +26,12 @@ function RemoveLBFromVMSS {
             }
         }
         log -Message "[RemoveLBFromVMSS] Updating VMSS $vmssName"
-        Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss
+        Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss > $null
         UpdateVmssInstances -vmss $vmss
     }
     log -Message "[RemoveLBFromVMSS] Removing Basic Loadbalancer $($BasicLoadBalancer.Name) from Resource Group $($BasicLoadBalancer.ResourceGroupName)"
-    Remove-AzLoadBalancer -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Name $BasicLoadBalancer.Name -Force
-    log -Message "[PublicFEMigration] Removal of Basic Loadbalancer $($BasicLoadBalancer.Name) Completed"
+    Remove-AzLoadBalancer -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Name $BasicLoadBalancer.Name -Force > $null
+    log -Message "[RemoveLBFromVMSS] Removal of Basic Loadbalancer $($BasicLoadBalancer.Name) Completed"
 }
 
 Export-ModuleMember -Function RemoveLBFromVMSS

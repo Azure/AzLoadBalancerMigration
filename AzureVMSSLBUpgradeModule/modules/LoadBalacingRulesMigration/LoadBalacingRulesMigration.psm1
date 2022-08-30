@@ -23,10 +23,10 @@ function LoadBalacingRulesMigration {
             BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
             Probe = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
         }
-        $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig
+        $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
     }
     log -Message "[LoadBalacingRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer
+    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer  > $null
     log -Message "[LoadBalacingRulesMigration] LoadBalacing Rules Migration Completed"
 }
 

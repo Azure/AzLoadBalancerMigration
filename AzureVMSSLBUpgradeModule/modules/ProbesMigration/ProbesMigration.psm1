@@ -18,10 +18,10 @@ function ProbesMigration {
             IntervalInSeconds = $probe.IntervalInSeconds
             ProbeCount = $probe.NumberOfProbes
         }
-        $StdLoadBalancer | Add-AzLoadBalancerProbeConfig @probeConfig
+        $StdLoadBalancer | Add-AzLoadBalancerProbeConfig @probeConfig > $null
     }
     log -Message "[ProbesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer
+    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     log -Message "[ProbesMigration] Probes Migration Completed"
 }
 Export-ModuleMember -Function ProbesMigration
