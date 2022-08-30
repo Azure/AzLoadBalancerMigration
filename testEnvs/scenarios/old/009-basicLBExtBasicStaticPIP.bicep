@@ -103,7 +103,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     location: location
     encryptionAtHost: false
     skuCapacity: 1
-    upgradePolicyMode: 'Automatic'
+    upgradePolicyMode: 'Manual'
     // Required parameters
     adminUsername: kv1.getSecret('adminUsername')
     imageReference: {
