@@ -10,7 +10,7 @@ function BackendPoolMigration {
     log -Message "[BackendPoolMigration] Looping all BackendAddressPools"
     foreach ($basicBackendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
         log -Message "[BackendPoolMigration] Adding BackendAddressPool $($basicBackendAddressPool.Name)"
-        $StdLoadBalancer | Add-AzLoadBalancerBackendAddressPoolConfig -Name $basicBackendAddressPool.Name | Set-AzLoadBalancer
+        $StdLoadBalancer | Add-AzLoadBalancerBackendAddressPoolConfig -Name $basicBackendAddressPool.Name | Set-AzLoadBalancer > $null
         log -Message "[BackendPoolMigration] Adding Standard Load Balancer back to the VMSS"
         $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
         $BackendIpConfigurationName = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("/")[-1]} | Select-Object -Unique
@@ -32,13 +32,13 @@ function BackendPoolMigration {
                         }
                         $vmssipConfig = New-azVmssIPConfig @vmssipConfigDef
                         $nicconfigname = $networkInterfaceConfiguration.Name
-                        Remove-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname
-                        Add-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname -Primary $true -IPConfiguration $vmssipConfig
+                        Remove-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname > $null
+                        Add-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname -Primary $true -IPConfiguration $vmssipConfig > $null
                     }
                 }
             }
             log -Message "[BackendPoolMigration] Saving VMSS $($vmss.Name)"
-            Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss
+            Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss > $null
             log -Message "[BackendPoolMigration] Updating VMSS Instances $($vmss.Name)"
             UpdateVmssInstances -vmss $vmss
         }

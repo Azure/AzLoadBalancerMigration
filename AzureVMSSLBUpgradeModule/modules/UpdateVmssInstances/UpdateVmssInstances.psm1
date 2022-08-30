@@ -10,7 +10,7 @@ function UpdateVmssInstances {
     $vmssIntances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
     foreach ($vmssInstance in $vmssIntances) {
         log -Message "[UpdateVmssInstances] Updating VMSS Instance $($vmssInstance.Name)"
-        Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstance.InstanceId
+        Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstance.InstanceId > $null
     }
 
     log -Message "[UpdateVmssInstances] Update Vmss Instances Completed"
