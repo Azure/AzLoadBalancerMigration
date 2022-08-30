@@ -29,7 +29,7 @@ function LoadBalacingRulesMigration {
         }
         catch {
             $message = @"
-                An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load
+                [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load
                 balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic 
                 load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
                 pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
@@ -46,7 +46,7 @@ function LoadBalacingRulesMigration {
     }
     catch {
         $message = @"
-        An error occured when adding Load Balancing Rules configuration to new Standard load
+        [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rules configuration to new Standard load
         balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic 
         load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
         pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 

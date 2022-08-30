@@ -17,7 +17,7 @@ function BackupBasicLoadBalancer {
         Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization -ErrorAction Stop > $null
     }
     catch {
-        $message = "An error occured while exporting the basic load balancer '$($BasicLoadBalancer.Name)' to an ARM template for backup purposes. Error: $_"
+        $message = "[BackupBasicLoadBalancer] An error occured while exporting the basic load balancer '$($BasicLoadBalancer.Name)' to an ARM template for backup purposes. Error: $_"
         log -Severity Error -Message $message
         Exit
     }
