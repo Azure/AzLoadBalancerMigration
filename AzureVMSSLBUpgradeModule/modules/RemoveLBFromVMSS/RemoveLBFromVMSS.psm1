@@ -8,7 +8,6 @@ function RemoveLBFromVMSS {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer
     )
     log -Message "[RemoveLBFromVMSS] Initiating removal of LB $($BasicLoadBalancer.Name) from VMSS $($VMSS.Name)"
-
     log -Message "[RemoveLBFromVMSS] Looping all VMSS from Basic Load Balancer $($BasicLoadBalancer.Name)"
     foreach ($vmssId in $vmssIds) {
         $vmssRg = $vmssId.Split('/')[4]
@@ -23,6 +22,14 @@ function RemoveLBFromVMSS {
             log 'Warning' $message
             continue
         }
+
+        If ($vmss.UpgradePolicy.Mode -ne 'Manual') {
+            log 'Error' -Message "VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', which is not yet supported by the script; exiting..."
+            
+            #temp
+            throw "VMSSs with upgrade policy other than 'Manual' are not handled by the script yet!"
+        }
+
         # ###### Attention ######
         # *** We may have to check other scenarios like with ApplicationGatewayBackendAddressPools, ApplicationSecurityGroups and LoadBalancerInboundNatPools
         # #######################
@@ -50,7 +57,7 @@ function RemoveLBFromVMSS {
             Exit
         }
 
-        If ($vmss.UpgradePolicy -eq 'Manual') {
+        If ($vmss.UpgradePolicy.Mode -eq 'Manual') {
             log -Message "VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy)', so each VMSS instance will have the updated VMSS network profile applied by the script."
             UpdateVmssInstances -vmss $vmss
         }
@@ -59,10 +66,7 @@ function RemoveLBFromVMSS {
             # *** Either use a Sleep or other method of ensuring the change has been applied to all instance before attempting to add the VMSS to the Standard LB! 
             # #######################
 
-            log -Message "VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy)', so the update NetworkProfile will be applied automatically."
-
-            #temp
-            throw "VMSSs with upgrade policy other than 'Manual' are not handled by the script yet!"
+            log -Message "VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so the update NetworkProfile will be applied automatically."
         }
     }
 

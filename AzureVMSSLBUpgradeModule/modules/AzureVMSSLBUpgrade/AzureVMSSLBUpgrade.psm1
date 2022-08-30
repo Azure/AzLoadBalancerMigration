@@ -66,7 +66,7 @@ function AzureVMSSLBUpgrade {
         $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName -ErrorAction Stop
     }
     catch {
-        $message = "Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription '$((Get-AzContext).Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. Error text: $_"
+        $message = "Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. Error text: $_"
         log -severity Error -message $message
 
         Exit
