@@ -1,3 +1,3 @@
 Remove-Module AzureVMSSLBUpgradeModule -force
-Import-Module AzureVMSSLBUpgradeModule.psd1 -Force
+Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureVMSSLBUpgradeModule\AzureVMSSLBUpgradeModule.psd1 -Force
 AzureVMSSLBUpgrade -ResourceGroupName basiclb -BasicLoadBalancerName basiclb-loadbalancer -StdLoadBalancerName stdlb-loadbalancer

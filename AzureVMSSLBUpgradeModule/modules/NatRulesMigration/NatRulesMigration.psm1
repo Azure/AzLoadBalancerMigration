@@ -5,7 +5,7 @@ function NatRulesMigration {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
     )
-    log -Message "[NatRulesMigration] Initiating Nat Rules Migration Migration"
+    log -Message "[NatRulesMigration] Initiating Nat Rules Migration"
     $inboundNatRules = $BasicLoadBalancer.InboundNatRules
     foreach ($inboundNatRule in $inboundNatRules) {
         log -Message "[NatRulesMigration] Adding Nat Rule $($inboundNatRule.Name) to Standard Load Balancer"
