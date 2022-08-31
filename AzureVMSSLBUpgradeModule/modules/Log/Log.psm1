@@ -13,10 +13,11 @@ function log {
     #Add-Content -Path ("AzureVMSSLBUpgradeModule-"+(Get-Date -Format FileDateTime)+".log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
     Add-Content -Path ("AzureVMSSLBUpgradeModule.log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
 
-    $outputMessage = "[{0}]:{1}" -f $Severity,$Message
+    If ([global]$FollowLog) {
+        $outputMessage = "[{0}]:{1}" -f $Severity,$Message
+    }
 
     Write-Output $outputMessage 
-    <# write to output streams
     switch ($severity) {
         "Error" {
             Write-Error $outputMessage
@@ -25,7 +26,7 @@ function log {
             Write-Warning $outputMessage
         }
         "Information" {
-            Write-Information $outputMessage
+            Write-Information $outputMessage -InformationAction SilentlyContinue
         }
         "Verbose" {
             Write-Verbose $outputMessage
@@ -34,7 +35,7 @@ function log {
             Write-Debug $outputMessage
         }
     }
-    #>
+
 }
 
 Export-ModuleMember -Function log

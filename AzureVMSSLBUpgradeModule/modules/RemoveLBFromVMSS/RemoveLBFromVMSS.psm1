@@ -15,7 +15,8 @@ function RemoveLBFromVMSS {
         log -Message "[RemoveLBFromVMSS] Loading VMSS $vmssName from RG $vmssRg"
 
         try {
-            $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -ErrorAction Stop
+            $ErrorActionPreference = 'Stop'
+            $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
         }
         catch {
             $message = "[RemoveLBFromVMSS] An error occured when getting VMSS '$($vmssName)' in resource group '$($vmssRG)'. The VMSS may have been removed already, script will continue. Error: $_"

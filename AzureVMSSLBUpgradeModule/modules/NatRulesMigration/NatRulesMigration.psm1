@@ -24,7 +24,8 @@ function NatRulesMigration {
         }
 
         try {
-            $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig -ErrorAction Stop > $null
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
         }
         catch {
             $message = @"
@@ -37,7 +38,8 @@ function NatRulesMigration {
     log -Message "[NatRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
     try {
-        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -ErrorAction Stop > $null   
+        $ErrorActionPreference = 'Stop'
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null   
     }
     catch {
         $message = @"

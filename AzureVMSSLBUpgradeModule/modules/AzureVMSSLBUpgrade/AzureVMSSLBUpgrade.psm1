@@ -55,8 +55,14 @@ function AzureVMSSLBUpgrade {
         [Parameter(Mandatory = $True)][string] $BasicLoadBalancerName,
         #Parameters for new Standard Load Balancer
         # *** We still need to decide if we will allow the user to change the name of the LB or use the same name***
-        [Parameter(Mandatory = $True)][string] $StdLoadBalancerName
+        [Parameter(Mandatory = $True)][string] $StdLoadBalancerName,
+        [Parameter(Mandatory = $false)][switch] $FollowLog
         )
+
+    # Set global variable to display log output in console
+    If ($FollowLog.IsPresent) {
+        [global]$FollowLog = $true
+    }
 
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
 
@@ -64,7 +70,8 @@ function AzureVMSSLBUpgrade {
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
 
     try {
-        $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName -ErrorAction Stop
+        $ErrorActionPreference = 'Stop'
+        $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
     }
     catch {
         $message = @"
@@ -83,7 +90,7 @@ function AzureVMSSLBUpgrade {
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
-    # Deletion of Basic Load Balancer
+    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
@@ -94,7 +101,8 @@ function AzureVMSSLBUpgrade {
         location = $BasicLoadBalancer.Location
     }
     try {
-        $StdLoadBalancer = New-AzLoadBalancer @StdLoadBalancerDef -ErrorAction Stop
+        $ErrorActionPreference = 'Stop'
+        $StdLoadBalancer = New-AzLoadBalancer @StdLoadBalancerDef
     }
     catch {
         $message = @"
