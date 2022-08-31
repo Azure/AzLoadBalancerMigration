@@ -20,7 +20,8 @@ function ProbesMigration {
         }
 
         try {
-            $StdLoadBalancer | Add-AzLoadBalancerProbeConfig @probeConfig -ErrorAction Stop > $null
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerProbeConfig @probeConfig > $null
         }
         catch {
             $message = @"
@@ -36,7 +37,8 @@ function ProbesMigration {
     }
     log -Message "[ProbesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
     try {
-        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -ErrorAction Stop > $null
+        $ErrorActionPreference = 'Stop'
+        AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
         $message = @"

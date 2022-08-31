@@ -25,7 +25,8 @@ function LoadBalacingRulesMigration {
         }
 
         try {
-            $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig -ErrorAction Stop > $null
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig> $null
         }
         catch {
             $message = @"
@@ -42,7 +43,8 @@ function LoadBalacingRulesMigration {
     log -Message "[LoadBalacingRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
     try {
-        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -ErrorAction Stop  > $null
+        $ErrorActionPreference = 'Stop'
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
         $message = @"
