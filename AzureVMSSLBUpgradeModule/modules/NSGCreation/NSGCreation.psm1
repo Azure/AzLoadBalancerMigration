@@ -32,7 +32,7 @@ function NSGCreation {
         }
         catch {
             $message = @"
-            An error occured while creating NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL 
+            [NSGCreation] An error occured while creating NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL 
             BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually create an NSG which allows traffic to the
             backend ports on the VM/VMSS and associate it with the VM, VMSS, or subnet. Error: $_
 "@
@@ -97,7 +97,7 @@ function NSGCreation {
         }
         catch {
             $message = @"
-            An error occured while adding security rules to NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL 
+            [NSGCreation] An error occured while adding security rules to NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL 
             BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually rules in NSG '$("NSG-"+$vmss.Name)' which allows traffic 
             to the backend ports on the VM/VMSS and associate the NSG with the VM, VMSS, or subnet. Error: $_
 "@
@@ -119,7 +119,7 @@ function NSGCreation {
         }
         catch {
             $message = @"
-            An error occured while updating VMSS '$($vmss.name)' to associate the new NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO 
+            [NSGCreation] An error occured while updating VMSS '$($vmss.name)' to associate the new NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO 
             BACKEND POOL MEMBERS WILL BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually associate NSG '$("NSG-"+$vmss.Name)' 
             with the VM, VMSS, or subnet. Error: $_
 "@
