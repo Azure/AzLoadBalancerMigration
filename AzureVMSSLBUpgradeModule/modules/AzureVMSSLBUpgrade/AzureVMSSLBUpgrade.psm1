@@ -72,7 +72,10 @@ function AzureVMSSLBUpgrade {
 
     try {
         $ErrorActionPreference = 'Stop'
-        $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
+            $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+        }
+        log -Message "[AzureVMSSLBUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
     catch {
         $message = @"
@@ -95,9 +98,9 @@ function AzureVMSSLBUpgrade {
     RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
-    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancerName
+    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
     $StdLoadBalancerDef = @{
-        ResourceGroupName = $ResourceGroupName
+        ResourceGroupName = $BasicLoadBalancer.ResourceGroupName
         Name = $StdLoadBalancerName
         SKU = "Standard"
         location = $BasicLoadBalancer.Location
@@ -109,8 +112,8 @@ function AzureVMSSLBUpgrade {
     catch {
         $message = @"
             [AzureVMSSLBUpgrade] An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover,
-            redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...'
-            file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...'
+            redeploy the Basic load balancer from the 'ARMTemplate-$($BasicLoadBalancer.Name)-ResourceGroupName...'
+            file, re-add the original backend pool members (see file 'State-$($BasicLoadBalancer.Name)-ResourceGroupName...'
             BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
         log 'Error' $message
