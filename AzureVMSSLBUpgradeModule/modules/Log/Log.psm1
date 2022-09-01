@@ -13,7 +13,7 @@ function log {
     #Add-Content -Path ("AzureVMSSLBUpgradeModule-"+(Get-Date -Format FileDateTime)+".log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
     Add-Content -Path ("AzureVMSSLBUpgradeModule.log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
 
-    If ([global]$FollowLog) {
+    If ($global:FollowLog) {
         $outputMessage = "[{0}]:{1}" -f $Severity,$Message
     }
 

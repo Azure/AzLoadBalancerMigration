@@ -59,13 +59,13 @@ function AzureVMSSLBUpgrade {
         [Parameter(Mandatory = $True)][string] $BasicLoadBalancerName,
         #Parameters for new Standard Load Balancer
         # *** We still need to decide if we will allow the user to change the name of the LB or use the same name***
-        [Parameter(Mandatory = $True)][string] $StdLoadBalancerName,
+        [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
 
     # Set global variable to display log output in console
     If ($FollowLog.IsPresent) {
-        [global]$FollowLog = $true
+        $global:FollowLog = $true
     }
 
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
@@ -79,8 +79,8 @@ function AzureVMSSLBUpgrade {
     }
     catch {
         $message = @"
-            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription 
-            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. 
+            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
+            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
             Error text: $_
 "@
         log -severity Error -message $message
@@ -102,6 +102,7 @@ function AzureVMSSLBUpgrade {
     RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
+    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancerName
     $StdLoadBalancerDef = @{
         ResourceGroupName = $ResourceGroupName
         Name = $StdLoadBalancerName
@@ -114,9 +115,9 @@ function AzureVMSSLBUpgrade {
     }
     catch {
         $message = @"
-            [AzureVMSSLBUpgrade] An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover, 
-            redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-            file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
+            [AzureVMSSLBUpgrade] An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover,
+            redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...'
+            file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...'
             BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
         log 'Error' $message
