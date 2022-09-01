@@ -53,10 +53,9 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NSGCreation\NSGCreation.psd1
 
 function AzureVMSSLBUpgrade {
     Param(
-        [Parameter(Mandatory = $True)][string] $ResourceGroupName,
-        [Parameter(Mandatory = $True)][string] $BasicLoadBalancerName,
-        #Parameters for new Standard Load Balancer
-        # *** We still need to decide if we will allow the user to change the name of the LB or use the same name***
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
+        [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
