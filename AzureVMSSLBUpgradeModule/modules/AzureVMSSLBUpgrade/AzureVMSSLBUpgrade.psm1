@@ -49,6 +49,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\InboundNatPoolsMigration\Inb
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\OutboundRulesCreation\OutboundRulesCreation.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NSGCreation\NSGCreation.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
@@ -105,6 +106,9 @@ function AzureVMSSLBUpgrade {
 
     # Creating Outbound Rules for SNAT
     OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+
+    # Creating NSG for Standard Load Balancer
+    NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     log -Message "############################## Migration Completed ##############################"
 }
