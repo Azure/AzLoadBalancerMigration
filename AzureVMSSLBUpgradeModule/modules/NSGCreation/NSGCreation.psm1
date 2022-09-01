@@ -25,7 +25,21 @@ function NSGCreation {
         log -Message "[NSGCreation] NSG not detected."
 
         log -Message "[NSGCreation] Creating NSG for VMSS: $vmssName"
-        $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssRg -Name ("NSG-"+$vmss.Name) -Location $vmss.Location
+
+        try {
+            $ErrorActionPreference = 'Stop'
+            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssRg -Name ("NSG-"+$vmss.Name) -Location $vmss.Location
+        }
+        catch {
+            $message = @"
+            An error occured while creating NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL 
+            BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually create an NSG which allows traffic to the
+            backend ports on the VM/VMSS and associate it with the VM, VMSS, or subnet. Error: $_
+"@
+            log 'Error' $message
+            Exit
+        }
+
         log -Message "[NSGCreation] NSG Named: $("NSG-"+$vmss.Name) created."
 
         # Adding NSG Rule for each Load Balancing Rule
@@ -77,7 +91,19 @@ function NSGCreation {
 
         # Saving NSG
         log -Message "[NSGCreation] Saving NSG Named: $($nsg.Name)"
-        Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg > $null
+        try {
+            $ErrorActionPreference = 'Stop'
+            Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg > $null
+        }
+        catch {
+            $message = @"
+            An error occured while adding security rules to NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL 
+            BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually rules in NSG '$("NSG-"+$vmss.Name)' which allows traffic 
+            to the backend ports on the VM/VMSS and associate the NSG with the VM, VMSS, or subnet. Error: $_
+"@
+            log 'Error' $message
+            Exit
+        }
 
         # Adding NSG to VMSS
         log -Message "[NSGCreation] Adding NSG Named: $($nsg.Name) to VMSS Named: $($vmss.Name)"
@@ -87,7 +113,19 @@ function NSGCreation {
 
         # Saving VMSS
         log -Message "[NSGCreation] Saving VMSS Named: $($vmss.Name)"
-        Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss > $null
+        try {
+            $ErrorActionPreference = 'Stop'
+            Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss > $null
+        }
+        catch {
+            $message = @"
+            An error occured while updating VMSS '$($vmss.name)' to associate the new NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO 
+            BACKEND POOL MEMBERS WILL BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually associate NSG '$("NSG-"+$vmss.Name)' 
+            with the VM, VMSS, or subnet. Error: $_
+"@
+            log 'Error' $message
+            Exit
+        }
 
         UpdateVmssInstances -vmss $vmss
     }
