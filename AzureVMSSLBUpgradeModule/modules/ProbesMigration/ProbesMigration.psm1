@@ -25,11 +25,11 @@ function ProbesMigration {
         }
         catch {
             $message = @"
-            [ProbesMigration] Failed to add health probe config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource
-            group '$($StdLoadBalancer.ResourceGroupName)'. To recover, address the following error, delete the standard LB ,redeploy the Basic
-            load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend
-            pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state
-            file for original pool membership), and retry the migration.  Error: $_
+            [ProbesMigration] Failed to add health probe config '$($probe.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource 
+            group '$($StdLoadBalancer.ResourceGroupName)'. To recover, address the following error, delete the standard LB ,redeploy the Basic 
+            load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
+            pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
+            file for original pool membership), and retry the migration.  `nError: $_ 
 "@
             log "Error" $message
             Exit
@@ -42,11 +42,11 @@ function ProbesMigration {
     }
     catch {
         $message = @"
-        [ProbesMigration] Failed to add health probe config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource
-        group '$($StdLoadBalancer.ResourceGroupName)'. To recover, address the following error, delete the standard LB ,redeploy the Basic
-        load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend
-        pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state
-        file for original pool membership), and retry the migration.  Error: $_
+        [ProbesMigration] Failed to add health probe config '$($probe.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource 
+        group '$($StdLoadBalancer.ResourceGroupName)'. To recover, address the following error, delete the standard LB ,redeploy the Basic 
+        load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
+        pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
+        file for original pool membership), and retry the migration.  Error: $_ 
 "@
         log "Error" $message
         Exit
