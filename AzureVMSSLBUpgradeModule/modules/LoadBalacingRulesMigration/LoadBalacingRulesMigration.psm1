@@ -26,15 +26,15 @@ function LoadBalacingRulesMigration {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig> $null
+            $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
         }
         catch {
             $message = @"
                 [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load
-                balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic 
-                load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
-                pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
-                file for original pool membership), and retry the migration.  Error: $_ 
+                balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic
+                load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend
+                pool membership back (see the backup '$('State-' + $BasicLoadBalancer.Name + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state
+                file for original pool membership), and retry the migration.  Error: $_
 "@
             log "Error" $message
             Exit
@@ -49,13 +49,13 @@ function LoadBalacingRulesMigration {
     catch {
         $message = @"
         [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rules configuration to new Standard load
-        balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic 
-        load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend 
-        pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state 
-        file for original pool membership), and retry the migration.  Error: $_ 
+        balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic
+        load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend
+        pool membership back (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state
+        file for original pool membership), and retry the migration.  Error: $_
 "@
         log "Error" $message
-        Exit   
+        Exit
     }
     log -Message "[LoadBalacingRulesMigration] LoadBalacing Rules Migration Completed"
 }

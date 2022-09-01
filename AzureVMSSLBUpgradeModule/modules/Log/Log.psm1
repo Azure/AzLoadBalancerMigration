@@ -12,36 +12,38 @@ function log {
 
     #Add-Content -Path ("AzureVMSSLBUpgradeModule-"+(Get-Date -Format FileDateTime)+".log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
     Add-Content -Path ("AzureVMSSLBUpgradeModule.log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
-
+    $outputMessage = "[{0}]:{1}" -f $Severity,$Message
     If ($global:FollowLog) {
-        $outputMessage = "[{0}]:{1}" -f $Severity,$Message -replace '^\s+?',''
-    }
-
-    Write-Host $outputMessage
-    
-    switch ($severity) {
-        "Error" {
-            Write-Error $outputMessage
-        }
-        "Warning" {
-            Write-Warning $outputMessage
-        }
-        "Information" {
-            If ($FollowLog) {
-                Write-Information $outputMessage
+        #$outputMessage = "[{0}]:{1}" -f $Severity,$Message
+        #Write-Output $outputMessage
+        switch ($severity) {
+            "Error" {
+                Write-Error $outputMessage
             }
-            Else {
+            "Warning" {
+                Write-Warning $outputMessage
+            }
+            "Information" {
                 Write-Information $outputMessage -InformationAction SilentlyContinue
             }
-        }
-        "Verbose" {
-            Write-Verbose $outputMessage
-        }
-        "Debug" {
-            Write-Debug $outputMessage
+            "Verbose" {
+                Write-Verbose $outputMessage
+            }
+            "Debug" {
+                Write-Debug $outputMessage
+            }
         }
     }
-
+    else {
+        switch ($severity) {
+            "Error" {
+                Write-Error $outputMessage
+            }
+            "Warning" {
+                Write-Warning $outputMessage
+            }
+        }
+    }
 }
 
 Export-ModuleMember -Function log
