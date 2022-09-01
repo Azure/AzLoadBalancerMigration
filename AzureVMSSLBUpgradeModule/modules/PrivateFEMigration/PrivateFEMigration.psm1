@@ -20,7 +20,15 @@ function PrivateFEMigration {
             Exit
         }
 
-        $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PrivateIPAddress $privateIP > $null
+        try {
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PrivateIPAddress $privateIP -SubnetId $feConfig.Subnet.Id > $null
+        }
+        catch {
+            $message = "[PrivateFEMigration] Failed to add FrontEnd Config '$($feConfig.Name)' with error: $_"
+            log 'Error' $message
+            Exit
+        }
     }
     log -Message "[PrivateFEMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
