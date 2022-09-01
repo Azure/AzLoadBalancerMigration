@@ -26,7 +26,7 @@ function RemoveLBFromVMSS {
 
         If ($vmss.UpgradePolicy.Mode -ne 'Manual') {
             log 'Error' -Message "[RemoveLBFromVMSS] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', which is not yet supported by the script; exiting..."
-            
+
             #temp
             throw "VMSSs with upgrade policy other than 'Manual' are not handled by the script yet!"
         }
@@ -34,7 +34,7 @@ function RemoveLBFromVMSS {
         # ###### Attention ######
         # *** We may have to check other scenarios like with ApplicationGatewayBackendAddressPools, ApplicationSecurityGroups and LoadBalancerInboundNatPools
         # #######################
-        log -Message "[RemoveLBFromVMSS] Cleanning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
+        log -Message "[RemoveLBFromVMSS] Cleaning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
         foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
             foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
                 $ipConfiguration.loadBalancerBackendAddressPools = $null
@@ -48,10 +48,10 @@ function RemoveLBFromVMSS {
         }
         catch {
             $message = @"
-                [RemoveLBFromVMSS] An error occured while updating VMSS '$vmssName' in resource group '$vmssRG' to remove it from a backend pool on load balancer 
-                '$($BasicLoadBalancer.Name)'. The script will be unable to delete the basic load balancer unless all backend pools are empty and 
-                must exit. To recover, add any backend pool members back to the backend pools (see the backup 
-                '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state file for original pool membership), 
+                [RemoveLBFromVMSS] An error occured while updating VMSS '$vmssName' in resource group '$vmssRG' to remove it from a backend pool on load balancer
+                '$($BasicLoadBalancer.Name)'. The script will be unable to delete the basic load balancer unless all backend pools are empty and
+                must exit. To recover, add any backend pool members back to the backend pools (see the backup
+                '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state file for original pool membership),
                 address the error, and try again. Error: $_
 "@
             log 'Error' $message
@@ -59,15 +59,15 @@ function RemoveLBFromVMSS {
         }
 
         If ($vmss.UpgradePolicy.Mode -eq 'Manual') {
-            log -Message "[RemoveLBFromVMSS] VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy)', so each VMSS instance will have the updated VMSS network profile applied by the script."
+            log -Message "[RemoveLBFromVMSS] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so each VMSS instance will have the updated VMSS network profile applied by the script."
             UpdateVmssInstances -vmss $vmss
         }
         Else {
             # ###### TO-DO ######
-            # *** Either use a Sleep or other method of ensuring the change has been applied to all instance before attempting to add the VMSS to the Standard LB! 
+            # *** Either use a Sleep or other method of ensuring the change has been applied to all instance before attempting to add the VMSS to the Standard LB!
             # #######################
 
-            log -Message "[RemoveLBFromVMSS] VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so the update NetworkProfile will be applied automatically."
+            log -Message "[RemoveLBFromVMSS] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so the update NetworkProfile will be applied automatically."
         }
     }
 
@@ -78,9 +78,9 @@ function RemoveLBFromVMSS {
     }
     Catch {
         $message = @"
-            [RemoveLBFromVMSS] A failure occured when attempting to delete the basic load balancer '$($BasicLoadBalancer.Name)'. The script cannot continue as the front 
-            end addresses will not be available to reassign to the new Standard load balancer. To recovery, add any backend pool members back to the 
-            backend pools (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state file for 
+            [RemoveLBFromVMSS] A failure occured when attempting to delete the basic load balancer '$($BasicLoadBalancer.Name)'. The script cannot continue as the front
+            end addresses will not be available to reassign to the new Standard load balancer. To recovery, add any backend pool members back to the
+            backend pools (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state file for
             original pool membership), address the following error, and try again. Error: $_
 "@
         log 'Error' $message

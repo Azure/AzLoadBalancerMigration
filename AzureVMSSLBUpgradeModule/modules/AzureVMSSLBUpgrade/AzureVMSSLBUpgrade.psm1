@@ -50,20 +50,21 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigrat
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\OutboundRulesCreation\OutboundRulesCreation.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NSGCreation\NSGCreation.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PrivateFEMigration\PrivateFEMigration.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
-        [Parameter(Mandatory = $True)][string] $ResourceGroupName,
-        [Parameter(Mandatory = $True)][string] $BasicLoadBalancerName,
-        #Parameters for new Standard Load Balancer
-        # *** We still need to decide if we will allow the user to change the name of the LB or use the same name***
-        [Parameter(Mandatory = $True)][string] $StdLoadBalancerName,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
+        [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
 
     # Set global variable to display log output in console
     If ($FollowLog.IsPresent) {
-        [global]$FollowLog = $true
+        $global:FollowLog = $true
     }
 
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
@@ -73,18 +74,25 @@ function AzureVMSSLBUpgrade {
 
     try {
         $ErrorActionPreference = 'Stop'
-        $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
+            $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+        }
+        log -Message "[AzureVMSSLBUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
     catch {
         $message = @"
-            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription 
-            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. 
+            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
+            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
             Error text: $_
 "@
         log -severity Error -message $message
 
         Exit
     }
+
+    # verify basic load balancer configuration is a supported scenario
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StandardLoadBalancerName
+
     #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
     #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
@@ -96,8 +104,9 @@ function AzureVMSSLBUpgrade {
     RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
+    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
     $StdLoadBalancerDef = @{
-        ResourceGroupName = $ResourceGroupName
+        ResourceGroupName = $BasicLoadBalancer.ResourceGroupName
         Name = $StdLoadBalancerName
         SKU = "Standard"
         location = $BasicLoadBalancer.Location
@@ -108,9 +117,9 @@ function AzureVMSSLBUpgrade {
     }
     catch {
         $message = @"
-            [AzureVMSSLBUpgrade] An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover, 
-            redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-            file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
+            [AzureVMSSLBUpgrade] An error occured when creating the new Standard load balancer '$StdLoadBalancerName'. To recover,
+            redeploy the Basic load balancer from the 'ARMTemplate-$($BasicLoadBalancer.Name)-ResourceGroupName...'
+            file, re-add the original backend pool members (see file 'State-$($BasicLoadBalancer.Name)-ResourceGroupName...'
             BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
         log 'Error' $message
@@ -118,7 +127,14 @@ function AzureVMSSLBUpgrade {
     }
 
     # Migration of Frontend IP Configurations
-    PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    switch ($scenario.ExternalOrInternal) {
+        'internal' {
+            PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
+        }
+        'external' {
+            PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+        }
+    }
 
     # Migration of Backend Address Pools
     BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer

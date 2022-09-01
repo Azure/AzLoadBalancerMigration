@@ -1,7 +1,7 @@
 Param (
     [string]$Location = 'australiaeast',
     [string]$KeyVaultResourceGroupName = 'rg-vmsstestingconfig',
-    [parameter(Mandatory = $false)][ValidatePattern('^\d\d\d$')][string[]]$ScenarioNumber,
+    [parameter(Mandatory = $false)][string[]]$ScenarioNumber,
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
     [switch]$Cleanup

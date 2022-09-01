@@ -24,18 +24,6 @@ function BackupBasicLoadBalancer {
     Move-Item ($BasicLoadBalancer.ResourceGroupName + ".json") $newExportedResourceFileName
     log -Message "[BackupBasicLoadBalancer] ARM Template Backup Basic Load Balancer to file $($newExportedResourceFileName) Completed"
 
-    # Detecting if there are any backend pools that is not virtualMachineScaleSets, if so, exit
-    log -Message "[BackupBasicLoadBalancer] Checking if there are any backend pools that is not virtualMachineScaleSets"
-    foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
-        foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {
-            if ($backendIpConfiguration.Id.split("/")[7] -ne "virtualMachineScaleSets") {
-                log -Message "[BackupBasicLoadBalancer] Basic Load Balancer has backend pools that is not virtualMachineScaleSets, exiting" -Severity "Error"
-                exit
-            }
-        }
-    }
-    log -Message "[BackupBasicLoadBalancer] All backend pools are virtualMachineScaleSets!"
-
     ConvertTo-Json -Depth 100 $BasicLoadBalancer | Out-File -FilePath ($BasicLoadBalancer.Name + "-" + $backupDateTime + ".json")
     log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer $($BasicLoadBalancer.Name + "-" + $backupDateTime + ".json") Completed"
     Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization > $null
