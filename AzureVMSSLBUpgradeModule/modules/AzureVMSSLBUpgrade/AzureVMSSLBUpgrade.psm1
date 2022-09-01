@@ -63,7 +63,7 @@ function AzureVMSSLBUpgrade {
 
     # Set global variable to display log output in console
     If ($FollowLog.IsPresent) {
-        [global]$FollowLog = $true
+        $global:FollowLog = $true
     }
 
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
