@@ -21,10 +21,34 @@ function InboundNatPoolsMigration {
             FrontendPortRangeEnd = $pool.FrontendPortRangeEnd
             IdleTimeoutInMinutes = $pool.IdleTimeoutInMinutes
         }
-        $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @poolConfig > $null
+
+        try {
+           $ErrorActionPreference = 'Stop'
+           $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @poolConfig > $null 
+        }
+        catch {
+            $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard 
+                Load Balancer. The script will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. 
+                `n$($inboundNatPoolConfig | ConvertTo-Json -Depth 5)$_$_"
+            log 'Warning' $message
+        }
+
     }
     log -Message "[InboundNatPoolsMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
+
+    try {
+        $ErrorActionPreference = 'Stop'
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
+     }
+     catch {
+         $message = @"
+            [InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script 
+            will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. 
+            `n$($StdLoadBalancer | Get-AzLoadBalancerInboundNatPoolConfig | ConvertTo-Json -Depth 5)$_
+"@
+         log 'Warning' $message
+     }
+
     log -Message "[InboundNatPoolsMigration] Inbound NAT Pools Migration Completed"
 }
 Export-ModuleMember -Function InboundNatPoolsMigration

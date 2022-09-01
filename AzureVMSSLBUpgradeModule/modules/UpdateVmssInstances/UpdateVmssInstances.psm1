@@ -6,6 +6,12 @@ function UpdateVmssInstances {
     )
     log -Message "[UpdateVmssInstances] Initiating Update Vmss Instances"
 
+    If ($vmss.UpgradePolicy.Mode -ne 'Manual') {
+        $message = "[UpdateVmssInstances] VMSS '$($vmss.Id)' is configued with UpgradePolicy '$($vmss.UpgradePolicy.Mode)', which is not supported by this script"
+        log 'Error' $message
+        Exit
+    }
+
     log -Message "[UpdateVmssInstances] Updating VMSS Instances. This process may take a while depending of how many instances."
     $vmssIntances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
     foreach ($vmssInstance in $vmssIntances) {
