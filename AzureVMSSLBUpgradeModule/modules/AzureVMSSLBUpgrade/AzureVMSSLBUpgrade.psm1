@@ -50,6 +50,8 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigrat
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\OutboundRulesCreation\OutboundRulesCreation.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NSGCreation\NSGCreation.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PrivateFEMigration\PrivateFEMigration.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
@@ -85,6 +87,10 @@ function AzureVMSSLBUpgrade {
 
         Exit
     }
+
+    # verify basic load balancer configuration is a supported scenario
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer
+
     #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
     #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
@@ -118,7 +124,14 @@ function AzureVMSSLBUpgrade {
     }
 
     # Migration of Frontend IP Configurations
-    PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    switch ($scenario.ExternalOrInternal) {
+        'internal' {
+            PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
+        }
+        'external' {
+            PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+        }
+    }
 
     # Migration of Backend Address Pools
     BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
