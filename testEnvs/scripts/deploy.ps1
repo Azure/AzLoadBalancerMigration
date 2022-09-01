@@ -9,6 +9,10 @@ Param (
 
 $ErrorActionPreference = 'Stop'
 
+If (!(Test-Path -Path ../scenarios)) {
+    Write-Error "This script should be executed from the ./testEnvs/scripts directory"
+    break
+}
 $allTemplates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
 
 If ($ScenarioNumber) {

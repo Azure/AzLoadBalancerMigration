@@ -22,3 +22,8 @@ New-ModuleManifest -Path ProbesMigration.psd1 -RootModule ProbesMigration -Autho
 
 New-ModuleManifest -Path LoadBalacingRulesMigration.psd1 -RootModule LoadBalacingRulesMigration -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
 
+New-ModuleManifest -Path InboundNatPoolsMigration.psd1 -RootModule InboundNatPoolsMigration -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path OutboundRulesCreation.psd1 -RootModule OutboundRulesCreation -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path NSGCreation.psd1 -RootModule NSGCreation -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
