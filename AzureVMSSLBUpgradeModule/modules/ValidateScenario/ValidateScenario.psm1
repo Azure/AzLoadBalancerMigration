@@ -6,7 +6,11 @@ Function Test-SupportedMigrationScenario {
     param (
         [Parameter(Mandatory = $true)]
         [Microsoft.Azure.Commands.Network.Models.PSLoadBalancer]
-        $BasicLoadBalancer
+        $BasicLoadBalancer,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $StdLoadBalancerName
     )
 
     $scenario = @{
@@ -14,12 +18,12 @@ Function Test-SupportedMigrationScenario {
     }
 
     # checking source load balance SKU
-    log "[Test-SupportedMigrationScenario] Verifying source load balancer SKU"
-    If ($BasicLoadBalancer.Sku -ne 'Basic') {
-        log 'Error' "[Test-SupportedMigrationScenario] The load balancer '$($BasicLoadBalancer.Name)' in resource group '$($BasicLoadBalancer.ResourceGroupName)' is SKU '$($BasicLoadBalancer.SKU)'. SKU must be Basic!"
+    log -Message "[Test-SupportedMigrationScenario] Verifying source load balancer SKU"
+    If ($BasicLoadBalancer.Sku.Name -ne 'Basic') {
+        log 'Error' "[Test-SupportedMigrationScenario] The load balancer '$($BasicLoadBalancer.Name)' in resource group '$($BasicLoadBalancer.ResourceGroupName)' is SKU '$($BasicLoadBalancer.SKU.Name)'. SKU must be Basic!"
         Exit
     }
-    log "[Test-SupportedMigrationScenario] Source load balancer SKU is type Basic"
+    log -Message "[Test-SupportedMigrationScenario] Source load balancer SKU is type Basic"
 
     # Detecting if there are any backend pools that is not virtualMachineScaleSets, if so, exit
     log -Message "[Test-SupportedMigrationScenario] Checking if there are any backend pools that is not virtualMachineScaleSets"
@@ -34,21 +38,28 @@ Function Test-SupportedMigrationScenario {
     log -Message "[Test-SupportedMigrationScenario] All backend pools are virtualMachineScaleSets!"
 
     # checking that source load balancer has sub-resource configurations
-    log "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
+    log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
     If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0) {
         log 'Error' "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no front end configurations, so there is nothing to migrate!"
         Exit
     }
-    log "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
+    log -Message "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
+
+    # check that standard load balancer name is avaliable
+    log -Message "[Test-SupportedMigrationScenario] Checking that standard load balancer name '$StdLoadBalancerName'"
+    If ((Get-AzLoadBalancer -Name $StdLoadBalancerName -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -ErrorAction SilentlyContinue)) {
+        log 'Error' "[Test-SupportedMigrationScenario] New standard load balancer resource '$StdLoadBalancerName' already exists; exiting!"
+        exit
+    }
 
     # detecting if source load balancer is internal or external-facing
-    log "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
+    log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
     If (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)) {
-        log "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a private IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)', so this LB is Internal"
+        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a private IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)', so this LB is Internal"
         $scenario.ExternalOrInternal = 'Internal'
     }
     ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)) {
-        log "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)', so this LB is External"
+        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)', so this LB is External"
         $scenario.ExternalOrInternal = 'External'
     }
     ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix)) {
