@@ -38,7 +38,7 @@ function ProbesMigration {
     log -Message "[ProbesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
     try {
         $ErrorActionPreference = 'Stop'
-        Update-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
         $message = @"
