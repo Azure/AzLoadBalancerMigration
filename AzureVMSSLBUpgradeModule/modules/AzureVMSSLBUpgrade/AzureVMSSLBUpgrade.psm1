@@ -89,7 +89,7 @@ function AzureVMSSLBUpgrade {
     }
 
     # verify basic load balancer configuration is a supported scenario
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StandardLoadBalancerName
 
     #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
     #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique

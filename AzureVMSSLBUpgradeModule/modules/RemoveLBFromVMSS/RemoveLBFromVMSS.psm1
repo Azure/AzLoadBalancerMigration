@@ -34,7 +34,7 @@ function RemoveLBFromVMSS {
         # ###### Attention ######
         # *** We may have to check other scenarios like with ApplicationGatewayBackendAddressPools, ApplicationSecurityGroups and LoadBalancerInboundNatPools
         # #######################
-        log -Message "[RemoveLBFromVMSS] Cleanning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
+        log -Message "[RemoveLBFromVMSS] Cleaning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
         foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
             foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
                 $ipConfiguration.loadBalancerBackendAddressPools = $null
@@ -59,7 +59,7 @@ function RemoveLBFromVMSS {
         }
 
         If ($vmss.UpgradePolicy.Mode -eq 'Manual') {
-            log -Message "[RemoveLBFromVMSS] VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy)', so each VMSS instance will have the updated VMSS network profile applied by the script."
+            log -Message "[RemoveLBFromVMSS] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so each VMSS instance will have the updated VMSS network profile applied by the script."
             UpdateVmssInstances -vmss $vmss
         }
         Else {
@@ -67,7 +67,7 @@ function RemoveLBFromVMSS {
             # *** Either use a Sleep or other method of ensuring the change has been applied to all instance before attempting to add the VMSS to the Standard LB! 
             # #######################
 
-            log -Message "[RemoveLBFromVMSS] VMSS '$vmss.Name' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so the update NetworkProfile will be applied automatically."
+            log -Message "[RemoveLBFromVMSS] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so the update NetworkProfile will be applied automatically."
         }
     }
 

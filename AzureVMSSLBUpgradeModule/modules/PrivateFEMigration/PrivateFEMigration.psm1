@@ -12,9 +12,9 @@ function PrivateFEMigration {
     foreach ($feConfig in $basicLoadBalancerFeConfig) {
         $privateIP = $feConfig.PrivateIpAddress
         $vnetRG = $feConfig.Subnet.Id.split('/')[4]
-        $vnetName = $feConfig.Subnet.Id.split('/')[7]
+        $vnetName = $feConfig.Subnet.Id.split('/')[8]
 
-        $ipAvailability = Test-AzPrivateIPAddressAvailability -ResourceGroupName $vnetRG -VirtualNetworkName $vnetName
+        $ipAvailability = Test-AzPrivateIPAddressAvailability -ResourceGroupName $vnetRG -VirtualNetworkName $vnetName -IPAddress $privateIP
         If (!$ipAvailability.Available) {
             log 'Error' "[PrivateFEMigration] The private IP address '$privateIP' in VNET '$vnetName', resource group '$vnetRG' is not available for allocation; another new device may have claimed it."
             Exit
