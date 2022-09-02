@@ -15,7 +15,7 @@ function log {
     $outputMessage = "[{0}]:{1}" -f $Severity,$Message
     If ($global:FollowLog) {
         #$outputMessage = "[{0}]:{1}" -f $Severity,$Message
-        #Write-Output $outputMessage
+        Write-Output $outputMessage
         switch ($severity) {
             "Error" {
                 Write-Error $outputMessage
