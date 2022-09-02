@@ -29,3 +29,5 @@ New-ModuleManifest -Path OutboundRulesCreation.psd1 -RootModule OutboundRulesCre
 New-ModuleManifest -Path NSGCreation.psd1 -RootModule NSGCreation -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
 
 New-ModuleManifest -Path ValidateScenario.psd1 -RootModule ValidateScenario -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path ScenariosMigration.psd1 -RootModule ScenariosMigration -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru

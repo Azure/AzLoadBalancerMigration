@@ -18,6 +18,7 @@ Function Test-SupportedMigrationScenario {
     }
 
     # checking source load balance SKU
+    log -Message "[Test-SupportedMigrationScenario] Verifying if Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
     log -Message "[Test-SupportedMigrationScenario] Verifying source load balancer SKU"
     If ($BasicLoadBalancer.Sku.Name -ne 'Basic') {
         log 'Error' "[Test-SupportedMigrationScenario] The load balancer '$($BasicLoadBalancer.Name)' in resource group '$($BasicLoadBalancer.ResourceGroupName)' is SKU '$($BasicLoadBalancer.SKU.Name)'. SKU must be Basic!"
@@ -66,7 +67,7 @@ Function Test-SupportedMigrationScenario {
         log 'Error' "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP prefix '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefixText)', which is not supported for migration!"
         Exit
     }
-
+    log -Message "[Test-SupportedMigrationScenario] Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
     return $scenario
 }
 
