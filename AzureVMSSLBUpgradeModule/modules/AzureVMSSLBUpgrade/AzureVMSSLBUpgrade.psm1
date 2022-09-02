@@ -59,6 +59,13 @@ function AzureVMSSLBUpgrade {
 
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
 
+    log -Message "[AzureVMSSLBUpgrade] Checking that user is signed in to Azure PowerShell"
+    if (!($azContext = Get-AzContext -ErrorAction SilentlyContinue)) {
+        log 'Error' "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
+        return
+    }
+    log -Message "[AzureVMSSLBUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)'"
+
     # Load Azure Resources
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
 
