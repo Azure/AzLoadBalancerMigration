@@ -81,15 +81,16 @@ function AzureVMSSLBUpgrade {
     }
 
     # verify basic load balancer configuration is a supported scenario
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StandardLoadBalancerName
+    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName
 
     # Migration of Frontend IP Configurations
     switch ($scenario.ExternalOrInternal) {
         'internal' {
-            InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName
+            InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
         }
         'external' {
-            PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName
+            PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
         }
     }
     log -Message "############################## Migration Completed ##############################"

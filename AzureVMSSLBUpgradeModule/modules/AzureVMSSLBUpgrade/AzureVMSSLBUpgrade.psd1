@@ -51,7 +51,12 @@ Copyright = '(c) 2022 Microsoft. All rights reserved.'
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
-# RequiredModules = @()
+RequiredModules = @(
+    'Az.Accounts',
+    'Az.Compute',
+    'Az.Network',
+    'Az.Resources'
+ )
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
