@@ -16,7 +16,8 @@ If (!(Test-Path -Path ../scenarios)) {
 $allTemplates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
 
 If ($ScenarioNumber) {
-    $pattern = '^({0})\-' -f $ScenarioNumber -join '|'
+    $templateNumberPattern = ($scenarioNumber | ForEach-Object {$_.ToString().PadLeft(3,'0')}) -join '|'
+    $pattern = '^({0})\-' -f $templateNumberPattern
     $filteredTemplates = $allTemplates | Where-Object {$_.Name -match $pattern}
 }
 ElseIf ($includeHighCostScenarios.IsPresent -and $includeManualConfigScenarios.IsPresent) {
