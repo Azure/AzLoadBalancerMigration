@@ -16,7 +16,13 @@ function UpdateVmssInstances {
     $vmssIntances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
     foreach ($vmssInstance in $vmssIntances) {
         log -Message "[UpdateVmssInstances] Updating VMSS Instance $($vmssInstance.Name)"
-        Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstance.InstanceId > $null
+        try {
+            Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstance.InstanceId > $null
+        }
+        catch {
+            log -Message "[UpdateVmssInstances] Fail to update VMSS Instance $($vmssInstance.Name). This instance must be updated manually. Error: $_" -Severity "Warning"
+        }
+
     }
 
     log -Message "[UpdateVmssInstances] Update Vmss Instances Completed"
