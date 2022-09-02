@@ -46,11 +46,16 @@ Function Test-SupportedMigrationScenario {
     }
     log -Message "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
 
-    # check that standard load balancer name is avaliable
+    # check if the load balancer name should be re-used, if so check if it's not standard already
     log -Message "[Test-SupportedMigrationScenario] Checking that standard load balancer name '$StdLoadBalancerName'"
-    If ((Get-AzLoadBalancer -Name $StdLoadBalancerName -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -ErrorAction SilentlyContinue)) {
-        log 'Error' "[Test-SupportedMigrationScenario] New standard load balancer resource '$StdLoadBalancerName' already exists; exiting!"
-        exit
+    $chkStdLB = (Get-AzLoadBalancer -Name $StdLoadBalancerName -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -ErrorAction SilentlyContinue)
+    If ($chkStdLB) {
+        log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' already exist. Checking if it is a Basic SKU for migration"
+        If ($chkStdLB.Sku.Name -ne 'Basic') {
+            log 'Error' "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is not a Basic SKU, so it cannot be migrated!"
+            Exit
+        }
+        log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is a Basic Load Balancer. The same name will be re-used."
     }
 
     # detecting if source load balancer is internal or external-facing
