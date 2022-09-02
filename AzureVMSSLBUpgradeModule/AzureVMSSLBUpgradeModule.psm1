@@ -1,6 +1,6 @@
 # verify that required Az modules are available
 
-If (!(Get-Module -Name Az.Accounts -ListAvailable)) {
+If (!(Get-Module -Name Az.Accounts -ListAvailable -Refresh)) {
     Write-Error "The 'Az.Accounts' PowerShell module is not installed on this system. To install the required modules for this script, run 'Install-Module -Name Az.Accounts,Az.Compute,Az.Network,Az.Resources'"
     return
 }
