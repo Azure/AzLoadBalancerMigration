@@ -133,6 +133,9 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
                 {
                   id: loadbalancer.outputs.backendpools[0].id
                 }
+                {
+                  id: loadbalancer.outputs.backendpools[1].id
+                }
               ]
             }
           }
