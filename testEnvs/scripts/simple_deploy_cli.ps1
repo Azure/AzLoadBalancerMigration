@@ -11,6 +11,9 @@ $lbName='BasicLB-LoadBalancer'
 
 $vmssBasicLBName='BasicLB-VMSS'
 
+# Delete the resource group
+az group delete --name $rg -y
+
 ##########################################
 # Create Azure Resource Group
 ##########################################

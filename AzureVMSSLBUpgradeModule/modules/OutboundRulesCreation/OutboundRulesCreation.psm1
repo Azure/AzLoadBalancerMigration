@@ -17,7 +17,20 @@ function OutboundRulesCreation {
             FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer)[0]
             BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name $backendAddressPool.Name)
         }
-        $StdLoadBalancer | Add-AzLoadBalancerOutboundRuleConfig @outboundRuleConfig > $null
+        try {
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerOutboundRuleConfig @outboundRuleConfig > $null
+        }
+        catch {
+            $message = @"
+                [OutboundRulesCreation] An error occured when adding Outbound Rule '$($backendAddressPool.Name)' to new Standard load
+                balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic
+                load balancer from the backup' file, add backend pool membership back state file for original pool membership), and retry the migration.  Error: $_
+"@
+            log "Error" $message
+            Exit
+        }
+
     }
     log -Message "[OutboundRulesCreation] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
     Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null

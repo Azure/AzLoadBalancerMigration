@@ -109,40 +109,16 @@ az network lb inbound-nat-rule create `
     --frontend-ip-name $lbIPName `
     --backend-pool-name $vmssBasicLBName
 
-############################################################
-# Create Azure Virtual Machine Scale Set for BasicLB
-############################################################
-# Create Network Security Group for BasicLB VMSS
-# az network nsg create `
-#     --resource-group $rg `
-#     --name $vmssBasicLBName"-NSG"
-
-# # Create Network Security Group Rule for BasicLB VMSS
-# az network nsg rule create `
-#     --resource-group $rg `
-#     --nsg-name $vmssBasicLBName"-NSG" `
-#     --name 'HTTP' `
-#     --protocol '*' `
-#     --direction inbound `
-#     --source-address-prefix '*' `
-#     --source-port-range '*' `
-#     --destination-address-prefix '*' `
-#     --destination-port-range 80 `
-#     --access allow `
-#     --priority 200
-
-# az network nsg rule create `
-#     --resource-group $rg `
-#     --nsg-name $vmssBasicLBName"-NSG" `
-#     --name 'HTTPs' `
-#     --protocol '*' `
-#     --direction inbound `
-#     --source-address-prefix '*' `
-#     --source-port-range '*' `
-#     --destination-address-prefix '*' `
-#     --destination-port-range 443 `
-#     --access allow `
-#     --priority 201
+# Create Azure Load Balancer NAT Rule
+az network lb inbound-nat-rule create `
+    --resource-group $rg `
+    --name 'Port-5000' `
+    --lb-name $lbName `
+    --protocol Tcp `
+    --frontend-port 5000 `
+    --backend-port 5000 `
+    --frontend-ip-name $lbIPName `
+    --backend-pool-name $vmssBasicLBName
 
 # Create VMSS BasicLB Flexible
 az vmss create `
@@ -160,17 +136,55 @@ az vmss create `
     --subnet $subnetBasicLBName `
     --subnet-address-prefix $subnetBasicLBAddressPrefix
 
-# az vmss create `
-#     --resource-group $rg `
-#     --name ($vmssBasicLBName+"2") `
-#     --image UbuntuLTS `
-#     --upgrade-policy-mode Manual `
-#     --vm-sku Standard_A0 `
-#     --instance-count 2 `
-#     --admin-username victor `
-#     --admin-password "H2OBarrentA@" `
-#     --load-balancer $lbName `
-#     --vnet-name $vnetName `
-#     --vnet-address-prefix $vnetAddressPrefix `
-#     --subnet $subnetBasicLBName `
-#     --subnet-address-prefix $subnetBasicLBAddressPrefix
+
+
+############################################################
+# Create Azure Virtual Machine Scale Set for BasicLB
+############################################################
+# Create Network Security Group for BasicLB VMSS
+az network nsg create `
+    --resource-group $rg `
+    --name $vmssBasicLBName"-NSG"
+
+# Create Network Security Group Rule for BasicLB VMSS
+az network nsg rule create `
+    --resource-group $rg `
+    --nsg-name $vmssBasicLBName"-NSG" `
+    --name 'HTTP' `
+    --protocol '*' `
+    --direction inbound `
+    --source-address-prefix '*' `
+    --source-port-range '*' `
+    --destination-address-prefix '*' `
+    --destination-port-range 80 `
+    --access allow `
+    --priority 200
+
+az network nsg rule create `
+    --resource-group $rg `
+    --nsg-name $vmssBasicLBName"-NSG" `
+    --name 'HTTPs' `
+    --protocol '*' `
+    --direction inbound `
+    --source-address-prefix '*' `
+    --source-port-range '*' `
+    --destination-address-prefix '*' `
+    --destination-port-range 443 `
+    --access allow `
+    --priority 201
+
+
+az vmss create `
+    --resource-group $rg `
+    --name ($vmssBasicLBName+"2") `
+    --image UbuntuLTS `
+    --upgrade-policy-mode Manual `
+    --vm-sku Standard_A0 `
+    --instance-count 2 `
+    --admin-username victor `
+    --admin-password "H2OBarrentA@" `
+    --nsg $vmssBasicLBName"-NSG" `
+    --vnet-name $vnetName `
+    --vnet-address-prefix $vnetAddressPrefix `
+    --subnet $subnetBasicLBName `
+    --subnet-address-prefix $subnetBasicLBAddressPrefix
