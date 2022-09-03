@@ -40,72 +40,66 @@
 #>
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\PublicFEMigration\PublicFEMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\RemoveLBFromVMSS\RemoveLBFromVMSS.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackendPoolMigration\BackendPoolMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\NatRulesMigration\NatRulesMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\InboundNatPoolsMigration\InboundNatPoolsMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ProbesMigration\ProbesMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\OutboundRulesCreation\OutboundRulesCreation.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ScenariosMigration\ScenariosMigration.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
-        [Parameter(Mandatory = $True)][string] $ResourceGroupName,
-        [Parameter(Mandatory = $True)][string] $BasicLoadBalancerName,
-        #Parameters for new Standard Load Balancer
-        # *** We still need to decide if we will allow the user to change the name of the LB or use the same name***
-        [Parameter(Mandatory = $True)][string] $StdLoadBalancerName
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
+        [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $false)][switch] $FollowLog
         )
+
+    # Set global variable to display log output in console
+    If ($FollowLog.IsPresent) {
+        $global:FollowLog = $true
+    }
 
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
 
+    log -Message "[AzureVMSSLBUpgrade] Checking that user is signed in to Azure PowerShell"
+    if (!($azContext = Get-AzContext -ErrorAction SilentlyContinue)) {
+        log 'Error' "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
+        return
+    }
+    log -Message "[AzureVMSSLBUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)'"
+
     # Load Azure Resources
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
-    $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
-    #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
-    #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
 
-    # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
-
-    # Deletion of Basic Load Balancer
-    RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
-
-    # Creation of Standard Load Balancer
-    $StdLoadBalancerDef = @{
-        ResourceGroupName = $ResourceGroupName
-        Name = $StdLoadBalancerName
-        SKU = "Standard"
-        location = $BasicLoadBalancer.Location
+    try {
+        $ErrorActionPreference = 'Stop'
+        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
+            $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+        }
+        log -Message "[AzureVMSSLBUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
-    $StdLoadBalancer = New-AzLoadBalancer @StdLoadBalancerDef
+    catch {
+        $message = @"
+            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
+            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
+            Error text: $_
+"@
+        log -severity Error -message $message
+
+        Exit
+    }
+
+    # verify basic load balancer configuration is a supported scenario
+    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName
 
     # Migration of Frontend IP Configurations
-    PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of NAT Rules
-    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Probes
-    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Load Balancing Rules
-        # *** Use default outbound access configuration **does default outbound use the standard LB public IP (matching the basic LB behavior)?
-        # We need to check if we will create an outbound rule for the Standard LB or not
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
-
+    switch ($scenario.ExternalOrInternal) {
+        'internal' {
+            InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+        }
+        'external' {
+            PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+        }
+    }
     log -Message "############################## Migration Completed ##############################"
 }
 

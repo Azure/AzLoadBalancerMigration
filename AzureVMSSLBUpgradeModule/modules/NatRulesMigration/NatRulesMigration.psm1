@@ -22,10 +22,34 @@ function NatRulesMigration {
             FrontendPortRangeEnd = $inboundNatRule.FrontendPortRangeEnd
             BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
         }
-        $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
+
+        try {
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
+        }
+        catch {
+            $message = @"
+            [NatRulesMigration] Failed to add inbound nat rule config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource 
+            group '$($StdLoadBalancer.ResourceGroupName)'. Migration will continue, FAILED RULE WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_ 
+"@
+            log "Error" $message
+        }
     }
     log -Message "[NatRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
-    Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
+
+    try {
+        $ErrorActionPreference = 'Stop'
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null   
+    }
+    catch {
+        $message = @"
+        [NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource 
+        group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule
+        configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load 
+        balancer. Error: $_
+"@
+        log "Error" $message
+    }
     log -Message "[NatRulesMigration] Nat Rules Migration Completed"
 }
 

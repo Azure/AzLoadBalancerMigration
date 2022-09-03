@@ -1,7 +1,7 @@
 Param (
     [string]$Location = 'australiaeast',
     [string]$KeyVaultResourceGroupName = 'rg-vmsstestingconfig',
-    [parameter(Mandatory = $false)][ValidatePattern('^\d\d\d$')][string[]]$ScenarioNumber,
+    [parameter(Mandatory = $false)][string[]]$ScenarioNumber,
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
     [switch]$Cleanup
@@ -9,10 +9,15 @@ Param (
 
 $ErrorActionPreference = 'Stop'
 
+If (!(Test-Path -Path ../scenarios)) {
+    Write-Error "This script should be executed from the ./testEnvs/scripts directory"
+    break
+}
 $allTemplates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
 
 If ($ScenarioNumber) {
-    $pattern = '^({0})\-' -f $ScenarioNumber -join '|'
+    $templateNumberPattern = ($scenarioNumber | ForEach-Object {$_.ToString().PadLeft(3,'0')}) -join '|'
+    $pattern = '^({0})\-' -f $templateNumberPattern
     $filteredTemplates = $allTemplates | Where-Object {$_.Name -match $pattern}
 }
 ElseIf ($includeHighCostScenarios.IsPresent -and $includeManualConfigScenarios.IsPresent) {
