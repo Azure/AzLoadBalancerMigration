@@ -4,7 +4,8 @@ Param (
     [parameter(Mandatory = $false)][string[]]$ScenarioNumber,
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
-    [switch]$Cleanup
+    [switch]$Cleanup,
+    [switch]$RunUpgrade
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,21 +17,21 @@ If (!(Test-Path -Path ../scenarios)) {
 $allTemplates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
 
 If ($ScenarioNumber) {
-    $templateNumberPattern = ($scenarioNumber | ForEach-Object {$_.ToString().PadLeft(3,'0')}) -join '|'
+    $templateNumberPattern = ($scenarioNumber | ForEach-Object { $_.ToString().PadLeft(3, '0') }) -join '|'
     $pattern = '^({0})\-' -f $templateNumberPattern
-    $filteredTemplates = $allTemplates | Where-Object {$_.Name -match $pattern}
+    $filteredTemplates = $allTemplates | Where-Object { $_.Name -match $pattern }
 }
 ElseIf ($includeHighCostScenarios.IsPresent -and $includeManualConfigScenarios.IsPresent) {
     $filteredTemplates = $allTemplates
 }
 ElseIf ($includeHighCostScenarios.IsPresent) {
-    $filteredTemplates = $allTemplates | Where-Object {$_.Name -notmatch 'MANUALCONFIG'}
+    $filteredTemplates = $allTemplates | Where-Object { $_.Name -notmatch 'MANUALCONFIG' }
 }
 ElseIf ($includeManualConfigScenarios.IsPresent) {
-    $filteredTemplates = $allTemplates | Where-Object {$_.Name -notmatch 'HIGHCOST'}
+    $filteredTemplates = $allTemplates | Where-Object { $_.Name -notmatch 'HIGHCOST' }
 }
 Else {
-    $filteredTemplates = $allTemplates | Where-Object {$_.Name -notmatch 'HIGHCOST|MANUALCONFIG'}
+    $filteredTemplates = $allTemplates | Where-Object { $_.Name -notmatch 'HIGHCOST|MANUALCONFIG' }
 }
 
 Write-Verbose "Deploying templates: $($filteredTemplates.Name)"
@@ -43,6 +44,27 @@ if ($Cleanup -and $null -ne $filteredTemplates) {
     Foreach-Object {
         "Removing Resource Group rg-$($_.BaseName)"
         $jobs += $(Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob)
+    }
+
+    $jobs | Wait-Job | Receive-Job
+    return
+}
+
+# if -RunUpgrade switch is supplied, the VMSS Load Balancer upgrade modules is run against all environments
+if ($RunUpgrade -and $null -ne $filteredTemplates) {
+    $jobs = @()
+
+    $filteredTemplates | 
+    Foreach-Object {
+        "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
+        $jobs += $(
+            Start-Job -InitializationScript { Import-Module ..\..\AzureVMSSLBUpgradeModule } `
+                -ScriptBlock { AzureVMSSLBUpgrade `
+                    -ResourceGroupName $input `
+                    -BasicLoadBalancerName 'lb-basic-01' `
+                    -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
+                -InputObject "rg-$($_.BaseName)"
+        )
     }
 
     $jobs | Wait-Job | Receive-Job

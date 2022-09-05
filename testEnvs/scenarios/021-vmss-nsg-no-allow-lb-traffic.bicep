@@ -45,6 +45,9 @@ module networkSecurityGroups '../modules/Microsoft.Network/networkSecurityGroups
     name: 'nsg-01'
     securityRules: []
   }
+  dependsOn: [
+    rg
+  ]
 }
 
 // basic lb

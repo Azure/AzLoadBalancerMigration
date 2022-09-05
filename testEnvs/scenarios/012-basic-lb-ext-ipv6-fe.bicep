@@ -15,12 +15,12 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
 
 //pip
 module pip1 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-pip-1'
+  name: '${uniqueString(deployment().name)}-pip-01'
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
     skuName: 'Basic'
-    name: 'pip-v4'
+    name: 'pip-01-v4'
     publicIPAddressVersion: 'IPv4'
   }
   dependsOn: [
@@ -29,12 +29,12 @@ module pip1 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
 }
 
 module pip2 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-pip-2'
+  name: '${uniqueString(deployment().name)}-pip-02'
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
     skuName: 'Basic'
-    name: 'pip-v6'
+    name: 'pip-02-v6'
     publicIPAddressVersion: 'IPv6'
   }
   dependsOn: [
@@ -70,7 +70,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
   name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-basi-c01'
+    name: 'lb-basic-01'
     location: location
     frontendIPConfigurations: [
       {

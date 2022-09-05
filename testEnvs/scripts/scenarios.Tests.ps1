@@ -19,42 +19,45 @@
     022-vmss-instance-protection_MANUALCONFIG.bicep
     023-vmss-high-instance-count_HIGHCOST.bicep
 #>
-function IsPrivateAddress {
-    Param
-    (
-        [string]$AddressString
-    )
-
-    $ErrorActionPreference = 'Stop'
-    [ref]$ipRef = $null
-
-    $result = [System.Net.IPAddress]::TryParse($AddressString, $ipRef)
-    if (!$result) {
-        return Write-Error -Exception "Error Parsing Ip Address $AddressString"
-    }
-
-    $ipBytes = $ipRef.Value.GetAddressBytes()
-    switch ($ipBytes[0]) {
-        10 {
-            return $true
-        }
-        172 {
-            return $($ipBytes[1] -lt 32 -and $ipBytes[1] -ge 16)
-        }
-        192 {
-            return $ipBytes[1] -eq 168
-        }
-        default {
-            return $false
-        }
-    }
-}
 
 Describe "Validate Upgrade Script Results" {
+    BeforeAll {
+        function IsPrivateAddress {
+            Param
+            (
+                [string]$AddressString
+            )
+        
+            $ErrorActionPreference = 'Stop'
+            [ref]$ipRef = $null
+        
+            $result = [System.Net.IPAddress]::TryParse($AddressString, $ipRef)
+            if (!$result) {
+                return Write-Error -Exception "Error Parsing Ip Address $AddressString"
+            }
+        
+            $ipBytes = $ipRef.Value.GetAddressBytes()
+            switch ($ipBytes[0]) {
+                10 { 
+                    return $true
+                }
+                172 {
+                    return $($ipBytes[1] -lt 32 -and $ipBytes[1] -ge 16)
+                }
+                192 {
+                    return $ipBytes[1] -eq 168
+                }
+                default {
+                    return $false
+                }
+            }
+        }
+    }
     Context 'Validate Scenario - 001-basic-lb-int-single-fe' {
         BeforeAll {
             $rgName = 'rg-001-basic-lb-int-single-fe'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -75,7 +78,7 @@ Describe "Validate Upgrade Script Results" {
             $lb.LoadBalancingRules.Count | Should -BeExactly 1
         }
 
-        It "Load Balancer has a single Probe" {   
+        It "Load Balancer has 1 Probe" {   
             $lb.Probes.Count | Should -Be 1
         }
 
@@ -87,7 +90,8 @@ Describe "Validate Upgrade Script Results" {
     Context 'Validate Scenario - 002-basic-lb-int-multi-fe' {
         BeforeAll {
             $rgName = 'rg-002-basic-lb-int-multi-fe'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -112,7 +116,7 @@ Describe "Validate Upgrade Script Results" {
             $lb.LoadBalancingRules.Count | Should -BeExactly 2
         }
 
-        It "Load Balancer has a single Probe" {   
+        It "Load Balancer has 1 Probe" {   
             $lb.Probes.Count | Should -Be 1
         }
 
@@ -125,17 +129,19 @@ Describe "Validate Upgrade Script Results" {
     Context 'Validate Scenario - 003-basic-lb-ext-single-fe' {
         BeforeAll {
             $rgName = 'rg-003-basic-lb-ext-single-fe'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
+            $nsg = Get-AzResource -ResourceId $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].NetworkSecurityGroup.Id | Get-AzNetworkSecurityGroup
         }
 
         It "Load Balancer has a Standard LoadBalancer" {   
             $lb.SKU.Name | Should -Be 'Standard'
         }
 
-        It "Load Balancer has a PrivateIpAddress" {   
-            IsPrivateAddress($lb.FrontendIpConfigurations.PrivateIpAddress) | Should -Be $true
+        It "Load Balancer has a Public IpAddress" {   
+            IsPrivateAddress((Get-AzResource -ResourceId $lb.FrontendIpConfigurations.PublicIpAddress.Id | Get-AzPublicIpAddress).IpAddress) | Should -Be $false
         }
 
         It "Load Balancer has a single FrontendIpConfiguration" {   
@@ -146,19 +152,28 @@ Describe "Validate Upgrade Script Results" {
             $lb.LoadBalancingRules.Count | Should -BeExactly 1
         }
 
-        It "Load Balancer has a single Probe" {   
+        It "Load Balancer has 1 Probe" {   
             $lb.Probes.Count | Should -Be 1
         }
 
         It "VMSS has a single LoadBalancer BackendAddress Pool" {   
             $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
         }
+
+        It "VMSS NIC has a Network Security Group" {
+            $nsg.SecurityRules.Count | Should -Be 1
+        }
+
+        It "Network Security Group has an inbound allow rule for port 80" {
+            ($nsg.SecurityRules[0].DestinationPortRange -eq 80 -and $nsg.SecurityRules[0].Access -eq 'Allow') | Should -be $true
+        }
     }
 
     Context '004-basic-lb-ext-multi-fe' {
         BeforeAll {
             $rgName = 'rg-004-basic-lb-ext-multi-fe'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -167,12 +182,12 @@ Describe "Validate Upgrade Script Results" {
             $lb.SKU.Name | Should -Be 'Standard'
         }
 
-        It "Load Balancer FrontendIpConfiguration 0 has a Public Ip Address" {   
-            IsPrivateAddress($lb.FrontendIpConfigurations[0].PublicIpAddress) | Should -Be $false
+        It "Load Balancer has a Public IpAddress" {   
+            IsPrivateAddress((Get-AzResource -ResourceId $lb.FrontendIpConfigurations[0].PublicIpAddress.Id | Get-AzPublicIpAddress).IpAddress) | Should -Be $false
         }
 
-        It "Load Balancer FrontendIpConfiguration 1 has a Public Ip Address" {   
-            IsPrivateAddress($lb.FrontendIpConfigurations[1].PublicIpAddress) | Should -Be $false
+        It "Load Balancer has a Public IpAddress" {   
+            IsPrivateAddress((Get-AzResource -ResourceId $lb.FrontendIpConfigurations[1].PublicIpAddress.Id | Get-AzPublicIpAddress).IpAddress) | Should -Be $false
         }
 
         It "Load Balancer has 2 FrontendConfigurations" {   
@@ -183,12 +198,12 @@ Describe "Validate Upgrade Script Results" {
             $lb.LoadBalancingRules.Count | Should -BeExactly 2
         }
 
-        It "Load Balancer has a single Probe" {   
-            $lb.Probes.Count | Should -Be 1
+        It "Load Balancer has 2 Probes" {   
+            $lb.Probes.Count | Should -Be 2
         }
 
         It "VMSS has a single LoadBalancer BackendAddress Pool" {   
-            $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
+            $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations.LoadBalancerBackendAddressPools.Count | 
             Should -BeExactly 1
         }
     }
@@ -196,7 +211,8 @@ Describe "Validate Upgrade Script Results" {
     Context '005-basic-lb-int-single-be' {
         BeforeAll {
             $rgName = 'rg-005-basic-lb-int-single-be'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -210,14 +226,14 @@ Describe "Validate Upgrade Script Results" {
         }
 
         It "Load Balancer FrontendIpConfiguration has a PrivateIpAddress" {   
-            IsPrivateAddress($lb.FrontendIpConfigurations.PrivateIpAddress) | Should -Be $true
+            IsPrivateAddress($lb.FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
         }
 
         It "Load Balancer has 1 LoadBalancingRule" {   
             $lb.LoadBalancingRules.Count | Should -BeExactly 1
         }
 
-        It "Load Balancer has a single Probe" {   
+        It "Load Balancer has 1 Probe" {   
             $lb.Probes.Count | Should -Be 1
         }
 
@@ -230,7 +246,8 @@ Describe "Validate Upgrade Script Results" {
     Context '006-basic-lb-int-multiple-be' {
         BeforeAll {
             $rgName = 'rg-006-basic-lb-int-multi-be'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -255,20 +272,21 @@ Describe "Validate Upgrade Script Results" {
             $lb.LoadBalancingRules.Count | Should -BeExactly 1
         }
 
-        It "Load Balancer has a single Probe" {   
+        It "Load Balancer has 1 Probe" {   
             $lb.Probes.Count | Should -Be 1
         }
 
-        It "VMSS has a 2 LoadBalancer BackendAddress Pools" {   
+        It "VMSS nic has 1 LoadBalancer BackendAddress Pool" {   
             $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
-            Should -BeExactly 2
+            Should -BeExactly 1
         }
     }
 
     Context '007-basic-lb-int-nat-rule' {
         BeforeAll {
             $rgName = 'rg-007-basic-lb-int-nat-rule'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -307,52 +325,11 @@ Describe "Validate Upgrade Script Results" {
         }
     }
 
-    Context '007-basic-lb-int-nat-rule' {
+    Context '008-basic-lb-nat-pool' {
         BeforeAll {
-            $rgName = 'rg-007-basic-lb-int-nat-rule'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
-            $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
-            $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
-        }
-        
-        It "Load Balancer has a Standard LoadBalancer" {   
-            $lb.SKU.Name | Should -Be 'Standard'
-        }
-
-        It "Load Balancer has 1 FrontendConfiguration" {   
-            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
-        }
-
-        It "Load Balancer FrontendConfiguration has a Private Ip Address" {   
-            IsPrivateAddress($lb.FrontendIpConfigurations.PrivateIpAddress) | Should -Be $true
-        }
-
-        It "Load Balancer has 1 LoadBalancingRule" {   
-            $lb.LoadBalancingRules.Count | Should -BeExactly 1
-        }
-
-        It "Load Balancer has 1 BackendAddressPools" {
-            $lb.BackendAddressPools.Count | Should -BeExactly 1
-        }
-
-        It "Load Balancer has 1 Probe" {   
-            $lb.Probes.Count | Should -Be 1
-        }
-
-        It "Load Balancer has 1 inbound Nat rule" {
-            $lb.InboundNatRules.Count | Should -BeExactly 1
-        }
-
-        It "VMSS has 1 LoadBalancer BackendAddress Pool" {   
-            $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
-            Should -BeExactly 1
-        }
-    }
-
-    Context '008-basic-lb-int-nat-pool' {
-        BeforeAll {
-            $rgName = 'rg-008-basic-lb-int-nat-pool'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rgName = 'rg-008-basic-lb-nat-pool'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -390,13 +367,14 @@ Describe "Validate Upgrade Script Results" {
     Context '009-basic-lb-ext-basic-static-pip' {
         BeforeAll {
             $rgName = 'rg-009-basic-lb-ext-basic-static-pip'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
             $pip = $(Get-AzResource -ResourceID $lb.FrontendIpConfigurations[0].PublicIpAddress.id | Get-AzPublicIpAddress)
         }
 
-        It "Load Balancer has a Standard LoadBalancer" {   
+        It "Load Balancer has a Standard Sku" {   
             $lb.SKU.Name | Should -Be 'Standard'
         }
 
@@ -416,7 +394,7 @@ Describe "Validate Upgrade Script Results" {
             $pip.PublicIpAllocationMethod | Should -Be 'Static'
         }
 
-        It "Public Ip has a Standard SKu" {
+        It "Public Ip has a Standard Sku" {
             $pip.Sku.Name | Should -Be 'Standard'
         }
 
@@ -433,7 +411,8 @@ Describe "Validate Upgrade Script Results" {
     Context '012-basic-lb-ext-ipv6-fe' {
         BeforeAll {
             $rgName = 'rg-012-basic-lb-ext-ipv6-fe'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
             $pip1 = $(Get-AzResource -ResourceID $lb.FrontendIpConfigurations[0].PublicIpAddress.id | Get-AzPublicIpAddress)
@@ -489,7 +468,8 @@ Describe "Validate Upgrade Script Results" {
     Context '013-vmss-multi-be-single-lb' {
         BeforeAll {
             $rgName = 'rg-013-vmss-multi-be-single-lb'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
         }
@@ -514,20 +494,26 @@ Describe "Validate Upgrade Script Results" {
             $lb.Probes.Count | Should -Be 1
         }
 
-        It "VMSS has 2 LoadBalancer BackendAddress Pools" {   
+        It "LoadBalancer has 2 BackendPools" {
+            $lb.BackendAddressPools.Count | Should -BeExactly 2
+        }
+
+        It "VMSS nic has 1 LoadBalancer BackendAddress Pool" {   
             $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
-            Should -BeExactly 2
+            Should -BeExactly 1
         }
     }
 
     Context '014-vmss-multi-be-multi-lb' {
         BeforeAll {
             $rgName = 'rg-014-vmss-multi-be-multi-lb'
-            $vmss = $(Get-AzVmss -ResourceGroup $rgName)
-            $lbs = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools | ForEach-Object {$($_.Id).Split("/")[-3]} | Foreach-Object {Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_}
-            $lbInt = $lbs | Where-Object {$null -ne $_.FrontendIpConfigurations[0].PrivateIpAddress}
-            $lbExt = $lbs | Where-Object {$null -eq $_.FrontendIpConfigurations[0].PrivateIpAddress}
-            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id | Get-AzPublicIpAddress)
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
+            $lbs = $(Get-AzLoadBalancer -ResourceGroup $rg.ResourceGroupName)
+            $lbs = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools | ForEach-Object { $($_.Id).Split("/")[-3] } | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $lbInt = $lbs | Where-Object { $null -ne $_.FrontendIpConfigurations[0].PrivateIpAddress }
+            $lbExt = $lbs | Where-Object { $null -eq $_.FrontendIpConfigurations[0].PrivateIpAddress }
+            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
         }
 
         It "Internal Load Balancer has a Standard SU" {   
@@ -535,12 +521,12 @@ Describe "Validate Upgrade Script Results" {
         }
 
         It "Internal Load Balancer has 1 FrontendConfiguration" {   
-            $lbInt.FrontendIpConfigurations.Count | Should -BeExactly 1
+            $lbs[0].FrontendIpConfigurations.Count | Should -BeExactly 1
         }
 
         It "Internal Load Balancer FrontendConfiguration has a Private Ip Address" { 
             
-            IsPrivateAddress($lbInt.FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
+            IsPrivateAddress($lbs[0].FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
         }
 
         It "Internal Load Balancer has 1 LoadBalancing Rule" {   
@@ -566,6 +552,41 @@ Describe "Validate Upgrade Script Results" {
         It "VMSS has 2 LoadBalancer BackendAddress Pools" {   
             $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
             Should -BeExactly 2
+        }
+    }
+
+    Context '016-vmss-automatic-upgrade-policy' {
+        BeforeAll {
+            $rgName = 'rg-016-vmss-automatic-upgrade-policy'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
+            $lb = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object {Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_}
+            # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+        }
+
+        It "Internal Load Balancer has a Standard SU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer FrontendConfiguration has a Private Ip Address" { 
+            
+            IsPrivateAddress($lb[0].FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
+        }
+
+        It "Internal Load Balancer has 1 LoadBalancing Rule" {   
+            $lb.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer has 1 Probe" {   
+            $lb.Probes.Count | Should -Be 1
+        }
+
+        It "VMSS has 2 LoadBalancer BackendAddress Pools" {   
+            $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
         }
     }
 } 
