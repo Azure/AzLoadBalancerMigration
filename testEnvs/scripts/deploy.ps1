@@ -4,8 +4,8 @@ Param (
     [parameter(Mandatory = $false)][string[]]$ScenarioNumber,
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
-    [switch]$Cleanup,
-    [switch]$RunUpgrade
+    [switch]$Cleanup, # removes all test environments (in parallel)
+    [switch]$RunUpgrade # executes the upgrade module against all test environments (in parallel)
 )
 
 $ErrorActionPreference = 'Stop'
