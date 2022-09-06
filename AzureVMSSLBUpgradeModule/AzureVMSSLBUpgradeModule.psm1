@@ -14,6 +14,7 @@ ForEach ($requiredModule in $requiredModules) {
 
     If ($module.count -gt 1) {
         # import the module and use imported version number
+        $multipleVersions = $true
         $module = Import-Module -Name $requiredModule.Name -PassThru
     }
 
@@ -26,6 +27,11 @@ ForEach ($requiredModule in $requiredModules) {
     }
     else {
         Write-Error ($versionMessage -f $requiredModule.Name,$module.Version,$requiredModule.requiredVersion)
+        
+        If ($multipleVersions) {
+            Write-Warning "More than one version of module '$($requiredModule.name)' exist on this system. Uninstall old versions and try again!"
+        }   
+
         return
     }
 }
