@@ -16,7 +16,10 @@ ForEach ($requiredModule in $requiredModules) {
         Write-Error ($installMessage -f $requiredModule.name)
         return
     }
-    ElseIf ($module.Version -lt $requiredModule.requiredVersion) {
+    ElseIf ($module.Version -ge $requiredModule.requiredVersion) {
+        continue
+    }
+    else {
         Write-Error ($versionMessage -f $requiredModule.Name,$module.Version,$requiredModule.requiredVersion)
         return
     }
