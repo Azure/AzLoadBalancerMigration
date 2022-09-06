@@ -46,7 +46,7 @@ if ($Cleanup -and $null -ne $filteredTemplates) {
         $jobs += $(Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob)
     }
 
-    $jobs | Wait-Job 
+    $jobs | Wait-Job | Receive-Job
     return
 }
 
