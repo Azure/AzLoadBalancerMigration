@@ -43,20 +43,25 @@ module pip2 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
 }
 
 // vnet
-module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bicep' = {
+module virtualNetworks '../modules/vnet/vnet.bicep' = {
   name: '${uniqueString(deployment().name)}-virtualNetworks'
   scope: resourceGroup(resourceGroupName)
   params: {
-    // Required parameters
+    name: '${uniqueString(deployment().name)}-virtualNetworks'
     location: location
-    addressPrefixes: [
+    vNetAddressPrefixes: [
       '10.0.0.0/16'
+      'fd00:db8:deca::/48'
     ]
-    name: 'vnet-01'
     subnets: [
       {
         name: 'subnet1'
-        addressPrefix: '10.0.1.0/24'
+        properties: {
+          addressPrefixes: [
+            '10.0.1.0/24'
+            'fd00:db8:deca::/64'
+          ]
+        }
       }
     ]
   }
@@ -64,6 +69,32 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     rg
   ]
 }
+
+// module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bicep' = {
+//   name: '${uniqueString(deployment().name)}-virtualNetworks'
+//   scope: resourceGroup(resourceGroupName)
+//   params: {
+//     // Required parameters
+//     location: location
+//     addressPrefixes: [
+//       '10.0.0.0/16'
+//       'fd00:db8:deca::/48'
+//     ]
+//     name: 'vnet-01'
+//     subnets: [
+//       {
+//         name: 'subnet1'
+//         addressPrefixes: [
+//           '10.0.1.0/24'
+//           'fd00:db8:deca::/64'
+//         ]
+//       }
+//     ]
+//   }
+//   dependsOn: [
+//     rg
+//   ]
+// }
 
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
@@ -86,6 +117,9 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
       {
         name: 'be-01'
       }
+      {
+        name: 'be-ipv6'
+      }
     ]
     inboundNatRules: []
     loadBalancerSku: 'Basic'
@@ -98,6 +132,17 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
         name: 'rule-01'
+        probeName: 'probe-01'
+        protocol: 'Tcp'
+      }
+      {
+        backendAddressPoolName: 'be-ipv6'
+        backendPort: 80
+        frontendIPConfigurationName: 'fe-02'
+        frontendPort: 8080
+        idleTimeoutInMinutes: 4
+        loadDistribution: 'Default'
+        name: 'rule-02'
         probeName: 'probe-01'
         protocol: 'Tcp'
       }
@@ -162,6 +207,20 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
               loadBalancerBackendAddressPools: [
                 {
                   id: loadbalancer.outputs.backendpools[0].id
+                }
+              ]
+            }
+          }
+          {
+            name: 'ipconfig2'
+            properties: {
+              subnet: {
+                id: virtualNetworks.outputs.subnetResourceIds[0]
+              }
+              privateIPAddressVersion: 'IPv6'
+              loadBalancerBackendAddressPools: [
+                {
+                  id: loadbalancer.outputs.backendpools[1].id
                 }
               ]
             }
