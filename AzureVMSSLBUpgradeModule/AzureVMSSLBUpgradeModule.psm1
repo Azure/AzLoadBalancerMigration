@@ -12,6 +12,11 @@ $versionMessage = "The installed '{0}' PowerShell module version '{1}' is outdat
 ForEach ($requiredModule in $requiredModules) {
     $module = Get-Module -Name $requiredModule.name -ListAvailable -Refresh
 
+    If ($module.count -gt 1) {
+        # import the module and use imported version number
+        $module = Import-Module -Name $requiredModule.Name -PassThru
+    }
+
     If ([string]::IsNullOrEmpty($module)) {
         Write-Error ($installMessage -f $requiredModule.name)
         return
