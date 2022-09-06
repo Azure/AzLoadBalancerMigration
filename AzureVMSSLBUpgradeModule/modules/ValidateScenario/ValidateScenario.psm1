@@ -66,6 +66,16 @@ Function Test-SupportedMigrationScenario {
     }
     ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)) {
         log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)', so this LB is External"
+
+        # Detecting if there is a frontend IPV6 configuration, if so, exit
+        log -Message "[Test-SupportedMigrationScenario] Determining if there is a frontend IPV6 configuration"
+        foreach($frontendIP in $BasicLoadBalancer.FrontendIpConfigurations){
+            $pip = Get-azPublicIpAddress -Name $frontendIP.PublicIpAddress.Id.split("/")[8] -ResourceGroupName $frontendIP.PublicIpAddress.Id.split("/")[4]
+            if($pip.PublicIpAddressVersion -eq "IPv6"){
+                log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error"
+                exit
+            }
+        }
         $scenario.ExternalOrInternal = 'External'
     }
     ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix)) {
