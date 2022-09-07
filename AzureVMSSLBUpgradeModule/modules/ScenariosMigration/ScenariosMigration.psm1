@@ -176,14 +176,79 @@ function InternalLBMigration {
 
 }
 
-function CreateLBFromBackup {
+function RestoreExternalLBMigration {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName
         )
 
+        log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+        # Creation of Standard Load Balancer
+        $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
+
+        # Migration of Frontend IP Configurations
+        PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Backend Address Pools
+        BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of NAT Rules
+        NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Inbound NAT Pools
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Probes
+        ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Load Balancing Rules
+        LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Creating Outbound Rules for SNAT
+        OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+
+        # Creating NSG for Standard Load Balancer
+        NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+}
+
+function RestoreInternalLBMigration {
+    Param(
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName
+        )
+
+        log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
+        # Creation of Standard Load Balancer
+        $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
+
+        # Migration of Private Frontend IP Configurations
+        PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
+
+        # Migration of Backend Address Pools
+        BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of NAT Rules
+        #NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Inbound NAT Pools
+        #InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Probes
+        ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Migration of Load Balancing Rules
+        LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+        # Creating Outbound Rules for SNAT
+        #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+
+        # Creating NSG for Standard Load Balancer
+        #NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
 }
 
 Export-ModuleMember -Function PublicLBMigration
 Export-ModuleMember -Function InternalLBMigration
-Export-ModuleMember -Function CreateLBFromBackup
+Export-ModuleMember -Function RestoreInternalLBMigration
+Export-ModuleMember -Function RestoreExternalLBMigration
