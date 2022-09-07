@@ -27,14 +27,17 @@ ForEach ($requiredModule in $requiredModules) {
     }
     else {
         Write-Error ($versionMessage -f $requiredModule.Name,$module.Version,$requiredModule.requiredVersion)
-        
+
         If ($multipleVersions) {
             Write-Warning "More than one version of module '$($requiredModule.name)' exist on this system. Uninstall old versions and try again!"
-        }   
+        }
 
         return
     }
 }
+
+# Supress warnings about Az modules
+Update-AzConfig -Scope Process -DisplayBreakingChangeWarning $false -AppliesTo Az > $null
 
 Import-Module $PSScriptRoot\modules\AzureVMSSLBUpgrade\AzureVMSSLBUpgrade.psd1
 
