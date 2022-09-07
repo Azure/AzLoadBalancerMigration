@@ -17,9 +17,9 @@ function BackendPoolMigration {
         }
         catch {
             $message = @"
-                [BackendPoolMigration] An error occured when adding a backend pool to the new Standard LB '$StdLoadBalancerName'. To recover, 
-                redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
+                [BackendPoolMigration] An error occured when adding a backend pool to the new Standard LB '$StdLoadBalancerName'. To recover,
+                redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...'
+                file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...'
                 BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
             log 'Error' $message
@@ -35,14 +35,13 @@ function BackendPoolMigration {
 
             try {
                 $ErrorActionPreference = 'Stop'
-                $vmssStatic = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
                 $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
             }
             catch {
                 $message = @"
-                    [BackendPoolMigration] An error occured when calling 'Get-AzVmss -ResourceGroupName '$vmssRg' -VMScaleSetName '$vmssName'. To recover, 
-                    redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                    file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
+                    [BackendPoolMigration] An error occured when calling 'Get-AzVmss -ResourceGroupName '$vmssRg' -VMScaleSetName '$vmssName'. To recover,
+                    redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...'
+                    file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...'
                     BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
                 log 'Error' $message
@@ -50,37 +49,25 @@ function BackendPoolMigration {
             }
 
             log -Message "[BackendPoolMigration] Adding BackendAddressPool to VMSS $($vmss.Name)"
-            foreach ($networkInterfaceConfiguration in $vmssStatic.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+            foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                $genericListSubResource = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
                 foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
                     if ($ipConfiguration.Name -contains $BackendIpConfigurationName) {
-                        $vmssipConfigDef = @{
-                            Name = $ipConfiguration.Name
-                            # ***Need to check what to do about InboundNatPools
-                            #LoadBalancerInboundNatPoolsId = $null
-                            LoadBalancerBackendAddressPoolsId = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $basicBackendAddressPool.Name}).Id
-                            SubnetId = $ipConfiguration.Subnet.Id
-                        }
-
                         try {
-                            $ErrorActionPreference = 'Stop'
-                            $vmssipConfig = New-azVmssIPConfig @vmssipConfigDef
+                            $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
+                            $subResource.Id = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $basicBackendAddressPool.Name}).Id
+                            $genericListSubResource.Add($subResource)
                         }
                         catch {
                             $message = @"
-                                [BackendPoolMigration] An error occured creating a new VMSS IP Config. To recover, 
-                                redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                                file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
-                                BackendIpConfigurations), address the following error, and try again. Error message: $_
+                                [BackendPoolMigration] An error occured setting the LoadBalancerBackendAddressPools back to VMSS IpConfiguration. Error message: $_
 "@
                             log 'Error' $message
                             Exit
                         }
-                        
-                        $nicconfigname = $networkInterfaceConfiguration.Name
-                        Remove-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname > $null
-                        Add-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname -Primary $true -IPConfiguration $vmssipConfig > $null
                     }
                 }
+                $ipConfiguration.LoadBalancerBackendAddressPools = $genericListSubResource
             }
             log -Message "[BackendPoolMigration] Saving VMSS $($vmss.Name)"
 
@@ -90,9 +77,9 @@ function BackendPoolMigration {
             }
             catch {
                 $message = @"
-                    [BackendPoolMigration] An error occured when attempting to update VMSS network config new Standard 
-                    LB backend pool membership. To recover, redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                    file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
+                    [BackendPoolMigration] An error occured when attempting to update VMSS network config new Standard
+                    LB backend pool membership. To recover, redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...'
+                    file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...'
                     BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
                 log 'Error' $message

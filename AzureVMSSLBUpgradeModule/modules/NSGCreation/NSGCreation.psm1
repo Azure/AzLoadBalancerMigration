@@ -18,7 +18,7 @@ function NSGCreation {
         # Check if VMSS already has a NSG
         log -Message "[NSGCreation] Checking if VMSS Named: $($vmss.Name) has a NSG"
         if (![string]::IsNullOrEmpty($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.NetworkSecurityGroup)) {
-            log -Message "[NSGCreation] NSG detected in VMSS Named: $($vmss.Name) NetworkInterfaceConfigurations.NetworkSecurityGroup Id: $($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.NetworkSecurityGroup)" -severity "Warning"
+            log -Message "[NSGCreation] NSG detected in VMSS Named: $($vmss.Name) NetworkInterfaceConfigurations.NetworkSecurityGroup Id: $($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.NetworkSecurityGroup.Id)" -severity "Warning"
             log -Message "[NSGCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Warning"
             break
         }

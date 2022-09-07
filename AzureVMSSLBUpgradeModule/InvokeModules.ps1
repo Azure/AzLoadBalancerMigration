@@ -2,8 +2,8 @@ Remove-Module AzureVMSSLBUpgradeModule -force
 Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureVMSSLBUpgradeModule\AzureVMSSLBUpgradeModule.psd1 -Force
 
 #AzureVMSSLBUpgrade -ResourceGroupName basiclb -BasicLoadBalancerName basiclb-loadbalancer -StandardLoadBalancerName stdlb-loadbalancer
-#AzureVMSSLBUpgrade -ResourceGroupName basiclb -BasicLoadBalancerName basiclb-loadbalancer
-AzureVMSSLBUpgrade -RestoreFromJsonFile State-BasicLB-LoadBalancer-basiclb-20220907T1020466592.json
+# AzureVMSSLBUpgrade -ResourceGroupName basiclb -BasicLoadBalancerName basiclb-loadbalancer
+AzureVMSSLBUpgrade -RestoreFromJsonFile State-BasicLB-LoadBalancer-basiclb-20220907T1752322840.json
 #AzureVMSSLBUpgrade -ResourceGroupName "rg-009-basic-lb-ext-basic-static-pip" -BasicLoadBalancerName "lb-basic-01"
 
 # Test IPV6
