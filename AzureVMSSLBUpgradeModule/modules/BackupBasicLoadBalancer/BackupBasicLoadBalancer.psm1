@@ -55,6 +55,24 @@ function BackupBasicLoadBalancer {
         log -Severity Error -Message $message
         Exit
     }
+
+    # Backup VMSS Object
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
+    foreach ($vmssId in $vmssIds) {
+        $vmssName = $vmssId.split("/")[8]
+        $vmssRg = $vmssId.Split('/')[4]
+        try {
+            $ErrorActionPreference = 'Stop'
+            $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
+            $outputFileNameVMSS = ('VMSS-' + $vmss.Name + "-" + $vmss.ResourceGroupName + "-" + $backupDateTime + ".json")
+            [System.Text.Json.JsonSerializer]::Serialize($vmss,[Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet],$options) | Out-File -FilePath $outputFileNameVMSS
+        }
+        catch {
+            $message = "[BackupBasicLoadBalancer] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
+            log -Severity Error -Message $message
+            Exit
+        }
+    }
     log -Message "[BackupBasicLoadBalancer] ARM Template Backup Basic Load Balancer to file $($newExportedResourceFileName) Completed"
 }
 Export-ModuleMember -Function BackupBasicLoadBalancer
