@@ -49,8 +49,9 @@ function AzureVMSSLBUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $RestoreFromJsonFile,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePath,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
 
@@ -66,18 +67,18 @@ function AzureVMSSLBUpgrade {
         log 'Error' "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
         return
     }
-    log -Message "[AzureVMSSLBUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)'"
+    log -Message "[AzureVMSSLBUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
 
     # Load Azure Resources
     log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
 
     try {
         $ErrorActionPreference = 'Stop'
-        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer") -and (!$PSBoundParameters.ContainsKey("RestoreFromJsonFile"))) {
+        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer") -and (!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
             $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
         }
         elseif (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
-            $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $RestoreFromJsonFile
+            $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePath
         }
         log -Message "[AzureVMSSLBUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
@@ -99,7 +100,7 @@ function AzureVMSSLBUpgrade {
     # Migration of Frontend IP Configurations
     switch ($scenario.ExternalOrInternal) {
         'internal' {
-            if ((!$PSBoundParameters.ContainsKey("RestoreFromJsonFile"))) {
+            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
                 InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
             }
             else {
@@ -107,7 +108,7 @@ function AzureVMSSLBUpgrade {
             }
         }
         'external' {
-            if ((!$PSBoundParameters.ContainsKey("RestoreFromJsonFile"))) {
+            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
                 PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
             }
             else {

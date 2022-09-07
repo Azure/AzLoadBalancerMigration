@@ -29,26 +29,32 @@ function RestoreLoadBalancer {
 
 function BackupBasicLoadBalancer {
     param (
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $true)] $RecoveryBackupPath
     )
-    log -Message "[BackupBasicLoadBalancer] Initiating Backup of Basic Load Balancer Configurations"
+    log -Message "[BackupBasicLoadBalancer] Initiating Backup of Basic Load Balancer Configurations to path '$RecoveryBackupPath'"
     try {
         $ErrorActionPreference = 'Stop'
 
         $backupDateTime = Get-Date -Format FileDateTime
+        
+        # export serialized JSON object of Basic LB for automated recovery scenarios
         $outputFileName = ('State-' + $BasicLoadBalancer.Name + "-" + $BasicLoadBalancer.ResourceGroupName + "-" + $backupDateTime + ".json")
-        #ConvertTo-Json -Depth 100 $BasicLoadBalancer | Out-File -FilePath $outputFileName
+        $outputFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileName
 
         $options = [System.Text.Json.JsonSerializerOptions]::new()
         $options.WriteIndented = $true
         #$options.IgnoreReadOnlyFields = $true # This is only available in PS 7
         $options.IgnoreReadOnlyProperties = $true
-        [System.Text.Json.JsonSerializer]::Serialize($BasicLoadBalancer,[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer],$options) | Out-File -FilePath $outputFileName
-        log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer to file $outputFileName Completed"
+        [System.Text.Json.JsonSerializer]::Serialize($BasicLoadBalancer,[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer],$options) | Out-File -FilePath $outputFilePath
+        log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer to file $outputFilePath Completed"
 
-        Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization > $null
+        # export ARM template of Basic LB for manual recovery scenarios
+        Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization -Path $RecoveryBackupPath > $null
         $newExportedResourceFileName = ("ARMTemplate-" + $BasicLoadBalancer.Name + "-" + $BasicLoadBalancer.ResourceGroupName + '-' + $backupDateTime + ".json")
-        Move-Item ($BasicLoadBalancer.ResourceGroupName + ".json") $newExportedResourceFileName
+        $exportedResourceFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath $newExportedResourceFileName
+        Rename-Item -Path $exportedResourceFilePath -NewName $newExportedResourceFileName
+
     }
     catch {
         $message = "[BackupBasicLoadBalancer] An error occured while exporting the basic load balancer '$($BasicLoadBalancer.Name)' to an ARM template for backup purposes. Error: $_"
@@ -65,7 +71,9 @@ function BackupBasicLoadBalancer {
             $ErrorActionPreference = 'Stop'
             $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
             $outputFileNameVMSS = ('VMSS-' + $vmss.Name + "-" + $vmss.ResourceGroupName + "-" + $backupDateTime + ".json")
-            [System.Text.Json.JsonSerializer]::Serialize($vmss,[Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet],$options) | Out-File -FilePath $outputFileNameVMSS
+            $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
+
+            [System.Text.Json.JsonSerializer]::Serialize($vmss,[Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet],$options) | Out-File -FilePath $outputFilePathVSS
         }
         catch {
             $message = "[BackupBasicLoadBalancer] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
