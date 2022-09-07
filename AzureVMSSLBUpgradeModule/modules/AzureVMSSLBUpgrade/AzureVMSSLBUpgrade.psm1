@@ -40,14 +40,16 @@
 #>
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ScenariosMigration\ScenariosMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 
 function AzureVMSSLBUpgrade {
     Param(
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $RestoreFromJsonFile,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
@@ -71,8 +73,11 @@ function AzureVMSSLBUpgrade {
 
     try {
         $ErrorActionPreference = 'Stop'
-        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
+        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer") -and (!$PSBoundParameters.ContainsKey("RestoreFromJsonFile"))) {
             $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
+        }
+        elseif (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
+            $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $RestoreFromJsonFile
         }
         log -Message "[AzureVMSSLBUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
@@ -94,10 +99,20 @@ function AzureVMSSLBUpgrade {
     # Migration of Frontend IP Configurations
     switch ($scenario.ExternalOrInternal) {
         'internal' {
-            InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+            if ((!$PSBoundParameters.ContainsKey("RestoreFromJsonFile"))) {
+                InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+            }
+            else {
+                RestoreInternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+            }
         }
         'external' {
-            PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+            if ((!$PSBoundParameters.ContainsKey("RestoreFromJsonFile"))) {
+                PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+            }
+            else {
+                RestoreExternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+            }
         }
     }
     log -Message "############################## Migration Completed ##############################"
