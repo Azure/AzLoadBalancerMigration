@@ -79,13 +79,11 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
         enableFloatingIP: false
         enableTcpReset: false
         frontendIPConfigurationID: frontEndIpConfigurationID
-        frontendPortRangeStart: 80
-        frontendPortRangeEnd: 90
+        frontendPortRangeStart: 8080
+        frontendPortRangeEnd: 8090
         idleTimeoutInMinutes: 4
         protocol: 'Tcp'
       }
-    ]
-    inboundNatRules: [
     ]
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
