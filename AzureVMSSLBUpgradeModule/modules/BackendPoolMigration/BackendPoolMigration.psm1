@@ -34,7 +34,6 @@ function BackendPoolMigration {
 
             try {
                 $ErrorActionPreference = 'Stop'
-                $vmssStatic = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
                 $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
             }
             catch {
@@ -48,20 +47,14 @@ function BackendPoolMigration {
             }
 
             log -Message "[BackendPoolMigration] Adding BackendAddressPool to VMSS $($vmss.Name)"
-            foreach ($networkInterfaceConfiguration in $vmssStatic.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+            foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                $genericListSubResource = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
                 foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
                     if ($ipConfiguration.Name -contains $BackendIpConfigurationName) {
-                        $vmssipConfigDef = @{
-                            Name = $ipConfiguration.Name
-                            # ***Need to check what to do about InboundNatPools
-                            #LoadBalancerInboundNatPoolsId = $null
-                            LoadBalancerBackendAddressPoolsId = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $basicBackendAddressPool.Name}).Id
-                            SubnetId = $ipConfiguration.Subnet.Id
-                        }
-
                         try {
-                            $ErrorActionPreference = 'Stop'
-                            $vmssipConfig = New-azVmssIPConfig @vmssipConfigDef
+                            $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
+                            $subResource.Id = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $basicBackendAddressPool.Name}).Id
+                            $genericListSubResource.Add($subResource)
                         }
                         catch {
                             $message = @"
@@ -72,12 +65,9 @@ function BackendPoolMigration {
                             log 'Error' $message
                             Exit
                         }
-                        
-                        $nicconfigname = $networkInterfaceConfiguration.Name
-                        Remove-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname > $null
-                        Add-azVmssNetworkInterfaceConfiguration -VirtualMachineScaleSet $vmss -Name $nicconfigname -Primary $true -IPConfiguration $vmssipConfig > $null
                     }
                 }
+                $ipConfiguration.LoadBalancerBackendAddressPools = $genericListSubResource
             }
             log -Message "[BackendPoolMigration] Saving VMSS $($vmss.Name)"
 
