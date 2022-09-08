@@ -56,7 +56,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     ]
     inboundNatRules: [
       {
-
+        backendAddressPoolName: 'be-01'
         backendPort: 8080
         frontendIPConfigurationName: 'fe-01'
         frontendPort: 8080
