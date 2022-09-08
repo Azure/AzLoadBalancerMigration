@@ -51,7 +51,7 @@ function AzureVMSSLBUpgrade {
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePath,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][string] $RecoveryBackupPath = $pwd,
+        [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
 
