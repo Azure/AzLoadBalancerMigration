@@ -19,7 +19,11 @@ function RemoveLBFromVMSS {
             $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
         }
         catch {
-            $message = "[RemoveLBFromVMSS] An error occured when getting VMSS '$($vmssName)' in resource group '$($vmssRG)'. Error: $_"
+            $message = @"
+            [RemoveLBFromVMSS] An error occured when getting VMSS '$($vmssName)' in resource group '$($vmssRG)'. To recover
+            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+            State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
+"@
             log 'Error' $message
             Exit
         }
@@ -50,9 +54,8 @@ function RemoveLBFromVMSS {
             $message = @"
                 [RemoveLBFromVMSS] An error occured while updating VMSS '$vmssName' in resource group '$vmssRG' to remove it from a backend pool on load balancer
                 '$($BasicLoadBalancer.Name)'. The script will be unable to delete the basic load balancer unless all backend pools are empty and
-                must exit. To recover, add any backend pool members back to the backend pools (see the backup
-                '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state file for original pool membership),
-                address the error, and try again. Error: $_
+                must exit. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
             log 'Error' $message
             Exit
@@ -70,9 +73,9 @@ function RemoveLBFromVMSS {
     Catch {
         $message = @"
             [RemoveLBFromVMSS] A failure occured when attempting to delete the basic load balancer '$($BasicLoadBalancer.Name)'. The script cannot continue as the front
-            end addresses will not be available to reassign to the new Standard load balancer. To recovery, add any backend pool members back to the
-            backend pools (see the backup '$('State-' + $BasicLoadBalancerName + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state file for
-            original pool membership), address the following error, and try again. Error: $_
+            end addresses will not be available to reassign to the new Standard load balancer. To recover
+            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+            State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
         log 'Error' $message
         Exit

@@ -60,6 +60,12 @@ function AzureVMSSLBUpgrade {
         $global:FollowLog = $true
     }
 
+    # validate backup path is directory
+    If (!(Test-Path -Path $RecoveryBackupPath -PathType Container )) {
+        Write-Error "The path '$recoveryBackupPath' specified with parameter recoveryBackupPath must exist and be a valid directory."
+        Exit
+    }
+
     log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
 
     log -Message "[AzureVMSSLBUpgrade] Checking that user is signed in to Azure PowerShell"
