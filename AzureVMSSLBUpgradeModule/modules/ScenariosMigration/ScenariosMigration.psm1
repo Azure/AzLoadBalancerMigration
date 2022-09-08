@@ -88,7 +88,8 @@ function _CreateStandardLoadBalancer {
 function PublicLBMigration {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath
         )
 
     log -Message "[PublicLBMigration] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -98,7 +99,7 @@ function PublicLBMigration {
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
 
     # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
@@ -134,7 +135,8 @@ function PublicLBMigration {
 function InternalLBMigration {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath
         )
 
         log -Message "[InternalLBMigration] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -142,7 +144,7 @@ function InternalLBMigration {
         $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
 
         # Backup Basic Load Balancer Configurations
-        BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+        BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
         # Deletion of Basic Load Balancer and Delete Basic Load Balancer
         RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
