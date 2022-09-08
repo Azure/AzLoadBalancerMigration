@@ -107,7 +107,7 @@ function AzureVMSSLBUpgrade {
     switch ($scenario.ExternalOrInternal) {
         'internal' {
             if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
-                InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
             }
             else {
                 RestoreInternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
@@ -115,7 +115,7 @@ function AzureVMSSLBUpgrade {
         }
         'external' {
             if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
-                PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
             }
             else {
                 RestoreExternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName

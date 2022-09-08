@@ -50,10 +50,12 @@ function BackupBasicLoadBalancer {
         log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer to file $outputFilePath Completed"
 
         # export ARM template of Basic LB for manual recovery scenarios
-        Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization -Path $RecoveryBackupPath > $null
+        log -Message "[BackupBasicLoadBalancer] Exporting Basic Load Balancer ARM template to path '$RecoveryBackupPath'..."
+        Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization -Path $RecoveryBackupPath -Force > $null
         $newExportedResourceFileName = ("ARMTemplate-" + $BasicLoadBalancer.Name + "-" + $BasicLoadBalancer.ResourceGroupName + '-' + $backupDateTime + ".json")
-        $exportedResourceFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath $newExportedResourceFileName
-        Rename-Item -Path $exportedResourceFilePath -NewName $newExportedResourceFileName
+        $exportedResourceFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath ($BasicLoadBalancer.ResourceGroupName + ".json")
+        $exportedTemplate = Rename-Item -Path $exportedResourceFilePath -NewName $newExportedResourceFileName -PassThru
+        log -Message "[BackupBasicLoadBalancer] Completed export Basic Load Balancer ARM template to path '$($exportedTemplate.FullName)'..."
 
     }
     catch {
@@ -81,7 +83,7 @@ function BackupBasicLoadBalancer {
             Exit
         }
     }
-    log -Message "[BackupBasicLoadBalancer] ARM Template Backup Basic Load Balancer to file $($newExportedResourceFileName) Completed"
+
 }
 Export-ModuleMember -Function BackupBasicLoadBalancer
 Export-ModuleMember -Function RestoreLoadBalancer
