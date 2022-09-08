@@ -21,7 +21,12 @@ function PublicFEMigration {
                 Set-AzPublicIpAddress -PublicIpAddress $pip > $null
             }
             catch {
-                $message = "[PublicFEMigration] An error occured when upgrading public IP '$($pip.Name)' from Basic to Standard SKU. $_"
+                $message = @"
+                [PublicFEMigration] An error occured when upgrading public IP '$($pip.Name)' from Basic to Standard SKU. To recover 
+                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load 
+                Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
+                `nError message: $_
+"@
                 log 'Error' $message
                 Exit
             }
@@ -36,7 +41,12 @@ function PublicFEMigration {
         Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
-        $message = "[PublicFEMigration] An error occured when moving Public IPs to the new Standard Load Balancer. $_"
+        $message = @"
+        [PublicFEMigration] An error occured when moving Public IPs to the new Standard Load Balancer. To recover 
+        address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic 
+        Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath.
+         `nError message: $_
+"@
         log 'Error' $message
         Exit
     }

@@ -24,8 +24,9 @@ function OutboundRulesCreation {
         catch {
             $message = @"
                 [OutboundRulesCreation] An error occured when adding Outbound Rule '$($backendAddressPool.Name)' to new Standard load
-                balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic
-                load balancer from the backup' file, add backend pool membership back state file for original pool membership), and retry the migration.  Error: $_
+                balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the 
+                -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or 
+                the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
             log "Error" $message
             Exit

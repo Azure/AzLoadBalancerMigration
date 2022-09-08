@@ -17,10 +17,9 @@ function BackendPoolMigration {
         }
         catch {
             $message = @"
-                [BackendPoolMigration] An error occured when adding a backend pool to the new Standard LB '$StdLoadBalancerName'. To recover, 
-                redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
-                BackendIpConfigurations), address the following error, and try again. Error message: $_
+                [BackendPoolMigration] An error occured when adding a backend pool to the new Standard LB '$StdLoadBalancerName'. To recover
+                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
             log 'Error' $message
             Exit
@@ -40,10 +39,9 @@ function BackendPoolMigration {
             }
             catch {
                 $message = @"
-                    [BackendPoolMigration] An error occured when calling 'Get-AzVmss -ResourceGroupName '$vmssRg' -VMScaleSetName '$vmssName'. To recover, 
-                    redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                    file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
-                    BackendIpConfigurations), address the following error, and try again. Error message: $_
+                    [BackendPoolMigration] An error occured when calling 'Get-AzVmss -ResourceGroupName '$vmssRg' -VMScaleSetName '$vmssName'. To recover
+                    address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+                    State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
                 log 'Error' $message
                 Exit
@@ -67,10 +65,9 @@ function BackendPoolMigration {
                         }
                         catch {
                             $message = @"
-                                [BackendPoolMigration] An error occured creating a new VMSS IP Config. To recover, 
-                                redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                                file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
-                                BackendIpConfigurations), address the following error, and try again. Error message: $_
+                                [BackendPoolMigration] An error occured creating a new VMSS IP Config. To recover
+                                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+                                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
                             log 'Error' $message
                             Exit
@@ -91,9 +88,9 @@ function BackendPoolMigration {
             catch {
                 $message = @"
                     [BackendPoolMigration] An error occured when attempting to update VMSS network config new Standard 
-                    LB backend pool membership. To recover, redeploy the Basic load balancer from the 'ARMTemplate-$BasicLoadBalancerName-ResourceGroupName...' 
-                    file, re-add the original backend pool members (see file 'State-$BasicLoadBalancerName-ResourceGroupName...' 
-                    BackendIpConfigurations), address the following error, and try again. Error message: $_
+                    LB backend pool membership. To recover address the following error, and try again specifying the 
+                    -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in 
+                    this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
                 log 'Error' $message
                 Exit
