@@ -39,6 +39,6 @@ ForEach ($requiredModule in $requiredModules) {
 # Supress warnings about Az modules
 Update-AzConfig -Scope Process -DisplayBreakingChangeWarning $false -AppliesTo Az > $null
 
-Import-Module $PSScriptRoot\modules\AzureVMSSLBUpgrade\AzureVMSSLBUpgrade.psd1
+Import-Module $PSScriptRoot\modules\Start-AzBasicLoadBalancerUpgrade\Start-AzBasicLoadBalancerUpgrade.psd1
 
-Export-ModuleMember -Function AzureVMSSLBUpgrade
+Export-ModuleMember -Function Start-AzBasicLoadBalancerUpgrade
