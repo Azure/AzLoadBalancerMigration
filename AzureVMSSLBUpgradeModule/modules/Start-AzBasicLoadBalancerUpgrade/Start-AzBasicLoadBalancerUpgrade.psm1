@@ -44,7 +44,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ScenariosMigration\Scenarios
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 
-function AzureVMSSLBUpgrade {
+function Start-AzBasicLoadBalancerUpgrade {
     Param(
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
@@ -66,17 +66,17 @@ function AzureVMSSLBUpgrade {
         Exit
     }
 
-    log -Message "############################## Initializing AzureVMSSLBUpgrade ##############################"
+    log -Message "############################## Initializing Start-AzBasicLoadBalancerUpgrade ##############################"
 
-    log -Message "[AzureVMSSLBUpgrade] Checking that user is signed in to Azure PowerShell"
+    log -Message "[Start-AzBasicLoadBalancerUpgrade] Checking that user is signed in to Azure PowerShell"
     if (!($azContext = Get-AzContext -ErrorAction SilentlyContinue)) {
         log 'Error' "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
         return
     }
-    log -Message "[AzureVMSSLBUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
+    log -Message "[Start-AzBasicLoadBalancerUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
 
     # Load Azure Resources
-    log -Message "[AzureVMSSLBUpgrade] Loading Azure Resources"
+    log -Message "[Start-AzBasicLoadBalancerUpgrade] Loading Azure Resources"
 
     try {
         $ErrorActionPreference = 'Stop'
@@ -86,11 +86,11 @@ function AzureVMSSLBUpgrade {
         elseif (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
             $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePath
         }
-        log -Message "[AzureVMSSLBUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
+        log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
     catch {
         $message = @"
-            [AzureVMSSLBUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
+            [Start-AzBasicLoadBalancerUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
             '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
             Error text: $_
 "@
@@ -125,4 +125,4 @@ function AzureVMSSLBUpgrade {
     log -Message "############################## Migration Completed ##############################"
 }
 
-Export-ModuleMember -Function AzureVMSSLBUpgrade
+Export-ModuleMember -Function Start-AzBasicLoadBalancerUpgrade
