@@ -39,7 +39,7 @@ function BackupBasicLoadBalancer {
         $backupDateTime = Get-Date -Format FileDateTime
         
         # export serialized JSON object of Basic LB for automated recovery scenarios
-        $outputFileName = ('State-' + $BasicLoadBalancer.Name + "-" + $BasicLoadBalancer.ResourceGroupName + "-" + $backupDateTime + ".json")
+        $outputFileName = ('State_' + $BasicLoadBalancer.Name + "_" + $BasicLoadBalancer.ResourceGroupName + "_" + $backupDateTime + ".json")
         $outputFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileName
 
         $options = [System.Text.Json.JsonSerializerOptions]::new()
@@ -52,7 +52,7 @@ function BackupBasicLoadBalancer {
         # export ARM template of Basic LB for manual recovery scenarios
         log -Message "[BackupBasicLoadBalancer] Exporting Basic Load Balancer ARM template to path '$RecoveryBackupPath'..."
         Export-AzResourceGroup -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Resource $BasicLoadBalancer.Id -SkipAllParameterization -Path $RecoveryBackupPath -Force > $null
-        $newExportedResourceFileName = ("ARMTemplate-" + $BasicLoadBalancer.Name + "-" + $BasicLoadBalancer.ResourceGroupName + '-' + $backupDateTime + ".json")
+        $newExportedResourceFileName = ("ARMTemplate_" + $BasicLoadBalancer.Name + "_" + $BasicLoadBalancer.ResourceGroupName + '_' + $backupDateTime + ".json")
         $exportedResourceFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath ($BasicLoadBalancer.ResourceGroupName + ".json")
         $exportedTemplate = Rename-Item -Path $exportedResourceFilePath -NewName $newExportedResourceFileName -PassThru
         log -Message "[BackupBasicLoadBalancer] Completed export Basic Load Balancer ARM template to path '$($exportedTemplate.FullName)'..."
@@ -72,7 +72,7 @@ function BackupBasicLoadBalancer {
         try {
             $ErrorActionPreference = 'Stop'
             $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
-            $outputFileNameVMSS = ('VMSS-' + $vmss.Name + "-" + $vmss.ResourceGroupName + "-" + $backupDateTime + ".json")
+            $outputFileNameVMSS = ('VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
             $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
 
             [System.Text.Json.JsonSerializer]::Serialize($vmss,[Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet],$options) | Out-File -FilePath $outputFilePathVSS
