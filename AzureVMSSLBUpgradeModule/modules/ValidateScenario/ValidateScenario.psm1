@@ -59,6 +59,29 @@ Function Test-SupportedMigrationScenario {
         log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is a Basic Load Balancer. The same name will be re-used."
     }
 
+    # check if load balancer backend pool contains VMSSes which are part of another LBs backend pools
+    log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
+    ForEach ($vmssId in $vmssIds) {
+        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVMSS
+        $loadBalancerAssociations = @()
+        ForEach ($nicConfig in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+            ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+                ForEach ($bepMembership in $ipConfig.LoadBalancerBackendAddressPools) {
+                    $loadBalancerAssociations += $bepMembership.id.split('/')[0..8] -join '/'
+                }
+            }
+        }
+
+        If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
+            $message = @"
+                One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps"
+"@      
+            log 'Error' $message
+            Exit
+        }
+    }
+
     # detecting if source load balancer is internal or external-facing
     log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
     If (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)) {
