@@ -58,12 +58,12 @@ if ($RunUpgrade -and $null -ne $filteredTemplates) {
     Foreach-Object {
         "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
         $jobs += $(
-            Start-Job -InitializationScript { Import-Module ..\..\AzureVMSSLBUpgradeModule } `
+            Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureVMSSLBUpgradeModule } `
                 -ScriptBlock { AzureVMSSLBUpgrade `
                     -ResourceGroupName $input `
                     -BasicLoadBalancerName 'lb-basic-01' `
                     -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
-                -InputObject "rg-$($_.BaseName)"
+                    -InputObject "rg-$($_.BaseName)"
         )
     }
 

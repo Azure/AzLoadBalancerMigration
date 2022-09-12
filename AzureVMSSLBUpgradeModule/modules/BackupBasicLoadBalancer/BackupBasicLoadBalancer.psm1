@@ -1,7 +1,8 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 
 function RestoreLoadBalancer {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][string] $BasicLoadBalancerJsonFile
     )
@@ -46,7 +47,7 @@ function BackupBasicLoadBalancer {
         $options.WriteIndented = $true
         #$options.IgnoreReadOnlyFields = $true # This is only available in PS 7
         $options.IgnoreReadOnlyProperties = $true
-        [System.Text.Json.JsonSerializer]::Serialize($BasicLoadBalancer,[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer],$options) | Out-File -FilePath $outputFilePath
+        [System.Text.Json.JsonSerializer]::Serialize($BasicLoadBalancer, [Microsoft.Azure.Commands.Network.Models.PSLoadBalancer], $options) | Out-File -FilePath $outputFilePath
         log -Message "[BackupBasicLoadBalancer] JSON backup Basic Load Balancer to file $outputFilePath Completed"
 
         # export ARM template of Basic LB for manual recovery scenarios
@@ -65,7 +66,7 @@ function BackupBasicLoadBalancer {
     }
 
     # Backup VMSS Object
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
     foreach ($vmssId in $vmssIds) {
         $vmssName = $vmssId.split("/")[8]
         $vmssRg = $vmssId.Split('/')[4]
@@ -75,7 +76,7 @@ function BackupBasicLoadBalancer {
             $outputFileNameVMSS = ('VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
             $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
 
-            [System.Text.Json.JsonSerializer]::Serialize($vmss,[Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet],$options) | Out-File -FilePath $outputFilePathVSS
+            [System.Text.Json.JsonSerializer]::Serialize($vmss, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet], $options) | Out-File -FilePath $outputFilePathVSS
         }
         catch {
             $message = "[BackupBasicLoadBalancer] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
