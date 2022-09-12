@@ -1,15 +1,15 @@
-$rg='BasicLB2'
-$location='centralus'
-$vnetName='BasicLB2-VNet'
-$vnetAddressPrefix='10.130.0.0/16'
+$rg = 'BasicLB2'
+$location = 'centralus'
+$vnetName = 'BasicLB2-VNet'
+$vnetAddressPrefix = '10.130.0.0/16'
 
-$subnetBasicLBName='VMSS-Subnet'
-$subnetBasicLBAddressPrefix='10.130.2.0/24'
+$subnetBasicLBName = 'VMSS-Subnet'
+$subnetBasicLBAddressPrefix = '10.130.2.0/24'
 
-$lbIPName='BasicLB2-LoadBalancer-PIP'
-$lbName='BasicLB2-LoadBalancer'
+$lbIPName = 'BasicLB2-LoadBalancer-PIP'
+$lbName = 'BasicLB2-LoadBalancer'
 
-$vmssBasicLBName='BasicLB2-VMSS'
+$vmssBasicLBName = 'BasicLB2-VMSS'
 
 ##########################################
 # Create Azure Resource Group
@@ -45,7 +45,7 @@ az network public-ip create `
 
 az network public-ip create `
     --resource-group $rg `
-    --name ($lbIPName+"2") `
+    --name ($lbIPName + "2") `
     --sku 'Basic'
 
 # Create Azure Load Balancer for BasicLB VMSS
@@ -176,7 +176,7 @@ az network nsg rule create `
 
 az vmss create `
     --resource-group $rg `
-    --name ($vmssBasicLBName+"2") `
+    --name ($vmssBasicLBName + "2") `
     --image UbuntuLTS `
     --upgrade-policy-mode Manual `
     --vm-sku Standard_A0 `

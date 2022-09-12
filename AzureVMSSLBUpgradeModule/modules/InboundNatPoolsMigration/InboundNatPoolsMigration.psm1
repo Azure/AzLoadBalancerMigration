@@ -1,6 +1,7 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 function InboundNatPoolsMigration {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
@@ -11,20 +12,20 @@ function InboundNatPoolsMigration {
     foreach ($pool in $inboundNatPools) {
         log -Message "[InboundNatPoolsMigration] Adding Inbound NAT Pool $($pool.Name) to Standard Load Balancer"
         $inboundNatPoolConfig = @{
-            Name = $pool.Name
-            BackendPort = $pool.backendPort
-            Protocol = $pool.Protocol
-            EnableFloatingIP = $pool.EnableFloatingIP
-            EnableTcpReset = $pool.EnableTcpReset
+            Name                    = $pool.Name
+            BackendPort             = $pool.backendPort
+            Protocol                = $pool.Protocol
+            EnableFloatingIP        = $pool.EnableFloatingIP
+            EnableTcpReset          = $pool.EnableTcpReset
             FrontendIPConfiguration = $pool.FrontendIPConfiguration
-            FrontendPortRangeStart = $pool.FrontendPortRangeStart
-            FrontendPortRangeEnd = $pool.FrontendPortRangeEnd
-            IdleTimeoutInMinutes = $pool.IdleTimeoutInMinutes
+            FrontendPortRangeStart  = $pool.FrontendPortRangeStart
+            FrontendPortRangeEnd    = $pool.FrontendPortRangeEnd
+            IdleTimeoutInMinutes    = $pool.IdleTimeoutInMinutes
         }
 
         try {
-           $ErrorActionPreference = 'Stop'
-           $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @poolConfig > $null 
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @poolConfig > $null 
         }
         catch {
             $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard 
@@ -39,15 +40,15 @@ function InboundNatPoolsMigration {
     try {
         $ErrorActionPreference = 'Stop'
         Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
-     }
-     catch {
-         $message = @"
+    }
+    catch {
+        $message = @"
             [InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script 
             will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. 
             `n$($StdLoadBalancer | Get-AzLoadBalancerInboundNatPoolConfig | ConvertTo-Json -Depth 5)$_
 "@
-         log 'Warning' $message
-     }
+        log 'Warning' $message
+    }
 
     log -Message "[InboundNatPoolsMigration] Inbound NAT Pools Migration Completed"
 }

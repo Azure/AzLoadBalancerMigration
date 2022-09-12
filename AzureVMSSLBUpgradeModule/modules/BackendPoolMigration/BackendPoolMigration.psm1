@@ -1,7 +1,8 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\UpdateVmssInstances\UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
 function BackendPoolMigration {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
@@ -26,8 +27,8 @@ function BackendPoolMigration {
         }
 
         log -Message "[BackendPoolMigration] Adding Standard Load Balancer back to the VMSS"
-        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
-        $BackendIpConfigurationName = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("/")[-1]} | Select-Object -Unique
+        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
+        $BackendIpConfigurationName = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("/")[-1] } | Select-Object -Unique
         foreach ($vmssId in $vmssIds) {
             $vmssName = $vmssId.split("/")[8]
             $vmssRg = $vmssId.Split('/')[4]
@@ -53,7 +54,7 @@ function BackendPoolMigration {
                     if ($ipConfiguration.Name -contains $BackendIpConfigurationName) {
                         try {
                             $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
-                            $subResource.Id = ($StdLoadBalancer.BackendAddressPools | Where-Object{$_.Name -eq $basicBackendAddressPool.Name}).Id
+                            $subResource.Id = ($StdLoadBalancer.BackendAddressPools | Where-Object { $_.Name -eq $basicBackendAddressPool.Name }).Id
                             $genericListSubResource.Add($subResource)
                         }
                         catch {

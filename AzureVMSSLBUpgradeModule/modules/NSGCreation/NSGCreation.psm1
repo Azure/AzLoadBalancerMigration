@@ -1,7 +1,8 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\UpdateVmssInstances\UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
 function NSGCreation {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
@@ -9,7 +10,7 @@ function NSGCreation {
     log -Message "[NSGCreation] Initiating NSG Creation"
 
     log -Message "[NSGCreation] Looping all VMSS in the backend pool of the Load Balancer"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{$_.split("virtualMachines")[0]} | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
     foreach ($vmssId in $vmssIds) {
         $vmssName = $vmssId.split("/")[8]
         $vmssRg = $vmssId.Split('/')[4]
@@ -28,7 +29,7 @@ function NSGCreation {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssRg -Name ("NSG-"+$vmss.Name) -Location $vmss.Location -Force
+            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssRg -Name ("NSG-" + $vmss.Name) -Location $vmss.Location -Force
         }
         catch {
             $message = @"
@@ -49,17 +50,17 @@ function NSGCreation {
         $priorityCount = 100
         foreach ($loadBalancingRule in $loadBalancingRules) {
             $networkSecurityRuleConfig = @{
-                Name = ($loadBalancingRule.Name+"-loadBalancingRule")
-                Protocol = $loadBalancingRule.Protocol
-                SourcePortRange = "*"
-                DestinationPortRange = $loadBalancingRule.BackendPort
-                SourceAddressPrefix = "*"
-                DestinationAddressPrefix = "*"
-                SourceApplicationSecurityGroup = $null
+                Name                                = ($loadBalancingRule.Name + "-loadBalancingRule")
+                Protocol                            = $loadBalancingRule.Protocol
+                SourcePortRange                     = "*"
+                DestinationPortRange                = $loadBalancingRule.BackendPort
+                SourceAddressPrefix                 = "*"
+                DestinationAddressPrefix            = "*"
+                SourceApplicationSecurityGroup      = $null
                 DestinationApplicationSecurityGroup = $null
-                Access = "Allow"
-                Priority = $priorityCount
-                Direction = "Inbound"
+                Access                              = "Allow"
+                Priority                            = $priorityCount
+                Direction                           = "Inbound"
             }
             log -Message "[NSGCreation] Adding NSG Rule Named: $($networkSecurityRuleConfig.Name) to NSG Named: $($nsg.Name)"
             $nsg | Add-AzNetworkSecurityRuleConfig @networkSecurityRuleConfig > $null
@@ -72,17 +73,17 @@ function NSGCreation {
         $inboundNatRules = $BasicLoadBalancer.InboundNatRules
         foreach ($inboundNatRule in $inboundNatRules) {
             $networkSecurityRuleConfig = @{
-                Name = ($inboundNatRule.Name+"-NatRule")
-                Protocol = $inboundNatRule.Protocol
-                SourcePortRange = "*"
-                DestinationPortRange = (($inboundNatRule.FrontendPortRangeStart).ToString()+"-"+($inboundNatRule.FrontendPortRangeEnd).ToString())
-                SourceAddressPrefix = "*"
-                DestinationAddressPrefix = "*"
-                SourceApplicationSecurityGroup = $null
+                Name                                = ($inboundNatRule.Name + "-NatRule")
+                Protocol                            = $inboundNatRule.Protocol
+                SourcePortRange                     = "*"
+                DestinationPortRange                = (($inboundNatRule.FrontendPortRangeStart).ToString() + "-" + ($inboundNatRule.FrontendPortRangeEnd).ToString())
+                SourceAddressPrefix                 = "*"
+                DestinationAddressPrefix            = "*"
+                SourceApplicationSecurityGroup      = $null
                 DestinationApplicationSecurityGroup = $null
-                Access = "Allow"
-                Priority = $priorityCount
-                Direction = "Inbound"
+                Access                              = "Allow"
+                Priority                            = $priorityCount
+                Direction                           = "Inbound"
             }
             log -Message "[NSGCreation] Adding NSG Rule Named: $($networkSecurityRuleConfig.Name) to NSG Named: $($nsg.Name)"
             $nsg | Add-AzNetworkSecurityRuleConfig @networkSecurityRuleConfig > $null

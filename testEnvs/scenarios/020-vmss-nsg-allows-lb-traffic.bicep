@@ -60,6 +60,9 @@ module networkSecurityGroups '../modules/Microsoft.Network/networkSecurityGroups
       }
     ]
   }
+  dependsOn: [
+    rg
+  ]
 }
 
 // basic lb

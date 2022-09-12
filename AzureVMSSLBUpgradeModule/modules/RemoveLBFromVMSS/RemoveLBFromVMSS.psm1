@@ -1,8 +1,9 @@
 
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\UpdateVmssInstances\UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
 function RemoveLBFromVMSS {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][string[]] $vmssIds,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer
