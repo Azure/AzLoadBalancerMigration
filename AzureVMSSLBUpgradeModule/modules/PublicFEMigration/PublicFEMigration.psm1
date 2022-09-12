@@ -13,13 +13,13 @@ function PublicFEMigration {
     foreach ($feConfig in $basicLoadBalancerFeConfig) {
         $pip = Get-AzPublicIpAddress -ResourceGroupName $feConfig.PublicIpAddress.Id.Split('/')[4] -Name $feConfig.PublicIpAddress.Id.Split('/')[-1]
         if ($pip.PublicIpAllocationMethod -ne "Static" -or $pip.Sku.Name -ne "Standard") {
-            log -Message "[PublicFEMigration] $($pip.Name) was using Dynamic IP or Basic SKU, changing to Static IP allocation method and Standard SKU." -Severity "Warning"
+            log -Message "[PublicFEMigration] '$($pip.Name)' ('$($pip.IpAddress)') was using Dynamic IP or Basic SKU, changing to Static IP allocation method and Standard SKU." -Severity "Warning"
             $pip.PublicIpAllocationMethod = "Static"
             $pip.Sku.Name = "Standard"
 
             try {
                 $ErrorActionPreference = 'Stop'
-                Set-AzPublicIpAddress -PublicIpAddress $pip > $null
+                $upgradedPip = Set-AzPublicIpAddress -PublicIpAddress $pip
             }
             catch {
                 $message = @"
@@ -31,9 +31,24 @@ function PublicFEMigration {
                 log 'Error' $message
                 Exit
             }
+
+            log -Message "[PublicFEMigration] Completed the migration of '$($pip.Name)' ('$($upgradedPip.IpAddress)') from Basic SKU and/or dynamic to static" -Severity "Information"
         }
-        #$StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id | Set-AzLoadBalancer
-        $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id > $null
+        
+        try {
+            $ErrorActionPreference = 'Stop'
+            $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id > $null
+        }
+        catch {
+            $message = @"
+            [PublicFEMigration] An error occured when adding the public front end '$($feConfig.Name)' to the new Standard LB. To recover 
+            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load 
+            Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
+            `nError message: $_
+"@
+            log 'Error' $message
+            Exit
+        }
     }
     log -Message "[PublicFEMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
