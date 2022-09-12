@@ -66,7 +66,7 @@ Function Test-SupportedMigrationScenario {
         $scenario.ExternalOrInternal = 'Internal'
     }
     ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)) {
-        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)', so this LB is External"
+        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress.IpAddress)', so this LB is External"
 
         # Detecting if there is a frontend IPV6 configuration, if so, exit
         log -Message "[Test-SupportedMigrationScenario] Determining if there is a frontend IPV6 configuration"
