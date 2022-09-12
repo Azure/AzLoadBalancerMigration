@@ -60,6 +60,27 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalan
 # display logs in the console as the command executes
 PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
 
+.PARAMETER ResourceGroupName
+Resource group containing the Basic Load Balancer to upgrade
+
+.PARAMETER BasicLoadBalancerName
+Name of the Basic Load Balancer to upgrade
+
+.PARAMETER BasicLoadBalancer
+Load Balancer Object to upgrade passed as pipeline input
+
+.PARAMETER FailedMigrationRetryFilePath
+Location of Failder migration retry files
+
+.PARAMETER StandardLoadBalancerName
+Name of the new Standard Load Balancer
+
+.PARAMETER RecoveryBackupPath
+Location of the Recovery backup files
+
+.PARAMETER FollowLog
+Swtich parameter to enable the display of logs in the console
+
 #>
 
 # Load Modules

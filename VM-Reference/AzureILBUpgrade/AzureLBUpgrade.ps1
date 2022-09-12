@@ -44,12 +44,12 @@ Note - all paramemters are required in order to successfully create a Standard P
 ##User defined paramters
 #Parameters for specified Basic Load Balancer
 Param(
-[Parameter(Mandatory = $True)][string] $oldRgName,
-[Parameter(Mandatory = $True)][string] $oldLBName,
-#Parameters for new Standard Load Balancer
-[Parameter(Mandatory = $True)][string] $newRgName,
-[Parameter(Mandatory = $True)][string] $newlocation,
-[Parameter(Mandatory = $True)][string] $newLBName
+    [Parameter(Mandatory = $True)][string] $oldRgName,
+    [Parameter(Mandatory = $True)][string] $oldLBName,
+    #Parameters for new Standard Load Balancer
+    [Parameter(Mandatory = $True)][string] $newRgName,
+    [Parameter(Mandatory = $True)][string] $newlocation,
+    [Parameter(Mandatory = $True)][string] $newLBName
 )
 
 #getting current loadbalancer
@@ -62,8 +62,7 @@ New-AzResourceGroup -Name $newRgName -Location $newlocation
 $newlbFrontendConfigs = $lb.FrontendIpConfigurations
 $feProcessed = 1
 
-foreach ($frontEndConfig in $newlbFrontendConfigs)
-{   
+foreach ($frontEndConfig in $newlbFrontendConfigs) {   
     $frontEndConfig
     #1. create public IP
     $newFrontEndIpPublicIpName = $frontEndConfig.name + "-pip-" + $feProcessed
@@ -81,15 +80,14 @@ $rulesFrontEndIpConfig = (Get-Variable -Include frontEndIpConfig*)
 $newlbNatRules = $lb.InboundNatRules
 ##looping through NAT Rules
 $ruleprocessed = 1
-foreach ($natRule in $newlbNatRules)
-{
+foreach ($natRule in $newlbNatRules) {
     ##need to get correct frontendipconfig
     $frontEndName = (($natRule.FrontendIPConfiguration).id).Split("/")[10]
-    $frontEndNameConfig = ((Get-Variable -Include frontEndIpConfig* | Where-Object {$_.Value.name -eq $frontEndName})).value
+    $frontEndNameConfig = ((Get-Variable -Include frontEndIpConfig* | Where-Object { $_.Value.name -eq $frontEndName })).value
     New-Variable -Name "nat$ruleprocessed" -Value (New-AzLoadBalancerInboundNatRuleConfig -Name $natRule.name -FrontendIpConfiguration $frontEndNameConfig -Protocol $natRule.Protocol -FrontendPort $natRule.FrontendPort -BackendPort $natRule.BackendPort)
     $ruleprocessed++
 }
-$rulesNat = (Get-Variable -Include nat* | Where-Object {$_.Name -ne "natRule"})
+$rulesNat = (Get-Variable -Include nat* | Where-Object { $_.Name -ne "natRule" })
 
 #4. create LoadBalancer and default outbound rule
 $newlb = New-AzLoadBalancer -ResourceGroupName $newRgName -Name $newLBName -SKU Standard -Location $newlocation -FrontendIpConfiguration $rulesFrontEndIpConfig.Value  -InboundNatRule $rulesNat.Value #-outboundRule $outboundrule
@@ -99,8 +97,7 @@ $newlb = (Get-AzLoadBalancer  -ResourceGroupName $newRgName -Name $newLBName)
 
 #5. create probe config - need to be done LAST!!!
 $newProbes = Get-AzLoadBalancerProbeConfig -LoadBalancer $lb
-foreach ($probe in $newProbes)
-{
+foreach ($probe in $newProbes) {
     $probeName = $probe.name
     $probeProtocol = $probe.protocol
     $probePort = $probe.port
@@ -114,8 +111,7 @@ foreach ($probe in $newProbes)
 #6. create backend pools
 $newBackendPools = $lb.BackendAddressPools
 ## needs a loop to address multiple pools
-foreach ($newBackendPool in $newBackendPools)
-{
+foreach ($newBackendPool in $newBackendPools) {
     $newlb | Add-AzLoadBalancerBackendAddressPoolConfig -Name ($newBackendPool).Name | Set-AzLoadBalancer
     $newBackendPoolConfig = Get-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $newlb -Name ($newBackendPool).Name
 }
@@ -123,11 +119,10 @@ foreach ($newBackendPool in $newBackendPools)
 $newlb = (Get-AzLoadBalancer  -ResourceGroupName $newRgName -Name $newLBName)
 #7. create load balancer rule config
 $newLbRuleConfigs = Get-AzLoadBalancerRuleConfig -LoadBalancer $lb
-foreach ($newLbRuleConfig in $newLbRuleConfigs)
-{
+foreach ($newLbRuleConfig in $newLbRuleConfigs) {
     $backendPool = (Get-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $newlb -Name ((($newLbRuleConfig.BackendAddressPool.id).split("/"))[10]))
     $lbFrontEndName = (($newLbRuleConfig.FrontendIPConfiguration).id).Split("/")[10]
-    $lbFrontEndNameConfig = ((Get-Variable -Include frontEndIpConfig* | Where-Object {$_.Value.name -eq $lbFrontEndName})).value
+    $lbFrontEndNameConfig = ((Get-Variable -Include frontEndIpConfig* | Where-Object { $_.Value.name -eq $lbFrontEndName })).value
     $newlb | Add-AzLoadBalancerRuleConfig -Name ($newLbRuleConfig).Name -FrontendIPConfiguration $lbFrontEndNameConfig -BackendAddressPool $backendPool -Probe (Get-AzLoadBalancerProbeConfig -LoadBalancer $newlb -Name (($newLbRuleConfig.Probe.id).split("/")[10])) -Protocol ($newLbRuleConfig).protocol -FrontendPort ($newLbRuleConfig).FrontendPort -BackendPort ($newLbRuleConfig).BackendPort -IdleTimeoutInMinutes ($newLbRuleConfig).IdleTimeoutInMinutes -EnableFloatingIP -LoadDistribution SourceIP -DisableOutboundSNAT
     $newlb | set-AzLoadBalancer
 
