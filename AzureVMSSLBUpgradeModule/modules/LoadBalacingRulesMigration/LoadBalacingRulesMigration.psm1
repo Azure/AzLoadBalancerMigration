@@ -1,6 +1,7 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 function LoadBalacingRulesMigration {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
@@ -10,18 +11,18 @@ function LoadBalacingRulesMigration {
     foreach ($loadBalancingRule in $loadBalancingRules) {
         log -Message "[LoadBalacingRulesMigration] Adding LoadBalacing Rule $($loadBalancingRule.Name) to Standard Load Balancer"
         $loadBalancingRuleConfig = @{
-            Name = $loadBalancingRule.Name
-            Protocol = $loadBalancingRule.Protocol
-            FrontendPort = $loadBalancingRule.FrontendPort
-            BackendPort = $loadBalancingRule.BackendPort
-            IdleTimeoutInMinutes = $loadBalancingRule.IdleTimeoutInMinutes
-            EnableFloatingIP = $loadBalancingRule.EnableFloatingIP
-            LoadDistribution = $loadBalancingRule.LoadDistribution
-            DisableOutboundSnat = $loadBalancingRule.DisableOutboundSnat
-            EnableTcpReset = $loadBalancingRule.EnableTcpReset
+            Name                    = $loadBalancingRule.Name
+            Protocol                = $loadBalancingRule.Protocol
+            FrontendPort            = $loadBalancingRule.FrontendPort
+            BackendPort             = $loadBalancingRule.BackendPort
+            IdleTimeoutInMinutes    = $loadBalancingRule.IdleTimeoutInMinutes
+            EnableFloatingIP        = $loadBalancingRule.EnableFloatingIP
+            LoadDistribution        = $loadBalancingRule.LoadDistribution
+            DisableOutboundSnat     = $loadBalancingRule.DisableOutboundSnat
+            EnableTcpReset          = $loadBalancingRule.EnableTcpReset
             FrontendIPConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.FrontendIpConfiguration.Id).split('/')[-1])
-            BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
-            Probe = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
+            BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
+            Probe                   = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
         }
 
         try {
