@@ -103,6 +103,9 @@ function PublicLBMigration {
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
+    # Upgrade public IP addresses on Basic LB to static (if dynamic)
+    PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
+
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
 
@@ -189,6 +192,10 @@ function RestoreExternalLBMigration {
     )
 
     log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+
+    # Upgrade public IP addresses on Basic LB to static (if dynamic)
+    PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
+
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
 
