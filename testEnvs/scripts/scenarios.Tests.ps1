@@ -560,7 +560,7 @@ Describe "Validate Upgrade Script Results" {
             $rgName = 'rg-016-vmss-automatic-upgrade-policy'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
-            $lb = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object {Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_}
+            $lb = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
             # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
         }
 

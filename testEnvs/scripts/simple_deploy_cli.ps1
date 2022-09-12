@@ -1,15 +1,15 @@
-$rg='BasicLB'
-$location='centralus'
-$vnetName='BasicLB-VNet'
-$vnetAddressPrefix='10.130.0.0/16'
+$rg = 'BasicLB'
+$location = 'centralus'
+$vnetName = 'BasicLB-VNet'
+$vnetAddressPrefix = '10.130.0.0/16'
 
-$subnetBasicLBName='VMSS-Subnet'
-$subnetBasicLBAddressPrefix='10.130.2.0/24'
+$subnetBasicLBName = 'VMSS-Subnet'
+$subnetBasicLBAddressPrefix = '10.130.2.0/24'
 
-$lbIPName='BasicLB-LoadBalancer-PIP'
-$lbName='BasicLB-LoadBalancer'
+$lbIPName = 'BasicLB-LoadBalancer-PIP'
+$lbName = 'BasicLB-LoadBalancer'
 
-$vmssBasicLBName='BasicLB-VMSS'
+$vmssBasicLBName = 'BasicLB-VMSS'
 
 # Delete the resource group
 az group delete --name $rg -y

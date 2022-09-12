@@ -63,7 +63,7 @@ if ($RunUpgrade -and $null -ne $filteredTemplates) {
                     -ResourceGroupName $input `
                     -BasicLoadBalancerName 'lb-basic-01' `
                     -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
-                    -InputObject "rg-$($_.BaseName)"
+                -InputObject "rg-$($_.BaseName)"
         )
     }
 
