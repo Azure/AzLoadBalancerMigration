@@ -1,9 +1,9 @@
 # verify that required Az modules are available
 $requiredModules = @(
-    @{name = 'Az.Accounts'; requiredVersion = [Version]::new(2,9,0)}
-    @{name = 'Az.Compute'; requiredVersion = [Version]::new(4,30,0)}
-    @{name = 'Az.Network'; requiredVersion = [Version]::new(4,20,0)}
-    @{name = 'Az.Resources'; requiredVersion = [Version]::new(6,1,0)}
+    @{name = 'Az.Accounts'; requiredVersion = [Version]::new(2, 9, 0) }
+    @{name = 'Az.Compute'; requiredVersion = [Version]::new(4, 30, 0) }
+    @{name = 'Az.Network'; requiredVersion = [Version]::new(4, 20, 0) }
+    @{name = 'Az.Resources'; requiredVersion = [Version]::new(6, 1, 0) }
 )
 
 $installMessage = "The '{0}' PowerShell module is not installed on this system. To install the required modules for this script, run 'Install-Module -Name Az.Accounts,Az.Compute,Az.Network,Az.Resources'"
@@ -26,7 +26,7 @@ ForEach ($requiredModule in $requiredModules) {
         continue
     }
     else {
-        Write-Error ($versionMessage -f $requiredModule.Name,$module.Version,$requiredModule.requiredVersion)
+        Write-Error ($versionMessage -f $requiredModule.Name, $module.Version, $requiredModule.requiredVersion)
 
         If ($multipleVersions) {
             Write-Warning "More than one version of module '$($requiredModule.name)' exist on this system. Uninstall old versions and try again!"

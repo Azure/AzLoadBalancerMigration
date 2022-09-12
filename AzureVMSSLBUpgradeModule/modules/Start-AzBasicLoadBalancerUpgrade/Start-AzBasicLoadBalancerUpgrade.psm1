@@ -27,7 +27,6 @@
 
 .RELEASENOTES
 
-
 .PRIVATEDATA
 
 #>
@@ -35,9 +34,34 @@
 <#
 
 .DESCRIPTION
- This script will migrate a Basic SKU load balancer to a Standard SKU Public load balancer preserving all the configurations.
+ This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) to a Standard SKU load balancer preserving the existing configuration.
+
+.SYNOPSIS
+This module consists of a number of child modules which abstract the operations required to successfully upgrade a Basic to a Standard load balancer.
+A Basic Load Balancer cannot be natively upgraded to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
+
+.EXAMPLE
+# Basic usage
+PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB
+
+.EXAMPLE
+# Pass LoadBalancer via pipeline input
+PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade -StandardLoadBalancerName myStandardLB
+
+.EXAMPLE
+# Specify a custom path for failed migration retry files
+PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FailedMigrationRetryFilePath C:\FailedMigrationRetryLogs
+
+.EXAMPLE
+# Specifcy a custom path for recovery backup files
+PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
+
+.EXAMPLE
+# display logs in the console as the command executes
+PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
 
 #>
+
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ScenariosMigration\ScenariosMigration.psd1")
@@ -45,6 +69,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateSce
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 
 function Start-AzBasicLoadBalancerUpgrade {
+    [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,

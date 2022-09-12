@@ -1,5 +1,5 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 
 Function Test-SupportedMigrationScenario {
     [CmdletBinding()]
@@ -9,6 +9,7 @@ Function Test-SupportedMigrationScenario {
         $BasicLoadBalancer,
 
         [Parameter(Mandatory = $true)]
+        [ValidatePattern("^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9_])?$")]
         [string]
         $StdLoadBalancerName
     )
@@ -21,8 +22,8 @@ Function Test-SupportedMigrationScenario {
     log -Message "[Test-SupportedMigrationScenario] Verifying if Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
     log -Message "[Test-SupportedMigrationScenario] Verifying source load balancer SKU"
     If ($BasicLoadBalancer.Sku.Name -ne 'Basic') {
-        log 'Error' "[Test-SupportedMigrationScenario] The load balancer '$($BasicLoadBalancer.Name)' in resource group '$($BasicLoadBalancer.ResourceGroupName)' is SKU '$($BasicLoadBalancer.SKU.Name)'. SKU must be Basic!"
-        Exit
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] The load balancer '$($BasicLoadBalancer.Name)' in resource group '$($BasicLoadBalancer.ResourceGroupName)' is SKU '$($BasicLoadBalancer.SKU.Name)'. SKU must be Basic!"
+        return
     }
     log -Message "[Test-SupportedMigrationScenario] Source load balancer SKU is type Basic"
 
@@ -31,8 +32,8 @@ Function Test-SupportedMigrationScenario {
     foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
         foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {
             if ($backendIpConfiguration.Id.split("/")[7] -ne "virtualMachineScaleSets") {
-                log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has backend pools that is not virtualMachineScaleSets, exiting" -Severity "Error"
-                exit
+                log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has backend pools that is not virtualMachineScaleSets, exiting" -Severity 'Error'
+                return
             }
         }
     }
@@ -41,8 +42,8 @@ Function Test-SupportedMigrationScenario {
     # checking that source load balancer has sub-resource configurations
     log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
     If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0) {
-        log 'Error' "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no front end configurations, so there is nothing to migrate!"
-        Exit
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no front end configurations, so there is nothing to migrate!"
+        return
     }
     log -Message "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
 
@@ -50,10 +51,10 @@ Function Test-SupportedMigrationScenario {
     log -Message "[Test-SupportedMigrationScenario] Checking that standard load balancer name '$StdLoadBalancerName'"
     $chkStdLB = (Get-AzLoadBalancer -Name $StdLoadBalancerName -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -ErrorAction SilentlyContinue)
     If ($chkStdLB) {
-        log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' already exist. Checking if it is a Basic SKU for migration"
+        log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' already exists. Checking if it is a Basic SKU for migration"
         If ($chkStdLB.Sku.Name -ne 'Basic') {
-            log 'Error' "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is not a Basic SKU, so it cannot be migrated!"
-            Exit
+            log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is not a Basic SKU, so it cannot be migrated!"
+            return
         }
         log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is a Basic Load Balancer. The same name will be re-used."
     }
@@ -69,18 +70,18 @@ Function Test-SupportedMigrationScenario {
 
         # Detecting if there is a frontend IPV6 configuration, if so, exit
         log -Message "[Test-SupportedMigrationScenario] Determining if there is a frontend IPV6 configuration"
-        foreach($frontendIP in $BasicLoadBalancer.FrontendIpConfigurations){
+        foreach ($frontendIP in $BasicLoadBalancer.FrontendIpConfigurations) {
             $pip = Get-azPublicIpAddress -Name $frontendIP.PublicIpAddress.Id.split("/")[8] -ResourceGroupName $frontendIP.PublicIpAddress.Id.split("/")[4]
-            if($pip.PublicIpAddressVersion -eq "IPv6"){
-                log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error"
-                exit
+            if ($pip.PublicIpAddressVersion -eq "IPv6") {
+                log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error"
+                return
             }
         }
         $scenario.ExternalOrInternal = 'External'
     }
-    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix)) {
-        log 'Error' "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP prefix '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefixText)', which is not supported for migration!"
-        Exit
+    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix.Id)) {
+        log -ErrorAction Stop -Severity 'Error' "[Test-SupportedMigrationScenario] FrontEndIPConfiguration[0] is assigned a public IP prefix '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefixText)', which is not supported for migration!"
+        return
     }
     log -Message "[Test-SupportedMigrationScenario] Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
     return $scenario

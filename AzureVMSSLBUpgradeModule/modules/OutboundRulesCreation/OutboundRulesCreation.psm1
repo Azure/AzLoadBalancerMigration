@@ -1,6 +1,7 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 function OutboundRulesCreation {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
     )
@@ -9,13 +10,13 @@ function OutboundRulesCreation {
     foreach ($backendAddressPool in $backendAddressPools) {
         log -Message "[OutboundRulesCreation] Adding Outbound Rule $($backendAddressPool.Name) to Standard Load Balancer"
         $outboundRuleConfig = @{
-            Name = $backendAddressPool.Name
-            AllocatedOutboundPort = 0
-            Protocol = "All"
-            EnableTcpReset = $True
-            IdleTimeoutInMinutes = 4
+            Name                    = $backendAddressPool.Name
+            AllocatedOutboundPort   = 0
+            Protocol                = "All"
+            EnableTcpReset          = $True
+            IdleTimeoutInMinutes    = 4
             FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer)[0]
-            BackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name $backendAddressPool.Name)
+            BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name $backendAddressPool.Name)
         }
         try {
             $ErrorActionPreference = 'Stop'

@@ -1,4 +1,5 @@
 function log {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $True, Position=1)]
         [ValidateNotNullOrEmpty()]
