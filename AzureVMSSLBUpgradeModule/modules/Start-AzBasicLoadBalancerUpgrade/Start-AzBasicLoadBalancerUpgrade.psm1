@@ -49,12 +49,12 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalan
 PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade -StandardLoadBalancerName myStandardLB
 
 .EXAMPLE
-# Specify a custom path for failed migration retry files
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FailedMigrationRetryFilePath C:\FailedMigrationRetryLogs
+# Specify a custom path for recovery backup files
+PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
 
 .EXAMPLE
-# Specifcy a custom path for recovery backup files
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
+# Retry a failed migration
+PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePath C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
 
 .EXAMPLE
 # display logs in the console as the command executes
@@ -70,7 +70,7 @@ Name of the Basic Load Balancer to upgrade
 Load Balancer Object to upgrade passed as pipeline input
 
 .PARAMETER FailedMigrationRetryFilePath
-Location of Failder migration retry files
+Location of a Basic load balancer backup state file (used when retrying a failed migration)
 
 .PARAMETER StandardLoadBalancerName
 Name of the new Standard Load Balancer
