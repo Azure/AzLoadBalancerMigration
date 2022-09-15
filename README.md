@@ -43,9 +43,9 @@ An Azure PowerShell module is available to migrate from a Basic to Standard load
 PS C:\> Find-Module Az | Install-Module
 ```
 
-## Download the 'VMSSLoadBalancerMigration' module
+## Install the 'VMSSLoadBalancerMigration' module
 
-Download the module from [PowerShell gallery](https://www.powershellgallery.com/packages/AzureVMSSLoadBalancerUpgrade/0.1.0)
+Install the module from [PowerShell gallery](https://www.powershellgallery.com/packages/AzureVMSSLoadBalancerUpgrade/0.1.0)
 
 ```
 PS C:\> Find-Module VMSSLoadBalancerMigration | Install-Module
