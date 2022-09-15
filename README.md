@@ -1,11 +1,11 @@
 # Upgrade from Basic load balancer to Standard load balancer for a Virtual Machine Scale set
 
 ### In this article
-  Upgrade overview
-  Download the modules
-  Use the Module
-  Common questions
-  Next Steps
+  - Upgrade overview
+  - Download the modules
+  - Use the Module
+  - Common questions
+  - Next Steps
 
 [Azure Standard Load Balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-overview) offers a rich set of functionality and high availability through zone redundancy. To learn more about Azure Load Balancer SKUs, see [comparison table](https://docs.microsoft.com/en-us/azure/load-balancer/skus#skus).
 
