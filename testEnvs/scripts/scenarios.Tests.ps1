@@ -20,7 +20,7 @@
     023-vmss-high-instance-count_HIGHCOST.bicep
 #>
 
-Describe "Validate Upgrade Script Results" {
+Describe "Validate Migration Script Results" {
     BeforeAll {
         function IsPrivateAddress {
             Param
