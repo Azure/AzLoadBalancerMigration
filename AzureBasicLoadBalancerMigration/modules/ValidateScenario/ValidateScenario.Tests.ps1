@@ -175,6 +175,13 @@ Describe "ValidateScenario" {
     }
   }
 
+  Context "Empty BackendPools" {
+    It "Should fail if the backend pool(s) have no membership" {
+      $BasicLoadBalancer.BackendAddressPools[0].BackendIpConfigurations = @()
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*Basic Load Balancer has backend pools have no membership, exiting"
+    }
+  }
+
   Context "LoadBalancingRules" {
     It "Should fail if no LoadBalancingRules exist on the load balancer" {
       $BasicLoadBalancer.LoadBalancingRules = $null
