@@ -14,25 +14,15 @@ The entire migration process for a Virtual Machine Scale set (VMSS) attached loa
 
 ## Migration Overview
 
-An Azure PowerShell module is available to migrate from a Virtual Machine Scale set (VMSS) attached Basic load balancer to a Standard load balancer. The PowerShell module exports a single function called 'Start-AzBasicLoadBalancerMigration' which performs the following procedures:
+An Azure PowerShell module is available to migrate from a Virtual Machine Scale set (VMSS) attached Basic load balancer to a Standard load balancer. The PowerShell module exports a single function called 'Start-AzBasicLoadBalancerMigration' which performs the following functions:
 
-- Verifies that the Basic load balancer has a supported configuration
-- Verifies tht the new Standard load balancer name is valid abd available
-- Determines whether the load balancer has a public or private IP address
-- Backs up the current Basic load balancer state to enable migration retry if a migration fails
-- Removes the load balancer from the Virtual Machine Scale set
-- Deletes the Basic load balancer
-- Creates a new Standard load balancer
-- Migrates a Basic Public IP to the Standard SKU (Public Load balancer only)
-- Migrates a dynamically assigned Public IP a Static IP address (Public Load balancer only)
-- Migrates Frontend IP configurations
-- Migrates Backend address pools
-- Migrates NAT rules
-- Migrates Probes
-- Migrates Load balancing rules
-- Creates outbound rules for SNAT (Public Load balancer only)
-- Creates NSG for inbound traffic (Public Load balancer only), ensuring that traffic to the backend pool members is allowed when moving to Standard load balancer's default-deny network access policy
-- Logs the entire Migrate process to a log file called `Start-AzBasicLoadBalancerMigrate.log` in the location where the module was executed
+- Verifies that the provided Basic load balancer scenario is supported for migration
+- Backs up the Basic load balancer configuration, enabling retry on failure or if errors are encountered
+- For public load balancers, updates the front end public IP address(es) to Standard SKU and static assignment as required
+- Migrates the Basic load balancer configuration to a new Standard load balancer, ensuring configuration and feature parity
+- Migrates VMSS backend pool members from the Basic load balancer to the standard load balancer
+- Creates and associates a NSG with the VMSS to ensure load balanced traffic reaches backend pool members, following Standard load balancer's move to a default-deny network policy
+- Logs the migration operation for easy audit and failure recovery
 
 ### Unsupported Scenarios
 
@@ -55,12 +45,12 @@ An Azure PowerShell module is available to migrate from a Virtual Machine Scale 
 PS C:\> Find-Module Az | Install-Module
 ```
 
-## Install the 'VMSSBasicLoadBalancerMigration' module
+## Install the 'AzureBasicLoadBalancerMigration' module
 
-Install the module from [PowerShell gallery](https://www.powershellgallery.com/packages/AzureVMSSLoadBalancerMigrate/0.1.0)
+Install the module from [PowerShell gallery](https://www.powershellgallery.com/packages/AzureBasicLoadBalancerMigration/0.1.0)
 
 ```powershell
-PS C:\> Find-Module VMSSBasicLoadBalancerMigration | Install-Module
+PS C:\> Find-Module AzureBasicLoadBalancerMigration | Install-Module
 ```
 
 ## Use the module

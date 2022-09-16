@@ -1,5 +1,5 @@
-Remove-Module AzureVMSSLBMigrationModule -force
-Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureVMSSLBMigrationModule\AzureVMSSLBMigrationModule.psd1 -Force
+Remove-Module AzureBasicLoadBalancerMigration -force
+Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureBasicLoadBalancerMigration\AzureBasicLoadBalancerMigration.psd1 -Force
 
 # External
 #Start-AzBasicLoadBalancerMigration -ResourceGroupName basiclb -BasicLoadBalancerName basiclb-loadbalancer -StandardLoadBalancerName stdlb-loadbalancer

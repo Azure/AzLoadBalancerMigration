@@ -1,6 +1,6 @@
 Describe "ValidateScenario" {
   BeforeEach {
-    Import-Module ./AzureVMSSLBMigrationModule/modules/ValidateScenario/ValidateScenario.psm1 -Force
+    Import-Module ./AzureBasicLoadBalancerMigration/modules/ValidateScenario/ValidateScenario.psm1 -Force
     $options = [System.Text.Json.JsonSerializerOptions]::new()
     $options.WriteIndented = $true
     $options.IgnoreReadOnlyProperties = $true
