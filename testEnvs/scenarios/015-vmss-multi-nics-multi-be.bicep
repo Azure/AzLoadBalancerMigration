@@ -137,6 +137,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
           {
             name: 'ipconfig1'
             properties: {
+              
               subnet: {
                 id: virtualNetworks.outputs.subnetResourceIds[0]
               }
@@ -148,12 +149,14 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
         ]
+        primary: true
+        enableAcceleratedNetworking: false
         nicSuffix: '-nic-01'
       }
       {
         ipConfigurations: [
           {
-            name: 'ipconfig1'
+            name: 'ipconfig2'
             properties: {
               subnet: {
                 id: virtualNetworks.outputs.subnetResourceIds[0]
@@ -166,6 +169,8 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
         ]
+        enableAcceleratedNetworking: false
+        primary: false
         nicSuffix: '-nic-02'
       }
     ]
