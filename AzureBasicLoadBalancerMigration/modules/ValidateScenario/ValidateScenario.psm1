@@ -28,16 +28,22 @@ Function Test-SupportedMigrationScenario {
     log -Message "[Test-SupportedMigrationScenario] Source load balancer SKU is type Basic"
 
     # Detecting if there are any backend pools that is not virtualMachineScaleSets, if so, exit
-    log -Message "[Test-SupportedMigrationScenario] Checking if there are any backend pools that is not virtualMachineScaleSets"
+    log -Message "[Test-SupportedMigrationScenario] Checking if there are any backend pool members which are not virtualMachineScaleSets and that all backend pools are not empty"
+    $backendPoolHasMembers = $false
     foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
         foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {
+            $backendPoolHasMembers = $true
             if ($backendIpConfiguration.Id.split("/")[7] -ne "virtualMachineScaleSets") {
                 log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has backend pools that is not virtualMachineScaleSets, exiting" -Severity 'Error'
                 return
             }
         }
     }
-    log -Message "[Test-SupportedMigrationScenario] All backend pools are virtualMachineScaleSets!"
+    If (!$backendPoolHasMembers) {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no backend pool membership, which is not supported for migration!"
+        return
+    }
+    log -Message "[Test-SupportedMigrationScenario] All backend pools members virtualMachineScaleSets!"
 
     # checking that source load balancer has sub-resource configurations
     log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
