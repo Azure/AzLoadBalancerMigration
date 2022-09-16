@@ -59,7 +59,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
         $jobs += $(
             Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureVMSSLBMigrationModule } `
-                -ScriptBlock { AzureVMSSLBMigration `
+                -ScriptBlock { Start-AzBasicLoadBalancerMigration `
                     -ResourceGroupName $input `
                     -BasicLoadBalancerName 'lb-basic-01' `
                     -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
