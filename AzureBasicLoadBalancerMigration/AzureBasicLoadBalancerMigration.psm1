@@ -39,6 +39,6 @@ ForEach ($requiredModule in $requiredModules) {
 # Supress warnings about Az modules
 Update-AzConfig -Scope Process -DisplayBreakingChangeWarning $false -AppliesTo Az > $null
 
-Import-Module $PSScriptRoot\modules\Start-AzBasicLoadBalancerUpgrade\Start-AzBasicLoadBalancerUpgrade.psd1
+Import-Module $PSScriptRoot\modules\Start-AzBasicLoadBalancerMigration\Start-AzBasicLoadBalancerMigration.psd1
 
-Export-ModuleMember -Function Start-AzBasicLoadBalancerUpgrade
+Export-ModuleMember -Function Start-AzBasicLoadBalancerMigration
