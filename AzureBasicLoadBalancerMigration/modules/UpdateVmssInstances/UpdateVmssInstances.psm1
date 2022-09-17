@@ -15,23 +15,40 @@ function UpdateVmssInstances {
 
     If ($vmss.UpgradePolicy.Mode -eq 'Manual') {
         log -Message "[UpdateVmssInstances] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so each VMSS instance will have the network profile updated."
-        log -Message "[UpdateVmssInstances] Updating VMSS Instances. This process may take a while depending of how many instances."
-        $vmssIntances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
-        foreach ($vmssInstance in $vmssIntances) {
-            log -Message "[UpdateVmssInstances] Updating VMSS Instance $($vmssInstance.Name)"
-            try {
-                Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstance.InstanceId > $null
-            }
-            catch {
-                log -Message "[UpdateVmssInstances] Fail to update VMSS Instance $($vmssInstance.Name). This instance must be updated manually. Error: $_" -Severity "Warning"
+        log -Message "[UpdateVmssInstances] Updating VMSS Instances..."
+
+        $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
+
+        try {
+            $ErrorActionPreference = 'Stop'
+            $updateJob = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
+
+            log -Message "[UpdateVmssInstances] Waiting for VMSS instance update job to complete..."
+            $updateJob | Wait-Job | Out-Null
+        }
+        catch {
+            $message = @"
+            An error occured when initiating the 'Update-AzVMssInstance' job on all instances in VMSS '$($vmss.Name)'. To recover, 
+            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+            State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
+"@  
+            log 'Error' $message
+            Exit
+        }
+        finally {
+            If (![string]::IsNullorEmpty($updateJob.Error)) {
+                $message = @"
+                An error occured while executing the 'Update-AzVMssInstance' job on all instances in VMSS '$($vmss.Name)'. To recover, 
+                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
+                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $($updateJob.Error)
+"@  
+                log 'Error' $message
+                Exit
             }
         }
+
     }
     Else {
-        # ###### TO-DO ######
-        # *** Either use a Sleep or other method of ensuring the change has been applied to all instance before attempting to add the VMSS to the Standard LB!
-        # #######################
-
         log -Message "[UpdateVmssInstances] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so the update NetworkProfile will be applied automatically."
     }
     log -Message "[UpdateVmssInstances] Update Vmss Instances Completed"
