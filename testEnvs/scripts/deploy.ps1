@@ -5,7 +5,7 @@ Param (
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
     [switch]$Cleanup, # removes all test environments (in parallel)
-    [switch]$RunUpgrade # executes the upgrade module against all test environments (in parallel)
+    [switch]$RunMigration # executes the migration module against all test environments (in parallel)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,16 +50,16 @@ if ($Cleanup -and $null -ne $filteredTemplates) {
     return
 }
 
-# if -RunUpgrade switch is supplied, the VMSS Load Balancer upgrade modules is run against all environments
-if ($RunUpgrade -and $null -ne $filteredTemplates) {
+# if -RunMigration switch is supplied, the VMSS Load Balancer migration modules is run against all environments
+if ($RunMigration -and $null -ne $filteredTemplates) {
     $jobs = @()
 
     $filteredTemplates | 
     Foreach-Object {
         "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
         $jobs += $(
-            Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureVMSSLBUpgradeModule } `
-                -ScriptBlock { AzureVMSSLBUpgrade `
+            Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureBasicLoadBalancerMigration } `
+                -ScriptBlock { Start-AzBasicLoadBalancerMigration `
                     -ResourceGroupName $input `
                     -BasicLoadBalancerName 'lb-basic-01' `
                     -StandardLoadBalancerName 'lb-std-01' -FollowLog } `

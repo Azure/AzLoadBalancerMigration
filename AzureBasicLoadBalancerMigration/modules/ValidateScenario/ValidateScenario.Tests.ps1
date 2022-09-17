@@ -1,6 +1,6 @@
 Describe "ValidateScenario" {
   BeforeEach {
-    Import-Module ./AzureVMSSLBUpgradeModule/modules/ValidateScenario/ValidateScenario.psm1 -Force
+    Import-Module ./AzureBasicLoadBalancerMigration/modules/ValidateScenario/ValidateScenario.psm1 -Force
     $options = [System.Text.Json.JsonSerializerOptions]::new()
     $options.WriteIndented = $true
     $options.IgnoreReadOnlyProperties = $true
@@ -172,6 +172,13 @@ Describe "ValidateScenario" {
     It "Should fail if the backend pool ip configuration does not contain 'VirtualMachineScaleSet'" {
       $BasicLoadBalancer.BackendAddressPools[0].BackendIpConfigurations[0].Id = "/subscriptions/b2375b5f-8dab-4436-b87c-32bc7fdce5d0/resourceGroups/rg-001-basic-lb-int-single-fe/providers/Microsoft.Compute/banana/vmss-01/virtualMachines/0/networkInterfaces/vmss-01-nic-01configuration-0/ipConfigurations/ipconfig1"
       { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*Basic Load Balancer has backend pools that is not virtualMachineScaleSets, exiting"
+    }
+  }
+
+  Context "Empty BackendPools" {
+    It "Should fail if the backend pool(s) have no membership" {
+      $BasicLoadBalancer.BackendAddressPools[0].BackendIpConfigurations = @()
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*Basic Load Balancer has backend pools have no membership, exiting"
     }
   }
 

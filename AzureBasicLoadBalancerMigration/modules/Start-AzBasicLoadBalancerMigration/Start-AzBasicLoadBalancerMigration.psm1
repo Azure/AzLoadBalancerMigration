@@ -34,52 +34,66 @@
 <#
 
 .DESCRIPTION
- This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) to a Standard SKU load balancer preserving the existing configuration.
+ This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) to a Standard SKU load balancer, preserving the existing configuration and functionality.
 
 .SYNOPSIS
-This module consists of a number of child modules which abstract the operations required to successfully upgrade a Basic to a Standard load balancer.
-A Basic Load Balancer cannot be natively upgraded to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
+This module consists of a number of child modules which abstract the operations required to successfully migrate a Basic to a Standard load balancer.
+A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
+
+Unsupported scenarios:
+- Basic load balancers with a VMSS backend pool member which is also a member of a backend pool on a different load balancer
+- Basic load balancers with backend pool members which are not a VMSS
+- Basic load balancers with only empty backend pools
+- Basic load balancers with IPV6 frontend IP configurations
+- Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode
+- Migrating a Basic load balancer to an existing Standard load balancer
+
+.OUTPUTS
+This module outputs the following files on execution:
+  - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration. 
+  - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only. 
+  - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios. 
 
 .EXAMPLE
 # Basic usage
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB
+PS C:\> Start-AzBasicLoadBalancerMigration -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB
 
 .EXAMPLE
 # Pass LoadBalancer via pipeline input
-PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade -StandardLoadBalancerName myStandardLB
+PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerMigration -StandardLoadBalancerName myStandardLB
 
 .EXAMPLE
-# Specify a custom path for failed migration retry files
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FailedMigrationRetryFilePath C:\FailedMigrationRetryLogs
+# Specify a custom path for recovery backup files
+PS C:\> Start-AzBasicLoadBalancerMigration -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
 
 .EXAMPLE
-# Specifcy a custom path for recovery backup files
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
+# Retry a failed migration
+PS C:\> Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePath C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
 
 .EXAMPLE
 # display logs in the console as the command executes
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
+PS C:\> Start-AzBasicLoadBalancerMigration -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
 
 .PARAMETER ResourceGroupName
-Resource group containing the Basic Load Balancer to upgrade
+Resource group containing the Basic Load Balancer to migrate. The new Standard load balancer will be created in this resource group. 
 
 .PARAMETER BasicLoadBalancerName
-Name of the Basic Load Balancer to upgrade
+Name of the existing Basic Load Balancer to migrate
 
 .PARAMETER BasicLoadBalancer
-Load Balancer Object to upgrade passed as pipeline input
+Load Balancer object to migrate passed as pipeline input
 
 .PARAMETER FailedMigrationRetryFilePath
-Location of Failder migration retry files
+Location of a Basic load balancer backup files (used when retrying a failed migration or manual configuration comparison)
 
 .PARAMETER StandardLoadBalancerName
-Name of the new Standard Load Balancer
+Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
 
 .PARAMETER RecoveryBackupPath
 Location of the Recovery backup files
 
 .PARAMETER FollowLog
-Swtich parameter to enable the display of logs in the console
+Switch parameter to enable the display of logs in the console
 
 #>
 
@@ -89,7 +103,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ScenariosMigration\Scenarios
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 
-function Start-AzBasicLoadBalancerUpgrade {
+function Start-AzBasicLoadBalancerMigration {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
@@ -97,7 +111,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePath,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][string] $RecoveryBackupPath = $pwd,
+        [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog
         )
 
@@ -112,17 +126,17 @@ function Start-AzBasicLoadBalancerUpgrade {
         Exit
     }
 
-    log -Message "############################## Initializing Start-AzBasicLoadBalancerUpgrade ##############################"
+    log -Message "############################## Initializing Start-AzBasicLoadBalancerMigration ##############################"
 
-    log -Message "[Start-AzBasicLoadBalancerUpgrade] Checking that user is signed in to Azure PowerShell"
+    log -Message "[Start-AzBasicLoadBalancerMigration] Checking that user is signed in to Azure PowerShell"
     if (!($azContext = Get-AzContext -ErrorAction SilentlyContinue)) {
         log 'Error' "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
         return
     }
-    log -Message "[Start-AzBasicLoadBalancerUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
+    log -Message "[Start-AzBasicLoadBalancerMigration] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
 
     # Load Azure Resources
-    log -Message "[Start-AzBasicLoadBalancerUpgrade] Loading Azure Resources"
+    log -Message "[Start-AzBasicLoadBalancerMigration] Loading Azure Resources"
 
     try {
         $ErrorActionPreference = 'Stop'
@@ -132,11 +146,11 @@ function Start-AzBasicLoadBalancerUpgrade {
         elseif (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
             $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePath
         }
-        log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
+        log -Message "[Start-AzBasicLoadBalancerMigration] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
     catch {
         $message = @"
-            [Start-AzBasicLoadBalancerUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
+            [Start-AzBasicLoadBalancerMigration] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
             '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
             Error text: $_
 "@
@@ -171,4 +185,4 @@ function Start-AzBasicLoadBalancerUpgrade {
     log -Message "############################## Migration Completed ##############################"
 }
 
-Export-ModuleMember -Function Start-AzBasicLoadBalancerUpgrade
+Export-ModuleMember -Function Start-AzBasicLoadBalancerMigration
