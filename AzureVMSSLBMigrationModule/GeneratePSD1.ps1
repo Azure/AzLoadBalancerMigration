@@ -31,3 +31,7 @@ New-ModuleManifest -Path NSGCreation.psd1 -RootModule NSGCreation -Author "Matth
 New-ModuleManifest -Path ValidateScenario.psd1 -RootModule ValidateScenario -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
 
 New-ModuleManifest -Path ScenariosMigration.psd1 -RootModule ScenariosMigration -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path GetVMSSFromBasicLoadBalancer.psd1 -RootModule GetVMSSFromBasicLoadBalancer -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+
+New-ModuleManifest -Path AddLoadBalancerBackendAddressPool.psd1 -RootModule AddLoadBalancerBackendAddressPool -Author "Matthew Bratschun" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru

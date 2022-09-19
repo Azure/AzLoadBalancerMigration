@@ -51,6 +51,8 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "\LoadBalacingRulesMigration
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\OutboundRulesCreation\OutboundRulesCreation.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\NSGCreation\NSGCreation.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\PrivateFEMigration\PrivateFEMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\AddLoadBalancerBackendAddressPool\AddLoadBalancerBackendAddressPool.psd1")
 
 function _CreateStandardLoadBalancer {
     [CmdletBinding()]
@@ -95,10 +97,9 @@ function PublicLBMigration {
     )
 
     log -Message "[PublicLBMigration] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
-    #$vmssNames = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | ForEach-Object{$_.split("/")[8]} | Select-Object -Unique
-    #$vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.Id | Where-Object{$_ -match "Microsoft.Compute/virtualMachineScaleSets"} | Select-Object -Unique
-    log -Message "[PublicLBMigration] Loading VMSSs from the Basic Load Balancer"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
+
+    # Creating a vmss object before it gets changed as a reference for the backend pool migration
+    $refVmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
@@ -107,7 +108,7 @@ function PublicLBMigration {
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
+    RemoveLBFromVMSS -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -115,14 +116,8 @@ function PublicLBMigration {
     # Migration of Frontend IP Configurations
     PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of NAT Rules
-    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Probes
     ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -130,11 +125,20 @@ function PublicLBMigration {
     # Migration of Load Balancing Rules
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Inbound NAT Pools
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
     # Creating Outbound Rules for SNAT
     OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
 
     # Creating NSG for Standard Load Balancer
     NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Backend Address Pools
+    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 }
 
 function InternalLBMigration {
@@ -146,14 +150,15 @@ function InternalLBMigration {
     )
 
     log -Message "[InternalLBMigration] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
-    log -Message "[InternalLBMigration] Loading VMSSs from the Basic Load Balancer"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
+
+    # Creating a vmss object before it gets changed as a reference for the backend pool migration
+    $refVmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLBFromVMSS -vmssIds $vmssIds -BasicLoadBalancer $BasicLoadBalancer
+    RemoveLBFromVMSS -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -161,8 +166,14 @@ function InternalLBMigration {
     # Migration of Private Frontend IP Configurations
     PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
 
-    # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Load Balancing Rules
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -170,11 +181,8 @@ function InternalLBMigration {
     # Migration of Inbound NAT Pools
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of Probes
-    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Load Balancing Rules
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    # Migration of Backend Address Pools
+    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
     #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
@@ -188,10 +196,14 @@ function RestoreExternalLBMigration {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
     )
 
     log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+
+    # Creating a vmss object before it gets changed as a reference for the backend pool migration
+    $refVmss = $vmss
 
     # Migrate public IP addresses on Basic LB to static (if dynamic)
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
@@ -202,20 +214,20 @@ function RestoreExternalLBMigration {
     # Migration of Frontend IP Configurations
     PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of NAT Rules
-    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Probes
     ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Load Balancing Rules
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Inbound NAT Pools
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
@@ -223,24 +235,37 @@ function RestoreExternalLBMigration {
     # Creating NSG for Standard Load Balancer
     NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # Migration of Backend Address Pools
+    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 }
 
 function RestoreInternalLBMigration {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
     )
 
     log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
+
+    # Creating a vmss object before it gets changed as a reference for the backend pool migration
+    $refVmss = $vmss
+
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
 
     # Migration of Private Frontend IP Configurations
     PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
 
-    # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Load Balancing Rules
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -248,11 +273,8 @@ function RestoreInternalLBMigration {
     # Migration of Inbound NAT Pools
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of Probes
-    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Migration of Load Balancing Rules
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    # Migration of Backend Address Pools
+    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
     #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer

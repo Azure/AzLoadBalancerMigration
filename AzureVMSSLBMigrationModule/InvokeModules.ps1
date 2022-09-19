@@ -9,7 +9,11 @@ Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureVMSSLBMigr
 
 # Internal
 #Start-AzBasicLoadBalancerMigration -ResourceGroupName BasicLBInternal -BasicLoadBalancerName BasicLBInternal-LoadBalancer
-Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-013-vmss-multi-be-single-lb -BasicLoadBalancerName lb-basic-01
+#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-013-vmss-multi-be-single-lb -BasicLoadBalancerName lb-basic-01
+# test different RG
+#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-018-vmss-roll-upgrade-policy -BasicLoadBalancerName lb-basic-01
+
+Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePathLB C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\State_lb-basic-01_rg-018-vmss-roll-upgrade-policy_20220919T0955511084.json -FailedMigrationRetryFilePathVMSS C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\VMSS_vmss-01_rg-018-vmss-roll-upgrade-policy_20220919T0955511084.json
 
 # Test IPV6
 # Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-012-basic-lb-ext-ipv6-fe -BasicLoadBalancerName lb-basi-c01
@@ -26,45 +30,12 @@ Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-013-vmss-multi-be-singl
 
 ############################################
 # Build test environment
-# Remove-AzResourceGroup -Name rg-009-basic-lb-ext-basic-static-pip -Force
+# Remove-AzResourceGroup -Name rg-018-vmss-roll-upgrade-policy -Force
 # cd testEnvs\scripts
-#.\deploy.ps1 -Location CentralUS -KeyVaultResourceGroupName rg-vmsstestingconfig -ScenarioNumber 012
+#.\deploy.ps1 -Location CentralUS -KeyVaultResourceGroupName rg-vmsstestingconfig -ScenarioNumber 018
+# Deploy all scenarios
+#.\deploy.ps1 -Location CentralUS -KeyVaultResourceGroupName rg-vmsstestingconfig
+# Cleanup
+# .\deploy.ps1 -Cleanup
 ############################################
-
-#############
-# Test Matrix
-#############
-
-# Tested OK
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-001-basic-lb-int-single-fe -BasicLoadBalancerName lb-basic-01
-#Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePath C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\State-lb-basic-01-rg-001-basic-lb-int-single-fe-20220908T1530071833.json
-
-# Tested OK
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-002-basic-lb-int-multi-fe -BasicLoadBalancerName lb-basic-01
-
-# Tested OK
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-003-basic-lb-ext-single-fe -BasicLoadBalancerName lb-basic-01
-
-# Tested OK
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-004-basic-lb-ext-multi-fe -BasicLoadBalancerName lb-basic-01
-
-# Tested OK
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-005-basic-lb-int-single-be -BasicLoadBalancerName lb-basic-01
-
-# Tested OK
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-006-basic-lb-int-multi-be -BasicLoadBalancerName lb-basic-01
-
-# Tested Failed error in the scenario - already fixed and waiting deployment
-# This scenario is failing but I created it manualy without bicep and worked fine
-# Carml is causing issue here in the natrule
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-007-basic-lb-int-nat-rule -BasicLoadBalancerName lb-basic-01
-
-# did not test yet
-#Start-AzBasicLoadBalancerMigration -ResourceGroupName rg-009-basic-lb-ext-basic-static-pip -BasicLoadBalancerName lb-basic-01
-
-
-#############
-# End Test Matrix
-#############
-
-
+# Remove-AzResourceGroup -Name rg-018-vmss-roll-upgrade-policy -Force;.\deploy.ps1 -Location CentralUS -KeyVaultResourceGroupName rg-vmsstestingconfig -ScenarioNumber 018

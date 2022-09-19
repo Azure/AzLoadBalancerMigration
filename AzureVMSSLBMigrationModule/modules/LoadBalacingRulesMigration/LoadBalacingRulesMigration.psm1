@@ -10,23 +10,23 @@ function LoadBalacingRulesMigration {
     $loadBalancingRules = $BasicLoadBalancer.LoadBalancingRules
     foreach ($loadBalancingRule in $loadBalancingRules) {
         log -Message "[LoadBalacingRulesMigration] Adding LoadBalacing Rule $($loadBalancingRule.Name) to Standard Load Balancer"
-        $loadBalancingRuleConfig = @{
-            Name                    = $loadBalancingRule.Name
-            Protocol                = $loadBalancingRule.Protocol
-            FrontendPort            = $loadBalancingRule.FrontendPort
-            BackendPort             = $loadBalancingRule.BackendPort
-            IdleTimeoutInMinutes    = $loadBalancingRule.IdleTimeoutInMinutes
-            EnableFloatingIP        = $loadBalancingRule.EnableFloatingIP
-            LoadDistribution        = $loadBalancingRule.LoadDistribution
-            DisableOutboundSnat     = $loadBalancingRule.DisableOutboundSnat
-            EnableTcpReset          = $loadBalancingRule.EnableTcpReset
-            FrontendIPConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.FrontendIpConfiguration.Id).split('/')[-1])
-            BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
-            Probe                   = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
-        }
 
         try {
             $ErrorActionPreference = 'Stop'
+            $loadBalancingRuleConfig = @{
+                Name                    = $loadBalancingRule.Name
+                Protocol                = $loadBalancingRule.Protocol
+                FrontendPort            = $loadBalancingRule.FrontendPort
+                BackendPort             = $loadBalancingRule.BackendPort
+                IdleTimeoutInMinutes    = $loadBalancingRule.IdleTimeoutInMinutes
+                EnableFloatingIP        = $loadBalancingRule.EnableFloatingIP
+                LoadDistribution        = $loadBalancingRule.LoadDistribution
+                DisableOutboundSnat     = $loadBalancingRule.DisableOutboundSnat
+                EnableTcpReset          = $loadBalancingRule.EnableTcpReset
+                FrontendIPConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.FrontendIpConfiguration.Id).split('/')[-1])
+                BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
+                Probe                   = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
+            }
             $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
         }
         catch {
@@ -50,8 +50,8 @@ function LoadBalacingRulesMigration {
     catch {
         $message = @"
         [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rules configuration to new Standard load
-        balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the 
-        -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory 
+        balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the
+        -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory
         or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
         log "Error" $message
