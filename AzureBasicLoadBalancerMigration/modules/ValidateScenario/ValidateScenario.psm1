@@ -101,8 +101,8 @@ Function Test-SupportedMigrationScenario {
     }
 
     # check if any VMSS instances have instance protection enabled
-    log -Message "[Test-SupportedMigrationScenario] Checking for instances in backend pool member VMSS '$($vmssIds[0].split('/')[-1])' with Instance Protection configured"
-    $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmssIds[0].split('/')[-1]
+    log -Message "[Test-SupportedMigrationScenario] Checking for instances in backend pool member VMSS '$($vmssIds.split('/')[-2])' with Instance Protection configured"
+    $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmssIds.split('/')[-2]
 
     ForEach ($instance in $vmssInstances) {
         If ($instance.ProtectionPolicy.ProtectFromScaleSetActions) {

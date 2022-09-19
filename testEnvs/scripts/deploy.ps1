@@ -14,7 +14,7 @@ If (!(Test-Path -Path ../scenarios)) {
     Write-Error "This script should be executed from the ./testEnvs/scripts directory"
     break
 }
-$allTemplates = Get-ChildItem -Path ../scenarios -Filter *.bicep 
+$allTemplates = Get-ChildItem -Path ../scenarios -File
 
 If ($ScenarioNumber) {
     $templateNumberPattern = ($scenarioNumber | ForEach-Object { $_.ToString().PadLeft(3, '0') }) -join '|'
@@ -40,7 +40,7 @@ Write-Verbose "Deploying templates: $($filteredTemplates.Name)"
 if ($Cleanup -and $null -ne $filteredTemplates) {
     $jobs = @()
 
-    $filteredTemplates | 
+    $filteredTemplates |
     Foreach-Object {
         "Removing Resource Group rg-$($_.BaseName)"
         $jobs += $(Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob)
@@ -52,22 +52,47 @@ if ($Cleanup -and $null -ne $filteredTemplates) {
 
 # if -RunMigration switch is supplied, the VMSS Load Balancer migration modules is run against all environments
 if ($RunMigration -and $null -ne $filteredTemplates) {
-    $jobs = @()
 
-    $filteredTemplates | 
-    Foreach-Object {
-        "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
-        $jobs += $(
-            Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureBasicLoadBalancerMigration } `
-                -ScriptBlock { Start-AzBasicLoadBalancerMigration `
-                    -ResourceGroupName $input `
-                    -BasicLoadBalancerName 'lb-basic-01' `
-                    -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
-                -InputObject "rg-$($_.BaseName)"
-        )
+    $ScriptBlock = {
+        param($RGName)
+        Write-Output $RGName
+        Import-Module ..\..\AzureBasicLoadBalancerMigration -Force
+        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzureBasicLoadBalancerMigration\$RGName"
+        New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
+        Set-Location $path
+        Start-AzBasicLoadBalancerMigration -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01
+    }
+    $scenarios = Get-AzResourceGroup -Name rg-0*
+
+    foreach($rg in $scenarios){
+        Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock > $null
     }
 
-    $jobs | Wait-Job | Receive-Job
+    Write-Output ("Total Jobs Created: " + $scenarios.Count)
+    Write-Output "-----------------------------"
+    while((Get-Job -State Running).count -ne 0)
+    {
+        Write-Output ("Threads Running: " + (Get-Job -State Running).count)
+        Start-Sleep -Seconds 5
+    }
+    Write-Output "-----------------------------"
+
+    # $jobs = @()
+
+    # $filteredTemplates |
+    # Foreach-Object {
+    #     "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
+    #     $jobs += $(
+    #         Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureBasicLoadBalancerMigration } `
+    #             -ScriptBlock { Start-AzBasicLoadBalancerMigration `
+    #                 -ResourceGroupName $input `
+    #                 -BasicLoadBalancerName 'lb-basic-01' `
+    #                 -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
+    #             -InputObject "rg-$($_.BaseName)"
+    #     )
+    # }
+
+    # $jobs | Wait-Job | Receive-Job
     return
 }
 
@@ -93,19 +118,32 @@ $keyVaultName = (
 $jobs = @()
 
 foreach ($template in $filteredTemplates) {
-
-    $params = @{
-        Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
-        TemplateFile            = $template.FullName
-        TemplateParameterObject = @{
-            Location                  = $Location
-            ResourceGroupName         = "rg-$($template.BaseName)"
-            KeyVaultName              = $keyVaultName
-            KeyVaultResourceGroupName = $KeyVaultResourceGroupName
+    if($template.FullName -like "*.bicep"){
+        $params = @{
+            Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
+            TemplateFile            = $template.FullName
+            TemplateParameterObject = @{
+                Location                  = $Location
+                ResourceGroupName         = "rg-$($template.BaseName)"
+                KeyVaultName              = $keyVaultName
+                KeyVaultResourceGroupName = $KeyVaultResourceGroupName
+            }
         }
+
+        $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
     }
 
-    $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
+    if($template.FullName -like "*.json"){
+        $rgTemplateName = "rg-$($template.BaseName)"
+        $params = @{
+            Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
+            TemplateFile            = $template.FullName
+        }
+        New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
+    }
+
 }
 
 $jobs | Wait-Job
+
