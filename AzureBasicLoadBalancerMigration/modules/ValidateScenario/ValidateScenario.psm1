@@ -81,12 +81,31 @@ Function Test-SupportedMigrationScenario {
 
         If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
             $message = @"
-                One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps"
+            [Test-SupportedMigrationScenario] One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of 
+            the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
 "@      
             log 'Error' $message
             Exit
         }
     }
+
+    # check if any VMSS instances have instance protection enabled
+    log -Message "[Test-SupportedMigrationScenario] Checking for instances in backend pool member VMSS '$($vmssIds[0].split('/')[-1])' with Instance Protection configured"
+    $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmssIds[0].split('/')[-1]
+
+    ForEach ($instance in $vmssInstances) {
+        If ($instance.ProtectionPolicy.ProtectFromScaleSetActions) {
+            $message = @"
+            [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' contains 1 or more instances with a ProtectFromScaleSetActions Instance Protection configured. This
+            module cannot upgrade the associated load balancer because a VMSS cannot be a backend member of both basic and standard SKU load balancers. Remove the Instance
+            Protection policy and re-run the module.
+"@
+            log -Severity 'Error' 
+            $vmssInstances.Remove($instance)
+        }
+    }
+    log -Message "[Test-SupportedMigrationScenario] No VMSS instances with Instance Protection found"
+
 
     # detecting if source load balancer is internal or external-facing
     log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
