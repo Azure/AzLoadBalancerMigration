@@ -31,6 +31,7 @@ An Azure PowerShell module is available to migrate from a Virtual Machine Scale 
 - Basic load balancers with only empty backend pools
 - Basic load balancers with IPV6 frontend IP configurations
 - Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode
+- Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
 - Migrating a Basic load balancer to an existing Standard load balancer
 
 ### Prerequisites
