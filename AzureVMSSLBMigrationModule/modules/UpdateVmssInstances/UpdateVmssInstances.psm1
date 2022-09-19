@@ -7,12 +7,6 @@ function UpdateVmssInstances {
     )
     log -Message "[UpdateVmssInstances] Initiating Update Vmss Instances"
 
-    # If ($vmss.UpgradePolicy.Mode -ne 'Manual') {
-    #     $message = "[UpdateVmssInstances] VMSS '$($vmss.Id)' is configued with UpgradePolicy '$($vmss.UpgradePolicy.Mode)', which is not supported by this script"
-    #     log 'Error' $message
-    #     Exit
-    # }
-
     If ($vmss.UpgradePolicy.Mode -eq 'Manual') {
         log -Message "[UpdateVmssInstances] VMSS '$($vmss.Name)' is configured with Upgrade Policy '$($vmss.UpgradePolicy.Mode)', so each VMSS instance will have the network profile updated."
         log -Message "[UpdateVmssInstances] Updating VMSS Instances. This process may take a while depending of how many instances."

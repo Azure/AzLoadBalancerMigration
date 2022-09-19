@@ -28,6 +28,33 @@ function RestoreLoadBalancer {
     }
 }
 
+function RestoreVMSS {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $True)][string] $VMSSJsonFile
+    )
+    log -Message "[RestoreVMSS] Initiating Restore VMSS from JSON Backup"
+
+    if (!(Test-Path $VMSSJsonFile)) {
+        log -Severity "Error" -Message "[RestoreVMSS] Unable to load the file $VMSSJsonFile. File not found or missing permission."
+        Exit
+    }
+    log -Message "[RestoreVMSS] Loading file $VMSSJsonFile"
+    $VMSSJson = Get-Content $VMSSJsonFile
+    try {
+        $ErrorActionPreference = 'Stop'
+        log -Message "[RestoreVMSS] Deserializing backup to a object type [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet]"
+        $vmss = [System.Text.Json.JsonSerializer]::Deserialize($VMSSJson, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet])
+        log -Message "[RestoreVMSS] Deserialization Completed"
+        return $vmss
+    }
+    catch {
+        $message = "[RestoreVMSS] An error occured while deserializing backup from JSON File. Error: $_"
+        log -Severity Error -Message $message
+        Exit
+    }
+}
+
 function BackupBasicLoadBalancer {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -38,7 +65,7 @@ function BackupBasicLoadBalancer {
         $ErrorActionPreference = 'Stop'
 
         $backupDateTime = Get-Date -Format FileDateTime
-        
+
         # export serialized JSON object of Basic LB for automated recovery scenarios
         $outputFileName = ('State_' + $BasicLoadBalancer.Name + "_" + $BasicLoadBalancer.ResourceGroupName + "_" + $backupDateTime + ".json")
         $outputFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileName
@@ -88,3 +115,4 @@ function BackupBasicLoadBalancer {
 }
 Export-ModuleMember -Function BackupBasicLoadBalancer
 Export-ModuleMember -Function RestoreLoadBalancer
+Export-ModuleMember -Function RestoreVMSS

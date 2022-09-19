@@ -10,28 +10,28 @@ function NatRulesMigration {
     $inboundNatRules = $BasicLoadBalancer.InboundNatRules
     foreach ($inboundNatRule in $inboundNatRules) {
         log -Message "[NatRulesMigration] Adding Nat Rule $($inboundNatRule.Name) to Standard Load Balancer"
-        $inboundNatRuleConfig = @{
-            Name                    = $inboundNatRule.Name
-            Protocol                = $inboundNatRule.Protocol
-            FrontendPort            = $inboundNatRule.FrontendPort
-            BackendPort             = $inboundNatRule.BackendPort
-            IdleTimeoutInMinutes    = $inboundNatRule.IdleTimeoutInMinutes
-            EnableFloatingIP        = $inboundNatRule.EnableFloatingIP
-            EnableTcpReset          = $inboundNatRule.EnableTcpReset
-            FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.FrontendIpConfiguration.Id).split('/')[-1])
-            FrontendPortRangeStart  = $inboundNatRule.FrontendPortRangeStart
-            FrontendPortRangeEnd    = $inboundNatRule.FrontendPortRangeEnd
-            BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
-        }
 
         try {
             $ErrorActionPreference = 'Stop'
+            $inboundNatRuleConfig = @{
+                Name                    = $inboundNatRule.Name
+                Protocol                = $inboundNatRule.Protocol
+                FrontendPort            = $inboundNatRule.FrontendPort
+                BackendPort             = $inboundNatRule.BackendPort
+                IdleTimeoutInMinutes    = $inboundNatRule.IdleTimeoutInMinutes
+                EnableFloatingIP        = $inboundNatRule.EnableFloatingIP
+                EnableTcpReset          = $inboundNatRule.EnableTcpReset
+                FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.FrontendIpConfiguration.Id).split('/')[-1])
+                FrontendPortRangeStart  = $inboundNatRule.FrontendPortRangeStart
+                FrontendPortRangeEnd    = $inboundNatRule.FrontendPortRangeEnd
+                BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
+            }
             $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
         }
         catch {
             $message = @"
-            [NatRulesMigration] Failed to add inbound nat rule config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource 
-            group '$($StdLoadBalancer.ResourceGroupName)'. Migration will continue, FAILED RULE WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_ 
+            [NatRulesMigration] Failed to add inbound nat rule config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource
+            group '$($StdLoadBalancer.ResourceGroupName)'. Migration will continue, FAILED RULE WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_
 "@
             log "Error" $message
         }
@@ -40,13 +40,13 @@ function NatRulesMigration {
 
     try {
         $ErrorActionPreference = 'Stop'
-        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null   
+        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
         $message = @"
-        [NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource 
+        [NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource
         group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule
-        configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load 
+        configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load
         balancer. Error: $_
 "@
         log "Error" $message

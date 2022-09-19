@@ -9,24 +9,24 @@ function OutboundRulesCreation {
     $backendAddressPools = $StdLoadBalancer.BackendAddressPools
     foreach ($backendAddressPool in $backendAddressPools) {
         log -Message "[OutboundRulesCreation] Adding Outbound Rule $($backendAddressPool.Name) to Standard Load Balancer"
-        $outboundRuleConfig = @{
-            Name                    = $backendAddressPool.Name
-            AllocatedOutboundPort   = 0
-            Protocol                = "All"
-            EnableTcpReset          = $True
-            IdleTimeoutInMinutes    = 4
-            FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer)[0]
-            BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name $backendAddressPool.Name)
-        }
         try {
             $ErrorActionPreference = 'Stop'
+            $outboundRuleConfig = @{
+                Name                    = $backendAddressPool.Name
+                AllocatedOutboundPort   = 0
+                Protocol                = "All"
+                EnableTcpReset          = $True
+                IdleTimeoutInMinutes    = 4
+                FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer)[0]
+                BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name $backendAddressPool.Name)
+            }
             $StdLoadBalancer | Add-AzLoadBalancerOutboundRuleConfig @outboundRuleConfig > $null
         }
         catch {
             $message = @"
                 [OutboundRulesCreation] An error occured when adding Outbound Rule '$($backendAddressPool.Name)' to new Standard load
-                balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the 
-                -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or 
+                balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the
+                -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or
                 the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
             log "Error" $message

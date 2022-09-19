@@ -50,9 +50,9 @@ Unsupported scenarios:
 
 .OUTPUTS
 This module outputs the following files on execution:
-  - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration. 
-  - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only. 
-  - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios. 
+  - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration.
+  - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only.
+  - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios.
 
 .EXAMPLE
 # Basic usage
@@ -75,7 +75,7 @@ PS C:\> Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePath C:\Reco
 PS C:\> Start-AzBasicLoadBalancerMigration -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
 
 .PARAMETER ResourceGroupName
-Resource group containing the Basic Load Balancer to migrate. The new Standard load balancer will be created in this resource group. 
+Resource group containing the Basic Load Balancer to migrate. The new Standard load balancer will be created in this resource group.
 
 .PARAMETER BasicLoadBalancerName
 Name of the existing Basic Load Balancer to migrate
@@ -109,7 +109,8 @@ function Start-AzBasicLoadBalancerMigration {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePath,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathLB,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathVMSS,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog
@@ -140,11 +141,12 @@ function Start-AzBasicLoadBalancerMigration {
 
     try {
         $ErrorActionPreference = 'Stop'
-        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer") -and (!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
+        if (!$PSBoundParameters.ContainsKey("BasicLoadBalancer") -and (!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
             $BasicLoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $BasicLoadBalancerName
         }
         elseif (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
-            $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePath
+            $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePathLB
+            $vmss = RestoreVMSS -VMSSJsonFile $FailedMigrationRetryFilePathVMSS
         }
         log -Message "[Start-AzBasicLoadBalancerMigration] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
@@ -166,19 +168,19 @@ function Start-AzBasicLoadBalancerMigration {
     # Migration of Frontend IP Configurations
     switch ($scenario.ExternalOrInternal) {
         'internal' {
-            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
+            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
                 InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
             }
             else {
-                RestoreInternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                RestoreInternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
             }
         }
         'external' {
-            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePath"))) {
+            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
                 PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
             }
             else {
-                RestoreExternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                RestoreExternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
             }
         }
     }
