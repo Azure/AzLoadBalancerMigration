@@ -58,7 +58,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     Foreach-Object {
         "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
         $jobs += $(
-            Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureVMSSLBMigrationModule } `
+            Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureBasicLoadBalancerMigration } `
                 -ScriptBlock { Start-AzBasicLoadBalancerMigration `
                     -ResourceGroupName $input `
                     -BasicLoadBalancerName 'lb-basic-01' `

@@ -137,6 +137,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
           {
             name: 'ipconfig1'
             properties: {
+              primary: true
               subnet: {
                 id: virtualNetworks.outputs.subnetResourceIds[0]
               }
@@ -148,8 +149,9 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
           {
-            name: 'ipconfig1'
+            name: 'ipconfig2'
             properties: {
+              primary: false
               subnet: {
                 id: virtualNetworks.outputs.subnetResourceIds[0]
               }
