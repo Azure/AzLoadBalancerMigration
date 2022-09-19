@@ -1,5 +1,5 @@
-Remove-Module AzureVMSSLBMigrationModule -force
-Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureVMSSLBMigrationModule\AzureVMSSLBMigrationModule.psd1 -Force
+Remove-Module AzureBasicLoadBalancerMigration -force
+Import-Module C:\Projects\VSProjects\VMSS-LoadBalander-MIgration\AzureBasicLoadBalancerMigration\AzureBasicLoadBalancerMigration.psd1 -Force
 
 # External
 #Start-AzBasicLoadBalancerMigration -ResourceGroupName basiclb -BasicLoadBalancerName basiclb-loadbalancer -StandardLoadBalancerName stdlb-loadbalancer
@@ -35,6 +35,8 @@ Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePathLB C:\Projects\V
 #.\deploy.ps1 -Location CentralUS -KeyVaultResourceGroupName rg-vmsstestingconfig -ScenarioNumber 018
 # Deploy all scenarios
 #.\deploy.ps1 -Location CentralUS -KeyVaultResourceGroupName rg-vmsstestingconfig
+# Run all scenarios
+# .\deploy.ps1 -RunMigration
 # Cleanup
 # .\deploy.ps1 -Cleanup
 ############################################
