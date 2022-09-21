@@ -10,14 +10,14 @@
 
 [Azure Standard Load Balancer](https://docs.microsoft.com/azure/load-balancer/load-balancer-overview) offers a rich set of functionality and high availability through zone redundancy. To learn more about Azure Load Balancer SKUs, see [comparison table](https://docs.microsoft.com/azure/load-balancer/skus#skus).
 
-The entire migration process for a Virtual Machine Scale set (VMSS) attached load balancer with a Public or Private IP is handled by this PowerShell module. 
+The entire migration process for a Virtual Machine Scale set (VMSS) attached load balancer with a Public or Private IP is handled by this PowerShell module.
 
 ## Migration Overview
 
 An Azure PowerShell module is available to migrate from a Virtual Machine Scale set (VMSS) attached Basic load balancer to a Standard load balancer. The PowerShell module exports a single function called 'Start-AzBasicLoadBalancerMigration' which performs the following functions:
 
 - Verifies that the provided Basic load balancer scenario is supported for migration
-- Backs up the Basic load balancer configuration, enabling retry on failure or if errors are encountered
+- Backs up the Basic load balancer and Virtual Machine Scale set (VMSS) configuration, enabling retry on failure or if errors are encountered
 - For public load balancers, updates the front end public IP address(es) to Standard SKU and static assignment as required
 - Migrates the Basic load balancer configuration to a new Standard load balancer, ensuring configuration and feature parity
 - Migrates VMSS backend pool members from the Basic load balancer to the standard load balancer
@@ -56,10 +56,10 @@ PS C:\> Find-Module AzureBasicLoadBalancerMigration | Install-Module
 
 ## Use the module
 
-1. Use `Connect-AzAccount` to connect to the required Azure AD tenant and Azure subscription 
+1. Use `Connect-AzAccount` to connect to the required Azure AD tenant and Azure subscription
 
     ```powershell
-    PS C:\> Connect-AzAccount -Tenant <TenantId> -Subscription <SubscriptionId> 
+    PS C:\> Connect-AzAccount -Tenant <TenantId> -Subscription <SubscriptionId>
     ```
 
 2. Find the Load Balancer you wish to migrate & record its name and containing resource group name
@@ -68,7 +68,8 @@ PS C:\> Find-Module AzureBasicLoadBalancerMigration | Install-Module
     - *BasicLoadBalancerName [string] Required* - This parameter is the name of the existing Basic load balancer you would like to migrate
     - *ResourceGroupName [string] Required* - This parameter is the name of the resource group containing the Basic load balancer
     - *RecoveryBackupPath [string] Optional* - This parameter allows you to specify an alternative path in which to store the Basic load balancer ARM template backup file (defaults to the current working directory)
-    - *FailedMigrationRetryPath [string] Optional* - This parameter allows you to specify a path to a Basic load balancer backup state file when retrying a failed migration (defaults to current working directory)
+    - *FailedMigrationRetryFilePathLB [string] Optional* - This parameter allows you to specify a path to a Basic load balancer backup state file when retrying a failed migration (defaults to current working directory)
+    - *FailedMigrationRetryFilePathVMSS [string] Optional* - This parameter allows you to specify a path to a Virtual Machine Scale set (VMSS) backup state file when retrying a failed migration (defaults to current working directory)
 
 4. Run the Migrate command.
 
@@ -93,20 +94,20 @@ PS C:\> Start-AzBasicLoadBalancerMigrate -ResourceGroupName <load balancer resou
 ### Example: migrate a basic load balancer to a standard load balancer with the specified name and store the basic load balancer backup file at the specified path
 
 ```powershell
-PS C:\> Start-AzBasicLoadBalancerMigrate -ResourceGroupName <load balancer resource group name> -BasicLoadBalancerName <existing basic load balancer name> -StandardLoadBalancerName <new standard load balancer name> -RecoveryBackupPath C:\BasicLBRecovery 
+PS C:\> Start-AzBasicLoadBalancerMigrate -ResourceGroupName <load balancer resource group name> -BasicLoadBalancerName <existing basic load balancer name> -StandardLoadBalancerName <new standard load balancer name> -RecoveryBackupPath C:\BasicLBRecovery
 ```
 
-### Example: retry a failed migration (due to error or script termination) by providing the Basic load balancer backup state file
+### Example: retry a failed migration (due to error or script termination) by providing the Basic load balancer and VMSS backup state file
 
 ```powerhsell
-PS C:\> Start-AzBasicLoadBalancerMigrate -FailedMigrationRetryFilePath C:\BasicLBRecovery\State_lb-basic-01_rg-basiclbmigration_20220912T1744261819.json
+PS C:\> Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
 ```
 
 ## Common Questions
 
 ### Will the module migrate my frontend IP address to the new Standard load balancer?
 
-Yes, for both public and internal load balancers, the module ensures that front end IP addresses are maintained. For public IPs, the IP is converted to a static IP prior to migration (if necessary). For internal front ends, the module will attempt to reassign the same IP address freed up when the Basic load balancer was deleted; if the private IP is not available the script will fail. In this scenario, remove the virtual network connected device which has claimed the intended front end IP and rerun the module with the `-FailedMigrationRetryFilePath <backupFilePath>` parameter specified.
+Yes, for both public and internal load balancers, the module ensures that front end IP addresses are maintained. For public IPs, the IP is converted to a static IP prior to migration (if necessary). For internal front ends, the module will attempt to reassign the same IP address freed up when the Basic load balancer was deleted; if the private IP is not available the script will fail. In this scenario, remove the virtual network connected device which has claimed the intended front end IP and rerun the module with the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters specified.
 
 ### How long does the Migrate take?
 
@@ -116,14 +117,55 @@ It usually takes a few minutes for the script to finish and it could take longer
 
 Yes. The Azure PowerShell script migrates the virtual machine scale set to the newly created public or private standard load balancer.
 
+### What load balancer configurations the script migrates?
+
+The script migrates the following in the load balancer:
+
+**Public Load Balancer:**
+
+- Public frontend IP configuration
+  - It will convert the public IP to a static IP if it is not already static
+  - It will change the public IP SKU to Standard if it is Basic
+  - It will migrate all associated public IPs to the new Standard load balancer
+- Health Probes:
+  - All probes will be migrated to the new Standard load balancer
+- Load balancing rules:
+  - All load balancing rules will be migrated to the new Standard load balancer
+- Inbound NAT Rules:
+  - All NAT rules will be migrated to the new Standard load balancer
+- Outbound Rules:
+  - Basic load balancer does not have outbound rules. The script will create an outbound rule in the Standard load balancer to preserve the same behavior. For more information about Outbound connectivity, see [Outbound-only load balancer configuration](/azure/load-balancer/egress-only).
+- Network Security Group
+  - Basic load balancer doesn't required a Network Security Group to allow outbound connectivity. In case there is no Network Security Group associated with the VMSS, a new NSG will be created to preserve the same functionality. This new NSG will be associated to the VMSS network interface and allow the same load balancing rules Ports and protocols and preserve the outbound connectivity.
+- Backend pools:
+  - All backend pools will be migrated to the new Standard load balancer
+  - All VMSS network interfaces and ipconfigurations will be migrated to the new Standard load balancer
+  - In case of VMSS using Rolling Upgrade policy, the script will update the VMSS upgrade policy to "Manual" during the migration process and revert it back to "Rolling" after the migration is completed.
+
+**Private Load Balancer:**
+
+- Private frontend IP configuration
+  - It will convert the private IP to a static IP if it is not already static
+  - It will migrate all associated private IPs to the new Standard load balancer
+- Health Probes:
+  - All probes will be migrated to the new Standard load balancer
+- Load balancing rules:
+  - All load balancing rules will be migrated to the new Standard load balancer
+- Inbound NAT Rules:
+  - All NAT rules will be migrated to the new Standard load balancer
+- Backend pools:
+  - All backend pools will be migrated to the new Standard load balancer
+  - All VMSS network interfaces and ipconfigurations will be migrated to the new Standard load balancer
+  - In case of VMSS using Rolling Upgrade policy, the script will update the VMSS upgrade policy to "Manual" during the migration process and revert it back to "Rolling" after the migration is completed.
+
 ### What happens if my migration fails mid-migration?
 
-The module is designed to accommodate failures, either due to unhandled errors or unexpected script termination. The failure design is a 'fail forward' approach, where instead of attempting to move back to the Basic load balancer, you should correct the issue causing the failure (see the error output or log file), and retry the migration again, specifying the `-FailedMigrationRetryFilePath <backupFilePath>` parameter. For public load balancers, because the Public IP Address SKU has been updated to Standard, moving the same IP back to a Basic load balancer will not be possible. The basic failure recovery procedure is:
+The module is designed to accommodate failures, either due to unhandled errors or unexpected script termination. The failure design is a 'fail forward' approach, where instead of attempting to move back to the Basic load balancer, you should correct the issue causing the failure (see the error output or log file), and retry the migration again, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters. For public load balancers, because the Public IP Address SKU has been updated to Standard, moving the same IP back to a Basic load balancer will not be possible. The basic failure recovery procedure is:
 
   1. Address the cause of the migration failure. Check the log file `Start-AzBasicLoadBalancerMigrate.log` for details
-  1. Remove the new Standard load balancer (if created)
+  1. Remove the new Standard load balancer (if created). Depending on which stage of the migration failed, you may have to remove the Standard load balancer reference from the VMSS network interfaces (ipconfigurations) and health probes in order to remove the Standard load balancer and try again.
   1. Locate the basic load balancer state backup file. This will either be in the directory where the script was executed, or at the path specified with the `-RecoveryBackupPath` parameter during the failed execution. The file will be named: `State_<basicLBName>_<basicLBRGName>_<timestamp>.json`
-  1. Rerun the migration script, specifying the `-FailedMigrationRetryFilePath <backupFilePath>` parameter instead of -BasicLoadBalancerName or passing the Basic load balancer over the pipeline
+  1. Rerun the migration script, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters instead of -BasicLoadBalancerName or passing the Basic load balancer over the pipeline
 
 ## Next Steps
 
