@@ -36,6 +36,22 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
   ]
 }
 
+module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+  name: 'pip-01'
+  params: {
+    name: 'pip-01'
+    location: location
+    publicIPAddressVersion: 'IPv4'
+    skuTier: 'Regional'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
+  }
+  scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
+}
+
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
   name: 'lb-basic-01'
@@ -46,7 +62,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = 
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: publicIp01.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -89,6 +105,17 @@ resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
   scope: resourceGroup(keyVaultResourceGroupName)
 }
 
+module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
+  name:'vmss${uniqueString(subscription().subscriptionId,resourceGroupName)}'
+  scope: resourceGroup(resourceGroupName)
+  params: {
+    name: 'vmss${uniqueString(subscription().subscriptionId,resourceGroupName)}'
+    location: location
+    storageAccountSku: 'Standard_LRS'
+    storageAccountKind: 'StorageV2'
+  }
+}
+
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
   name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
@@ -97,16 +124,16 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     // Required parameters
     encryptionAtHost: false
     adminUsername: kv1.getSecret('adminUsername')
-    skuCapacity: 1
+    skuCapacity: 3
     upgradePolicyMode: 'Rolling'
-    
     imageReference: {
-      offer: 'WindowsServer'
-      publisher: 'MicrosoftWindowsServer'
-      sku: '2022-Datacenter'
+      offer: 'UbuntuServer'
+      publisher: 'Canonical'
+      sku: '18.04-LTS'
       version: 'latest'
     }
     name: 'vmss-01'
+    bootDiagnosticStorageAccountName: storageAccounts.outputs.name
     osDisk: {
       createOption: 'fromImage'
       diskSizeGB: '128'
@@ -114,13 +141,14 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
         storageAccountType: 'Standard_LRS'
       }
     }
-    osType: 'Windows'
-    skuName: 'Standard_DS1_v2'
-    // Non-required parameters
-    adminPassword: kv1.getSecret('adminPassword')
+    osType: 'Linux'
+    customData: loadFileAsBase64('./config/018-cloud-init.yml')
     healthProbe: {
       id: '${loadbalancer.outputs.resourceId}/probes/probe-01'
     }
+    skuName: 'Standard_DS1_v2'
+    // Non-required parameters
+    adminPassword: kv1.getSecret('adminPassword')
     nicConfigurations: [
       {
         ipConfigurations: [
@@ -141,7 +169,6 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
         nicSuffix: '-nic-01'
       }
     ]
-
   }
   dependsOn: [
     rg
