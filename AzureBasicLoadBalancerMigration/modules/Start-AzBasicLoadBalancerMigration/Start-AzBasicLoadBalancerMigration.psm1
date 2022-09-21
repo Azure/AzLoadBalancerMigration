@@ -54,6 +54,7 @@ This module outputs the following files on execution:
   - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration.
   - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only.
   - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios.
+  - 'VMSS_<vmssName>_<vmssRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the VMSS, used in retry scenarios.
 
 .EXAMPLE
 # Basic usage
@@ -64,12 +65,21 @@ PS C:\> Start-AzBasicLoadBalancerMigration -ResourceGroupName myRG -BasicLoadBal
 PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerMigration -StandardLoadBalancerName myStandardLB
 
 .EXAMPLE
+# Pass LoadBalancer via pipeline input and re-use the existing Load Balancer Name
+PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerMigration
+
+.EXAMPLE
+# Pass LoadBalancer object using -BasicLoadBalancer parameter input and re-use the existing Load Balancer Name
+PS C:\> $basicLB = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB
+PS C:\> Start-AzBasicLoadBalancerMigration -BasicLoadBalancer $basicLB
+
+.EXAMPLE
 # Specify a custom path for recovery backup files
 PS C:\> Start-AzBasicLoadBalancerMigration -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
 
 .EXAMPLE
 # Retry a failed migration
-PS C:\> Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePath C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
+PS C:\> Start-AzBasicLoadBalancerMigration -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
 
 .EXAMPLE
 # display logs in the console as the command executes
@@ -82,10 +92,13 @@ Resource group containing the Basic Load Balancer to migrate. The new Standard l
 Name of the existing Basic Load Balancer to migrate
 
 .PARAMETER BasicLoadBalancer
-Load Balancer object to migrate passed as pipeline input
+Load Balancer object to migrate passed as pipeline input or parameter
 
-.PARAMETER FailedMigrationRetryFilePath
-Location of a Basic load balancer backup files (used when retrying a failed migration or manual configuration comparison)
+.PARAMETER FailedMigrationRetryFilePathLB
+Location of a Basic load balancer backup file (used when retrying a failed migration or manual configuration comparison)
+
+.PARAMETER FailedMigrationRetryFilePathVMSS
+Location of a VMSS backup file (used when retrying a failed migration or manual configuration comparison)
 
 .PARAMETER StandardLoadBalancerName
 Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
