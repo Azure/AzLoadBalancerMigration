@@ -117,16 +117,16 @@ It usually takes a few minutes for the script to finish and it could take longer
 
 Yes. The Azure PowerShell script migrates the virtual machine scale set to the newly created public or private standard load balancer.
 
-### What load balancer configurations the script migrates?
+### Which load balancer components are migrated?
 
-The script migrates the following in the load balancer:
+The script migrates the following from the Basic load balancer to the Standard load balancer:
 
 **Public Load Balancer:**
 
 - Public frontend IP configuration
-  - It will convert the public IP to a static IP if it is not already static
-  - It will change the public IP SKU to Standard if it is Basic
-  - It will migrate all associated public IPs to the new Standard load balancer
+  - Converts the public IP to a static IP, if dynamic
+  - Updates the public IP SKU to Standard, if Basic
+  - Migrate all associated public IPs to the new Standard load balancer
 - Health Probes:
   - All probes will be migrated to the new Standard load balancer
 - Load balancing rules:
@@ -134,19 +134,19 @@ The script migrates the following in the load balancer:
 - Inbound NAT Rules:
   - All NAT rules will be migrated to the new Standard load balancer
 - Outbound Rules:
-  - Basic load balancer does not have outbound rules. The script will create an outbound rule in the Standard load balancer to preserve the same behavior. For more information about Outbound connectivity, see [Outbound-only load balancer configuration](/azure/load-balancer/egress-only).
+  - Basic load balancer do not support configured outbound rules. The script will create an outbound rule in the Standard load balancer to preserve the outbound behavior of the Basic load balancer. For more information about Outbound connectivity, see [Outbound-only load balancer configuration](/azure/load-balancer/egress-only).
 - Network Security Group
-  - Basic load balancer doesn't required a Network Security Group to allow outbound connectivity. In case there is no Network Security Group associated with the VMSS, a new NSG will be created to preserve the same functionality. This new NSG will be associated to the VMSS network interface and allow the same load balancing rules Ports and protocols and preserve the outbound connectivity.
+  - Basic load balancer doesn't required a Network Security Group to allow outbound connectivity. In case there is no Network Security Group associated with the VMSS, a new NSG will be created to preserve the same functionality. This new NSG will be associated to the VMSS backend pool member network interfaces and allow the same load balancing rules ports and protocols and preserve the outbound connectivity.
 - Backend pools:
   - All backend pools will be migrated to the new Standard load balancer
-  - All VMSS network interfaces and ipconfigurations will be migrated to the new Standard load balancer
+  - All VMSS network interfaces and IP configurations will be migrated to the new Standard load balancer
   - In case of VMSS using Rolling Upgrade policy, the script will update the VMSS upgrade policy to "Manual" during the migration process and revert it back to "Rolling" after the migration is completed.
 
 **Private Load Balancer:**
 
 - Private frontend IP configuration
-  - It will convert the private IP to a static IP if it is not already static
-  - It will migrate all associated private IPs to the new Standard load balancer
+  - Converts the public IP to a static IP, if dynamic
+  - Updates the public IP SKU to Standard, if Basic
 - Health Probes:
   - All probes will be migrated to the new Standard load balancer
 - Load balancing rules:
@@ -155,7 +155,7 @@ The script migrates the following in the load balancer:
   - All NAT rules will be migrated to the new Standard load balancer
 - Backend pools:
   - All backend pools will be migrated to the new Standard load balancer
-  - All VMSS network interfaces and ipconfigurations will be migrated to the new Standard load balancer
+  - All VMSS network interfaces and IP configurations will be migrated to the new Standard load balancer
   - In case of VMSS using Rolling Upgrade policy, the script will update the VMSS upgrade policy to "Manual" during the migration process and revert it back to "Rolling" after the migration is completed.
 
 ### What happens if my migration fails mid-migration?
@@ -163,7 +163,7 @@ The script migrates the following in the load balancer:
 The module is designed to accommodate failures, either due to unhandled errors or unexpected script termination. The failure design is a 'fail forward' approach, where instead of attempting to move back to the Basic load balancer, you should correct the issue causing the failure (see the error output or log file), and retry the migration again, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters. For public load balancers, because the Public IP Address SKU has been updated to Standard, moving the same IP back to a Basic load balancer will not be possible. The basic failure recovery procedure is:
 
   1. Address the cause of the migration failure. Check the log file `Start-AzBasicLoadBalancerMigrate.log` for details
-  1. Remove the new Standard load balancer (if created). Depending on which stage of the migration failed, you may have to remove the Standard load balancer reference from the VMSS network interfaces (ipconfigurations) and health probes in order to remove the Standard load balancer and try again.
+  1. Remove the new Standard load balancer (if created). Depending on which stage of the migration failed, you may have to remove the Standard load balancer reference from the VMSS network interfaces (IP configurations) and health probes in order to remove the Standard load balancer and try again.
   1. Locate the basic load balancer state backup file. This will either be in the directory where the script was executed, or at the path specified with the `-RecoveryBackupPath` parameter during the failed execution. The file will be named: `State_<basicLBName>_<basicLBRGName>_<timestamp>.json`
   1. Rerun the migration script, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters instead of -BasicLoadBalancerName or passing the Basic load balancer over the pipeline
 
