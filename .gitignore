@@ -1,2 +1,3 @@
 *.json
 *.log
+!019-vmss-multi-be-ipconfigs.json
