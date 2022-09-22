@@ -56,11 +56,11 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     $ScriptBlock = {
         param($RGName)
         Write-Output $RGName
-        Import-Module ..\..\AzureBasicLoadBalancerMigration -Force
-        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzureBasicLoadBalancerMigration\$RGName"
+        Import-Module ..\..\AzureBasicLoadBalancerUpgrade -Force
+        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzureBasicLoadBalancerUpgrade\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerMigration -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01
+        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01
     }
     $scenarios = Get-AzResourceGroup -Name rg-0*
 
@@ -83,8 +83,8 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     # Foreach-Object {
     #     "Upgrading LoadBalancer configuration in Resouce Group rg-$($_.BaseName)"
     #     $jobs += $(
-    #         Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureBasicLoadBalancerMigration } `
-    #             -ScriptBlock { Start-AzBasicLoadBalancerMigration `
+    #         Start-Job -Name "$rgName deployment job" -InitializationScript { Import-Module ..\..\AzureBasicLoadBalancerUpgrade } `
+    #             -ScriptBlock { Start-AzBasicLoadBalancerUpgrade `
     #                 -ResourceGroupName $input `
     #                 -BasicLoadBalancerName 'lb-basic-01' `
     #                 -StandardLoadBalancerName 'lb-std-01' -FollowLog } `
