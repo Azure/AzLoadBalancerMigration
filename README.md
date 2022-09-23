@@ -1,5 +1,5 @@
 # Upgrade a basic load balancer used with Virtual Machine Scale Sets
-[Azure Standard Load Balancer](load-balancer-overview.md) offers a rich set of functionality and high availability through zone redundancy. To learn more about Load Balancer SKU, see [comparison table](./skus.md#skus).
+[Azure Standard Load Balancer](load-balancer-overview.md) offers a rich set of functionality and high availability through zone redundancy. To learn more about Load Balancer SKU, see [comparison table](https://learn.microsoft.com/azure/load-balancer/skus).
 
 This article introduces a PowerShell module that creates a Standard Load Balancer with the same configuration as the Basic Load Balancer along with the associated  Virtual Machine Scale Set.
 
@@ -27,9 +27,9 @@ An Azure PowerShell module is available to upgrade from Basic load balancer to a
 
 ### Prerequisites
 
-- Install the latest version of [PowerShell Desktop or Core ](/powershell/scripting/install/installing-powershell)
+- Install the latest version of [PowerShell Desktop or Core ](https://learn.microsoft.com/powershell/scripting/windows-powershell/install/installing-windows-powershell)
 - Determine whether you have the latest Az module installed (8.2.0)
-  - Install the latest Az PowerShell module](/powershell/azure/install-az-ps)
+  - Install the latest Az PowerShell module](https://learn.microsoft.com/powershell/azure/install-az-ps)
 
 ## Install the 'AzureBasicLoadBalancerUpgrade' module
 
@@ -119,7 +119,7 @@ The script migrates the following from the Basic load balancer to the Standard l
 - Inbound NAT Rules:
   - All NAT rules will be migrated to the new Standard load balancer
 - Outbound Rules:
-  - Basic load balancers do not support configured outbound rules. The script will create an outbound rule in the Standard load balancer to preserve the outbound behavior of the Basic load balancer. For more information about Outbound connectivity, see [Outbound-only load balancer configuration](/azure/load-balancer/egress-only).
+  - Basic load balancers do not support configured outbound rules. The script will create an outbound rule in the Standard load balancer to preserve the outbound behavior of the Basic load balancer. For more information about Outbound connectivity, see [Outbound-only load balancer configuration](https://learn.microsoft.com/azure/load-balancer/egress-only).
 - Network Security Group
   - Basic load balancer doesn't required a Network Security Group to allow outbound connectivity. In case there is no Network Security Group associated with the VMSS, a new NSG will be created to preserve the same functionality. This new NSG will be associated to the VMSS backend pool member network interfaces and allow the same load balancing rules ports and protocols and preserve the outbound connectivity.
 - Backend pools:
@@ -148,13 +148,13 @@ The script migrates the following from the Basic load balancer to the Standard l
 The module is designed to accommodate failures, either due to unhandled errors or unexpected script termination. The failure design is a 'fail forward' approach, where instead of attempting to move back to the Basic load balancer, you should correct the issue causing the failure (see the error output or log file), and retry the migration again, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters. For public load balancers, because the Public IP Address SKU has been updated to Standard, moving the same IP back to a Basic load balancer will not be possible. The basic failure recovery procedure is:
 
   1. Address the cause of the migration failure. Check the log file `Start-AzBasicLoadBalancerUpgrade.log` for details
-  1. [Remove the new Standard load balancer](/azure/load-balancer/update-load-balancer-with-vm-scale-set) (if created). Depending on which stage of the migration failed, you may have to remove the Standard load balancer reference from the VMSS network interfaces (IP configurations) and health probes in order to remove the Standard load balancer and try again.
+  1. [Remove the new Standard load balancer](https://learn.microsoft.com/azure/load-balancer/update-load-balancer-with-vm-scale-set) (if created). Depending on which stage of the migration failed, you may have to remove the Standard load balancer reference from the VMSS network interfaces (IP configurations) and health probes in order to remove the Standard load balancer and try again.
   1. Locate the basic load balancer state backup file. This will either be in the directory where the script was executed, or at the path specified with the `-RecoveryBackupPath` parameter during the failed execution. The file will be named: `State_<basicLBName>_<basicLBRGName>_<timestamp>.json`
   1. Rerun the migration script, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters instead of -BasicLoadBalancerName or passing the Basic load balancer over the pipeline
 
 ## Next Steps
 
-[Learn about the Azure Load Balancer](/azure/load-balancer/load-balancer-overview)
+[Learn about the Azure Load Balancer](https://learn.microsoft.com/azure/load-balancer/load-balancer-overview)
 
 ## Contributing
 
