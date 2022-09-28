@@ -76,7 +76,7 @@ function NSGCreation {
                 Name                                = ($inboundNatRule.Name + "-NatRule")
                 Protocol                            = $inboundNatRule.Protocol
                 SourcePortRange                     = "*"
-                DestinationPortRange                = (($inboundNatRule.FrontendPortRangeStart).ToString() + "-" + ($inboundNatRule.FrontendPortRangeEnd).ToString())
+                DestinationPortRange                = [string]::IsNullOrEmpty($inboundNatRule.FrontendPortRangeStart) ? ($inboundNatRule.BackendPort).ToString() : (($inboundNatRule.FrontendPortRangeStart).ToString() + "-" + ($inboundNatRule.FrontendPortRangeEnd).ToString())
                 SourceAddressPrefix                 = "*"
                 DestinationAddressPrefix            = "*"
                 SourceApplicationSecurityGroup      = $null
