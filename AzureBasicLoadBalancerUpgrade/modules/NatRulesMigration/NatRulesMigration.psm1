@@ -15,10 +15,10 @@ function NatRulesMigration {
             $ErrorActionPreference = 'Stop'
 
             If () {
-                $backendAddressPoolNATRule = $inboundNatRule.BackendAddressPool.Id
+                $natRuleBackendAddressPool = $inboundNatRule.BackendAddressPool.Id
             }
             Else {
-                $backendAddressPoolNATRule = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
+                $natRuleBackendAddressPool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
             }
 
             $inboundNatRuleConfig = @{
@@ -32,7 +32,7 @@ function NatRulesMigration {
                 FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.FrontendIpConfiguration.Id).split('/')[-1])
                 FrontendPortRangeStart  = $inboundNatRule.FrontendPortRangeStart
                 FrontendPortRangeEnd    = $inboundNatRule.FrontendPortRangeEnd
-                BackendAddressPool      = $backendAddressPoolNATRule
+                BackendAddressPool      = $natRuleBackendAddressPool
             }
             $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
         }
