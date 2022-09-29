@@ -72,11 +72,17 @@ function NSGCreation {
         $networkSecurityRuleConfig = $null
         $inboundNatRules = $BasicLoadBalancer.InboundNatRules
         foreach ($inboundNatRule in $inboundNatRules) {
+            if([string]::IsNullOrEmpty($inboundNatRule.FrontendPortRangeStart)){
+                $dstportrange = ($inboundNatRule.BackendPort).ToString()
+            }
+            else{
+                $dstportrange = (($inboundNatRule.FrontendPortRangeStart).ToString() + "-" + ($inboundNatRule.FrontendPortRangeEnd).ToString())
+            }
             $networkSecurityRuleConfig = @{
                 Name                                = ($inboundNatRule.Name + "-NatRule")
                 Protocol                            = $inboundNatRule.Protocol
                 SourcePortRange                     = "*"
-                DestinationPortRange                = [string]::IsNullOrEmpty($inboundNatRule.FrontendPortRangeStart) ? ($inboundNatRule.BackendPort).ToString() : (($inboundNatRule.FrontendPortRangeStart).ToString() + "-" + ($inboundNatRule.FrontendPortRangeEnd).ToString())
+                DestinationPortRange                = $dstportrange
                 SourceAddressPrefix                 = "*"
                 DestinationAddressPrefix            = "*"
                 SourceApplicationSecurityGroup      = $null
