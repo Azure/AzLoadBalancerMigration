@@ -13,6 +13,13 @@ function NatRulesMigration {
 
         try {
             $ErrorActionPreference = 'Stop'
+            if([string]::IsNullOrEmpty($inboundNatRule.BackendAddressPool.Id)){
+                $bkeaddpool = $inboundNatRule.BackendAddressPool.Id
+            }
+            else{
+                $bkeaddpool = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
+            }
+
             $inboundNatRuleConfig = @{
                 Name                    = $inboundNatRule.Name
                 Protocol                = $inboundNatRule.Protocol
@@ -24,7 +31,7 @@ function NatRulesMigration {
                 FrontendIpConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.FrontendIpConfiguration.Id).split('/')[-1])
                 FrontendPortRangeStart  = $inboundNatRule.FrontendPortRangeStart
                 FrontendPortRangeEnd    = $inboundNatRule.FrontendPortRangeEnd
-                BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($inboundNatRule.BackendAddressPool.Id).split('/')[-1])
+                BackendAddressPool      = $bkeaddpool
             }
             $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
         }
