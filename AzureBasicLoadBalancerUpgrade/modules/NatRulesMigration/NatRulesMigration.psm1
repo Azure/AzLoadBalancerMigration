@@ -14,7 +14,7 @@ function NatRulesMigration {
         try {
             $ErrorActionPreference = 'Stop'
 
-            If () {
+            If ([string]::IsNullOrEmpty($inboundNatRule.BackendAddressPool.Id)) {
                 $natRuleBackendAddressPool = $inboundNatRule.BackendAddressPool.Id
             }
             Else {
