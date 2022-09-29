@@ -64,15 +64,16 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     }
     $scenarios = Get-AzResourceGroup -Name rg-0*
 
+    $jobs = @()
     foreach($rg in $scenarios){
-        Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock > $null
+        $jobs += Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock
     }
 
-    Write-Output ("Total Jobs Created: " + $scenarios.Count)
+    Write-Output ("Total Jobs Created: " + $jobs.Count)
     Write-Output "-----------------------------"
-    while((Get-Job -State Running).count -ne 0)
+    while($jobs | Wait-Job -State Running)
     {
-        Write-Output ("Threads Running: " + (Get-Job -State Running).count)
+        Write-Output ("Threads Running: " + ($jobs | Get-Job -State Running).count)
         Start-Sleep -Seconds 5
     }
     Write-Output "-----------------------------"
