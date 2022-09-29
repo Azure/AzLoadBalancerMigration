@@ -28,6 +28,7 @@ jobs:
             catch{
               Write-Output "Error publishing module to PowerShell Gallery"
               Write-Output $_
+              exit 1
             }
           }
           else{
