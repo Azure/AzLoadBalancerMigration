@@ -176,7 +176,15 @@ function Start-AzBasicLoadBalancerUpgrade {
     }
 
     # verify basic load balancer configuration is a supported scenario
-    $StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
+    # Ternary operator is only supported in PowerShell 7 and above to keep compatibility with PowerShell 5.1, we use the If statement
+    #$StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
+    if($PSBoundParameters.ContainsKey("StandardLoadBalancerName")){
+        $StdLoadBalancerName = $StandardLoadBalancerName
+    }
+    else{
+        $StdLoadBalancerName = $BasicLoadBalancer.Name
+    }
+
     $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName
 
     # Migration of Frontend IP Configurations
