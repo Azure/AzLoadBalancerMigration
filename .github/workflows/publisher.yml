@@ -1,37 +1,37 @@
-name: Publisher
+# name: Publisher
 
-on:
-  release:
-    types: [published]
+# on:
+#   release:
+#     types: [published]
 
-env:
-  gallerykey: ${{ secrets.POWERSHELLGALLERY }}
-  modulepath: "AzureBasicLoadBalancerUpgrade"
+# env:
+#   gallerykey: ${{ secrets.POWERSHELLGALLERY }}
+#   modulepath: "AzureBasicLoadBalancerUpgrade"
 
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      #Get the code files from the repo
-      - uses: actions/checkout@v3
-      # Publish the module to the PowerShell Gallery
-      - name: PowerShell Gallery Publisher
-        shell: pwsh
-        run: |
-          Write-Output "Checking module folder exists"
-          if(Test-Path "${{ env.modulepath }}"){
-            Write-Output "Module folder: ${{ env.modulepath }} exists"
-            Write-Output "Publishing module to PowerShell Gallery"
-            try{
-              Publish-Module -Path ${{ env.modulepath }} -NuGetApiKey "${{ env.gallerykey }}"
-            }
-            catch{
-              Write-Output "Error publishing module to PowerShell Gallery"
-              Write-Output $_
-              exit 1
-            }
-          }
-          else{
-            Write-Output "Module folder: ${{ env.modulepath }} does not exist"
-            exit 1
-          }
+# jobs:
+#   publish:
+#     runs-on: ubuntu-latest
+#     steps:
+#       #Get the code files from the repo
+#       - uses: actions/checkout@v3
+#       # Publish the module to the PowerShell Gallery
+#       - name: PowerShell Gallery Publisher
+#         shell: pwsh
+#         run: |
+#           Write-Output "Checking module folder exists"
+#           if(Test-Path "${{ env.modulepath }}"){
+#             Write-Output "Module folder: ${{ env.modulepath }} exists"
+#             Write-Output "Publishing module to PowerShell Gallery"
+#             try{
+#               Publish-Module -Path ${{ env.modulepath }} -NuGetApiKey "${{ env.gallerykey }}"
+#             }
+#             catch{
+#               Write-Output "Error publishing module to PowerShell Gallery"
+#               Write-Output $_
+#               exit 1
+#             }
+#           }
+#           else{
+#             Write-Output "Module folder: ${{ env.modulepath }} does not exist"
+#             exit 1
+#           }
