@@ -10,11 +10,10 @@ function NSGCreation {
     log -Message "[NSGCreation] Initiating NSG Creation"
 
     log -Message "[NSGCreation] Looping all VMSS in the backend pool of the Load Balancer"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("/virtualMachines/")[0] } | Select-Object -Unique    
+    
     foreach ($vmssId in $vmssIds) {
-        $vmssName = $vmssId.split("/")[8]
-        $vmssRg = $vmssId.Split('/')[4]
-        $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
+        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
 
         # Check if VMSS already has a NSG
         log -Message "[NSGCreation] Checking if VMSS Named: $($vmss.Name) has a NSG"

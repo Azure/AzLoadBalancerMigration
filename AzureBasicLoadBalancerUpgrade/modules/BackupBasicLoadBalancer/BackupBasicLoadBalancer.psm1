@@ -93,13 +93,14 @@ function BackupBasicLoadBalancer {
     }
 
     # Backup VMSS Object
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("/virtualMachines/")[0] } | Select-Object -Unique
     foreach ($vmssId in $vmssIds) {
-        $vmssName = $vmssId.split("/")[8]
-        $vmssRg = $vmssId.Split('/')[4]
+        $message = "[BackupBasicLoadBalancer] Attempting to create a file-based backup VMSS with id '$vmssId'"
+        log -Severity Information -Message $message
+
         try {
             $ErrorActionPreference = 'Stop'
-            $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
+            $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
             $outputFileNameVMSS = ('VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
             $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
 
