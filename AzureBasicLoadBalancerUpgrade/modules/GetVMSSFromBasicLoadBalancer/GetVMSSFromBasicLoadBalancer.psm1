@@ -16,7 +16,7 @@ function GetVMSSFromBasicLoadBalancer {
     }
     catch {
         $message = @"
-        [GetVMSSFromBasicLoadBalancer] An error occured when getting VMSS '$($vmssName)' in resource group '$($vmssRG)'. To recover
+        [GetVMSSFromBasicLoadBalancer] An error occured when getting VMSS '$($vmss.Name)' in resource group '$($vmss.ResourceGroupName)'. To recover
         address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
         State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
