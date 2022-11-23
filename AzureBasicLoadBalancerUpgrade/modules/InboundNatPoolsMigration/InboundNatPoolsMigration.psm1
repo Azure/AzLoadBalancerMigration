@@ -25,7 +25,7 @@ function InboundNatPoolsMigration {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @poolConfig > $null 
+            $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @inboundNatPoolConfig > $null 
         }
         catch {
             $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard 
