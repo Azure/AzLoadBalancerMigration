@@ -133,7 +133,7 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
     }
 
-    if($template.FullName -like "*.json"){
+    if($template.FullName -like "019*.json"){
         $rgTemplateName = "rg-$($template.BaseName)"
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
@@ -143,6 +143,21 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
     }
 
+    if($template.FullName -like "*.json"){
+        $rgTemplateName = "rg-$($template.BaseName)"
+        $params = @{
+            Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
+            TemplateFile            = $template.FullName
+            TemplateParameterObject = @{
+                Location                  = $Location
+                ResourceGroupName         = "rg-$($template.BaseName)"
+                KeyVaultName              = $keyVaultName
+                KeyVaultResourceGroupName = $KeyVaultResourceGroupName
+            }
+        }
+        New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
+    }
 }
 
 $jobs | Wait-Job

@@ -28,7 +28,7 @@ function NSGCreation {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssR.ResourceGroupName -Name ("NSG-" + $vmss.Name) -Location $vmss.Location -Force
+            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmss.ResourceGroupName -Name ("NSG-" + $vmss.Name) -Location $vmss.Location -Force
         }
         catch {
             $message = @"
