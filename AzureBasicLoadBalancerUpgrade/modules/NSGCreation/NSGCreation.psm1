@@ -10,7 +10,7 @@ function NSGCreation {
     log -Message "[NSGCreation] Initiating NSG Creation"
 
     log -Message "[NSGCreation] Looping all VMSS in the backend pool of the Load Balancer"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("/virtualMachines/")[0] } | Select-Object -Unique    
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0] } | Select-Object -Unique    
     
     foreach ($vmssId in $vmssIds) {
         $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
@@ -28,7 +28,7 @@ function NSGCreation {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssRg -Name ("NSG-" + $vmss.Name) -Location $vmss.Location -Force
+            $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmssR.ResourceGroupName -Name ("NSG-" + $vmss.Name) -Location $vmss.Location -Force
         }
         catch {
             $message = @"
@@ -121,7 +121,7 @@ function NSGCreation {
         log -Message "[NSGCreation] Saving VMSS Named: $($vmss.Name)"
         try {
             $ErrorActionPreference = 'Stop'
-            Update-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName -VirtualMachineScaleSet $vmss > $null
+            Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
         }
         catch {
             $message = @"

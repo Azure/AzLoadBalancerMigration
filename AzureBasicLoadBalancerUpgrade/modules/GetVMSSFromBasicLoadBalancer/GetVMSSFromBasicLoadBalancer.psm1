@@ -9,7 +9,7 @@ function GetVMSSFromBasicLoadBalancer {
 
     try {
         $ErrorActionPreference = 'Stop'
-        $vmssId = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("/virtualMachines/")[0] } | Select-Object -Unique
+        $vmssId = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0] } | Select-Object -Unique
 
         log -Message "[GetVMSSFromBasicLoadBalancer] Getting VMSS object '$vmssId' from Azure"
         $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
