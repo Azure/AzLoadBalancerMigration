@@ -11,13 +11,14 @@ function InboundNatPoolsMigration {
     $inboundNatPools = $BasicLoadBalancer.InboundNatPools
     foreach ($pool in $inboundNatPools) {
         log -Message "[InboundNatPoolsMigration] Adding Inbound NAT Pool $($pool.Name) to Standard Load Balancer"
+        $frontEndIPConfig = Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($pool.FrontEndIPConfiguration.Id.split('/')[-1])
         $inboundNatPoolConfig = @{
             Name                    = $pool.Name
             BackendPort             = $pool.backendPort
             Protocol                = $pool.Protocol
             EnableFloatingIP        = $pool.EnableFloatingIP
             EnableTcpReset          = $pool.EnableTcpReset
-            FrontendIPConfiguration = $pool.FrontendIPConfiguration
+            FrontendIPConfiguration = $frontEndIPConfig
             FrontendPortRangeStart  = $pool.FrontendPortRangeStart
             FrontendPortRangeEnd    = $pool.FrontendPortRangeEnd
             IdleTimeoutInMinutes    = $pool.IdleTimeoutInMinutes
@@ -25,7 +26,7 @@ function InboundNatPoolsMigration {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @poolConfig > $null 
+            $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @inboundNatPoolConfig > $null 
         }
         catch {
             $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard 

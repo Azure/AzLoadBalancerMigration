@@ -124,7 +124,7 @@ function _UpdateAzVmss {
         Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
     }
     catch {
-        $exceptionType = $_.Exception.Message.Split('ErrorCode:')[1].Split('ErrorMessage:')[0].Trim()
+        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
         if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
             $message = @"
             [_UpdateAzVmss] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
