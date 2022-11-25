@@ -56,8 +56,9 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     $ScriptBlock = {
         param($RGName)
         Write-Output $RGName
-        Import-Module ..\..\AzureBasicLoadBalancerUpgrade -Force
-        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzureBasicLoadBalancerUpgrade\$RGName"
+        Set-Location 
+        Import-Module ..\..\AzureBasicLoadBalancerUpgrade  -Force
+        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzLoadBalancerMigration\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
         Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01
@@ -65,7 +66,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     $scenarios = Get-AzResourceGroup -Name rg-0*
 
     foreach($rg in $scenarios){
-        Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock > $null
+        Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'")) > $null
     }
 
     Write-Output ("Total Jobs Created: " + $scenarios.Count)
@@ -133,7 +134,7 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
     }
 
-    if($template.FullName -like "*.json"){
+    if($template.FullName -like "019*.json"){
         $rgTemplateName = "rg-$($template.BaseName)"
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
@@ -143,6 +144,21 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
     }
 
+    if($template.FullName -like "*.json"){
+        $rgTemplateName = "rg-$($template.BaseName)"
+        $params = @{
+            Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
+            TemplateFile            = $template.FullName
+            TemplateParameterObject = @{
+                Location                  = $Location
+                ResourceGroupName         = "rg-$($template.BaseName)"
+                KeyVaultName              = $keyVaultName
+                KeyVaultResourceGroupName = $KeyVaultResourceGroupName
+            }
+        }
+        New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
+    }
 }
 
 $jobs | Wait-Job
