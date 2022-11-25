@@ -9,15 +9,14 @@ function GetVMSSFromBasicLoadBalancer {
 
     try {
         $ErrorActionPreference = 'Stop'
-        $vmssId = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { $_.split("virtualMachines")[0] } | Select-Object -Unique
-        $vmssRg = $vmssId.Split('/')[4]
-        $vmssName = $vmssId.Split('/')[8]
-        log -Message "[GetVMSSFromBasicLoadBalancer] Loading VMSS $vmssName from RG $vmssRg"
-        $vmss = Get-AzVmss -ResourceGroupName $vmssRg -VMScaleSetName $vmssName
+        $vmssId = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0] } | Select-Object -Unique
+
+        log -Message "[GetVMSSFromBasicLoadBalancer] Getting VMSS object '$vmssId' from Azure"
+        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
     }
     catch {
         $message = @"
-        [GetVMSSFromBasicLoadBalancer] An error occured when getting VMSS '$($vmssName)' in resource group '$($vmssRG)'. To recover
+        [GetVMSSFromBasicLoadBalancer] An error occured when getting VMSS '$($vmss.Name)' in resource group '$($vmss.ResourceGroupName)'. To recover
         address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
         State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
