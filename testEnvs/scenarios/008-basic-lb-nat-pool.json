@@ -191,6 +191,11 @@
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
                                   }
+                                ],
+                                "loadBalancerInboundNatPools": [
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-01')]"
+                                  }
                                 ]
                               }
                             }
@@ -295,11 +300,11 @@
                 "inboundNatRules": [],
                 "inboundNatPools": [
                   {
-                    "name": "natpool01",
+                    "name": "natpool-01",
                     "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/inboundNatPools/natpool01')]",
                     "properties": {
-                      "frontendPortRangeStart": 8080,
-                      "frontendPortRangeEnd": 8081,
+                      "frontendPortRangeStart": 9080,
+                      "frontendPortRangeEnd": 9085,
                       "backendPort": 8080,
                       "protocol": "Tcp",
                       "idleTimeoutInMinutes": 4,
