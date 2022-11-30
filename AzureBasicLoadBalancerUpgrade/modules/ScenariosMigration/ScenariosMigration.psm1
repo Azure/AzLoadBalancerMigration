@@ -125,14 +125,14 @@ function PublicLBMigration {
     # Migration of Load Balancing Rules
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # Creating Outbound Rules for SNAT
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Inbound NAT Pools
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
 
     # Creating NSG for Standard Load Balancer
     NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -223,14 +223,14 @@ function RestoreExternalLBMigration {
     # Migration of Load Balancing Rules
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # Creating Outbound Rules for SNAT
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Inbound NAT Pools
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
-    # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
 
     # Creating NSG for Standard Load Balancer
     NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
