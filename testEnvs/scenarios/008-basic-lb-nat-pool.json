@@ -73,6 +73,22 @@
               }
             },
             {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2022-05-01",
+              "name": "pip-02",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Dynamic",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+              }
+            },
+            {
               "type": "Microsoft.Network/virtualNetworks",
               "apiVersion": "2022-05-01",
               "name": "vnet-01",
@@ -168,9 +184,11 @@
                       "version": "latest"
                     }
                   },
-                  "bootDiagnostics": {
-                    "enabled": true,
-                    "storageUri": "[reference(concat('bootdiag',uniqueString(resourceGroup().id)), '2021-04-01').primaryEndpoints.blob]"
+                  "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                      "enabled": true,
+                      "storageUri": "[reference(concat('bootdiag',uniqueString(resourceGroup().id)), '2021-04-01').primaryEndpoints.blob]"
+                    }
                   },
                   "networkProfile": {
                     "networkInterfaceConfigurations": [
@@ -201,6 +219,9 @@
                                 "loadBalancerInboundNatPools": [
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-01')]"
+                                  },
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-03')]"
                                   }
                                 ]
                               }
@@ -229,11 +250,6 @@
                         }
                       }
                     ]
-                  },
-                  "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                      "enabled": false
-                    }
                   },
                   "priority": "Regular",
                   "scheduledEventsProfile": {}
@@ -271,6 +287,16 @@
                       "privateIPAllocationMethod": "Dynamic",
                       "publicIPAddress": {
                         "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-01')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "fe-02",
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-02')]",
+                    "properties": {
+                      "privateIPAllocationMethod": "Dynamic",
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-02')]"
                       }
                     }
                   }
@@ -350,6 +376,21 @@
                       "frontendPortRangeStart": 9180,
                       "frontendPortRangeEnd": 9185,
                       "backendPort": 8180,
+                      "protocol": "Tcp",
+                      "idleTimeoutInMinutes": 4,
+                      "enableFloatingIP": false,
+                      "enableTcpReset": false,
+                      "frontendIPConfiguration": {
+                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-01')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "natpool-03",
+                    "properties": {
+                      "frontendPortRangeStart": 9280,
+                      "frontendPortRangeEnd": 9285,
+                      "backendPort": 3389,
                       "protocol": "Tcp",
                       "idleTimeoutInMinutes": 4,
                       "enableFloatingIP": false,
