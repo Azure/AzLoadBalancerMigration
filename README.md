@@ -23,6 +23,7 @@ An Azure PowerShell module is available to upgrade from Basic load balancer to a
 - Basic load balancers with IPV6 frontend IP configurations
 - Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode
 - Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
+- Basic load balancers with a Public IP Configuration in the associated VMSS's network profile
 - Migrating a Basic load balancer to an existing Standard load balancer
 
 ### Prerequisites
