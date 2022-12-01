@@ -34,10 +34,26 @@ function _MigrateNetworkInterfaceConfigurations {
             foreach($InboundNatPool in $BasicLoadBalancer.InboundNatPools) {
 
                 try {
-                    $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
-                    $subResource.Id = ($StdLoadBalancer.InboundNatPools | Where-Object { $_.Name -eq $InboundNatPools.Name }).Id
-                    log -Message "[_MigrateNetworkInterfaceConfigurations] Adding InboundNatPools $($subResource.Id.Split('/')[-1]) to VMSS Nic: $lbBeNicName ipConfig: $lbBeipConfigName"
-                    $genericListSubResource.Add($subResource)
+                    # get the ipconfig from the VMSS as it was prior to starting the upgrade--we'll use this to determine which NAT Pools to assiciate with which ipconfig
+                    $coorespondingRefVmssIpconfig = $refVmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                        Where-Object {$_.Name -eq $networkInterfaceConfiguration.Name} | 
+                        Select-Object -ExpandProperty IpConfigurations | 
+                        Where-Object {$_.Name -eq $ipConfiguration.Name}
+                    $coorespondingRefVmssIpconfigNatPoolNames = @()
+                    $coorespondingRefVmssIpconfig.loadBalancerInboundNatPools.id | ForEach-Object {
+                        $coorespondingRefVmssIpconfigNatPoolNames += $_.Split("/")[-1]
+                    }
+
+                    $message = "[_MigrateNetworkInterfaceConfigurations] Checking if VMSS '$($vmss.Name)' NIC '$($networkInterfaceConfiguration.Name)' IPConfig '$($ipConfiguration.Name)' should be associated with NAT Pool '$($InboundNatPool.Name)'"
+                    log -Message $message
+                    If ($InboundNatPool.Id.split('/')[-1] -in $coorespondingRefVmssIpconfigNatPoolNames) {
+                        $message = "[_MigrateNetworkInterfaceConfigurations] Adding NAT Pool '$($InboundNatPool.Name)' to IPConfig '$($ipConfiguration.Name)'"
+                        log -Message $message
+    
+                        $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
+                        $subResource.Id = ($StdLoadBalancer.InboundNatPools | Where-Object { $_.Name -eq $InboundNatPool.Name }).Id
+                        $genericListSubResource.Add($subResource)
+                    }
                 }
                 catch {
                     $message = @"
@@ -93,7 +109,8 @@ function InboundNatPoolsMigration {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
     log -Message "[InboundNatPoolsMigration] Initiating Inbound NAT Pools Migration"
 
@@ -141,7 +158,7 @@ function InboundNatPoolsMigration {
 
     $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
-    _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss
+    _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
     _UpdateAzVmss -vmss $vmss
