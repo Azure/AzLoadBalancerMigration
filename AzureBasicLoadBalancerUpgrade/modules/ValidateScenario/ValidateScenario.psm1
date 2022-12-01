@@ -20,6 +20,14 @@ Function Test-SupportedMigrationScenario {
 
     # checking source load balance SKU
     log -Message "[Test-SupportedMigrationScenario] Verifying if Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
+
+    # create array of VMSSes associated with the load balancer for following checks
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{($_ -split '/virtualMachines/')[0]} | Select-Object -Unique
+    $basicLBVMSSs = @()
+    ForEach ($vmssId in $vmssIds) {
+        $basicLBVMSSs += Get-AzResource -ResourceId $vmssId | Get-AzVMSS
+    }
+
     log -Message "[Test-SupportedMigrationScenario] Verifying source load balancer SKU"
     If ($BasicLoadBalancer.Sku.Name -ne 'Basic') {
         log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] The load balancer '$($BasicLoadBalancer.Name)' in resource group '$($BasicLoadBalancer.ResourceGroupName)' is SKU '$($BasicLoadBalancer.SKU.Name)'. SKU must be Basic!"
@@ -78,9 +86,7 @@ Function Test-SupportedMigrationScenario {
 
     # check if load balancer backend pool contains VMSSes which are part of another LBs backend pools
     log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{($_ -split '/virtualMachines/')[0]} | Select-Object -Unique
-    ForEach ($vmssId in $vmssIds) {
-        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVMSS
+    ForEach ($vmss in $basicLBVMSSs) {
         $loadBalancerAssociations = @()
         ForEach ($nicConfig in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
             ForEach ($ipConfig in $nicConfig.ipConfigurations) {
@@ -117,6 +123,19 @@ Function Test-SupportedMigrationScenario {
     }
     log -Message "[Test-SupportedMigrationScenario] No VMSS instances with Instance Protection found"
 
+    # check if any VMSS have publicIPConfigurations which must be basic sku with a basic LB and cannot be migrated to a Standard LB
+    log -Message "[Test-SupportedMigrationScenario] Checking for VMSS with publicIPConfigurations"
+    foreach ($vmss in $basicLBVMSSs) {
+        $vmssPublicIPConfigurations = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | Select-Object -ExpandProperty IpConfigurations | Select-Object -ExpandProperty PublicIpAddressConfiguration
+        if ($vmssPublicIPConfigurations[0]) {
+            $message = @"
+            [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has publicIPConfigurations which must be basic sku with a basic LB and cannot be migrated to a Standard LB.
+            Remove the publicIPConfigurations and re-run the module.
+"@
+            log -Severity 'Error' -Message $message
+            Exit
+        }
+    }
 
     # detecting if source load balancer is internal or external-facing
     log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
@@ -142,6 +161,43 @@ Function Test-SupportedMigrationScenario {
         log -ErrorAction Stop -Severity 'Error' "[Test-SupportedMigrationScenario] FrontEndIPConfiguration[0] is assigned a public IP prefix '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefixText)', which is not supported for migration!"
         return
     }
+
+    # check if internal LB backend VMs does not have public IPs
+    If ($scenario.ExternalOrInternal -eq 'Internal') {
+        log -Message "[Test-SupportedMigrationScenario] Checking if internal load balancer backend VMs have public IPs..."
+        ForEach ($vmss in $basicLBVMSSs) {
+            $vmssVMsHavePublicIPs = $false
+            :vmssNICs ForEach ($nicConfig in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+                    If ($ipConfig.PublicIPAddressConfiguration) {
+                        $message = @"
+                        [Test-SupportedMigrationScenario] Internal load balancer backend VMs have public IPs and will continue to use them for outbound connectivity. VMSS: '$($vmssId)'; VMSS ipconfig: '$($ipConfig.Name)'
+"@ 
+                        log -Message $message -Severity 'Information'
+                        $vmssVMsHavePublicIPs = $true
+
+                        break :vmssNICs
+                    }
+                }
+            }
+
+            If (!$vmssVMsHavePublicIPs) {
+                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmssId)'"
+                log -Message $message -Severity 'Warning'
+
+                Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Information'
+                    Exit
+                }
+            }
+        }
+    }
+
     log -Message "[Test-SupportedMigrationScenario] Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
     return $scenario
 }
