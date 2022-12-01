@@ -132,7 +132,7 @@ function PublicLBMigration {
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating NSG for Standard Load Balancer
     NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -179,7 +179,7 @@ function InternalLBMigration {
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Migration of Backend Address Pools
     BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -230,7 +230,7 @@ function RestoreExternalLBMigration {
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating NSG for Standard Load Balancer
     NSGCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -271,7 +271,7 @@ function RestoreInternalLBMigration {
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Inbound NAT Pools
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Migration of Backend Address Pools
     BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss

@@ -89,6 +89,21 @@ resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
   scope: resourceGroup(keyVaultResourceGroupName)
 }
 
+module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
+  name: 'bootdiag-storage-01'
+  scope: resourceGroup(resourceGroupName)
+  params: {
+    name: 'bootdiag${uniqueString(deployment().name)}'
+    location: location
+    storageAccountSku: 'Standard_LRS'
+    storageAccountKind: 'StorageV2'
+    supportsHttpsTrafficOnly: true
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
   name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
@@ -105,6 +120,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
       sku: '2022-Datacenter'
       version: 'latest'
     }
+    bootDiagnosticStorageAccountName: storageAccounts.outputs.name
     name: 'vmss-01'
     osDisk: {
       createOption: 'fromImage'
