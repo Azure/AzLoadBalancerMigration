@@ -26,8 +26,7 @@ function PublicIPToStatic {
                 Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
                 `nError message: $_
 "@
-                log 'Error' $message
-                Exit
+                log 'Error' $message -terminateOnError
             }
 
             log -Message "[PublicIPToStatic] Completed the migration of '$($pip.Name)' ('$($upgradedPip.IpAddress)') from Basic SKU and/or dynamic to static" -Severity "Information"
@@ -63,8 +62,7 @@ function PublicFEMigration {
                 Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
                 `nError message: $_
 "@
-                log 'Error' $message
-                Exit
+                log 'Error' $message -terminateOnError
             }
 
             log -Message "[PublicFEMigration] Completed the migration of '$($pip.Name)' ('$($upgradedPip.IpAddress)') from Basic SKU and/or dynamic to static" -Severity "Information"
@@ -81,8 +79,7 @@ function PublicFEMigration {
             Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
             `nError message: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
     }
     log -Message "[PublicFEMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
@@ -98,8 +95,7 @@ function PublicFEMigration {
         Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath.
          `nError message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
 
     log -Message "[PublicFEMigration] Public Frontend Migration Completed"

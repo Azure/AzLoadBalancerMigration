@@ -44,8 +44,7 @@ function _MigrateHealthProbe{
             address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
             State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
     log -Message "[_MigrateHealthProbe] Migrating Health Probes completed"
 }
@@ -100,8 +99,7 @@ function _MigrateNetworkInterfaceConfigurations {
                                 address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
                                 State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-                            log 'Error' $message
-                            Exit
+                            log 'Error' $message -terminateOnError
                         }
                     }
                 }
@@ -141,8 +139,7 @@ function _UpdateAzVmss {
             -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in
             this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
     }
 }
