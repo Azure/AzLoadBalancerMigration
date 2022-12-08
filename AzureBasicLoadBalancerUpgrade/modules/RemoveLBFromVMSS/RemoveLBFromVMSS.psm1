@@ -43,8 +43,7 @@ function RemoveLBFromVMSS {
             must exit. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
             State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
 
     # Update the VMSS instances
@@ -62,8 +61,7 @@ function RemoveLBFromVMSS {
             address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
             State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
     log -Message "[RemoveLBFromVMSS] Removal of Basic Loadbalancer $($BasicLoadBalancer.Name) Completed"
 }
