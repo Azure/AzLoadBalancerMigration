@@ -37,8 +37,7 @@ function LoadBalacingRulesMigration {
                 pool membership back (see the backup '$('State-' + $BasicLoadBalancer.Name + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state
                 file for original pool membership), and retry the migration.  Error: $_
 "@
-            log "Error" $message
-            Exit
+            log "Error" $message -terminateOnError
         }
     }
     log -Message "[LoadBalacingRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
@@ -54,8 +53,7 @@ function LoadBalacingRulesMigration {
         -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory
         or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-        log "Error" $message
-        Exit
+        log "Error" $message -terminateOnError
     }
     log -Message "[LoadBalacingRulesMigration] LoadBalacing Rules Migration Completed"
 }

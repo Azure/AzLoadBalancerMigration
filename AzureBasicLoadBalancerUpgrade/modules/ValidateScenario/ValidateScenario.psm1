@@ -101,8 +101,7 @@ Function Test-SupportedMigrationScenario {
             [Test-SupportedMigrationScenario] One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
             the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
     }
 
@@ -129,11 +128,10 @@ Function Test-SupportedMigrationScenario {
         $vmssPublicIPConfigurations = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | Select-Object -ExpandProperty IpConfigurations | Select-Object -ExpandProperty PublicIpAddressConfiguration
         if ($vmssPublicIPConfigurations) {
             $message = @"
-            [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has publicIPConfigurations which must be basic sku with a basic LB and cannot be migrated to a Standard LB.
-            Remove the publicIPConfigurations and re-run the module.
+            [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has Public IP Configurations assigning Public IPs to each instance (see: https://learn.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine). 
+            These Basic SKU public IP configurations cannot be associated with the VMSS when it is behind a Standard SKU load balancer due to SKU mismatch. Remove the publicIPConfigurations and re-run the module.
 "@
-            log -Severity 'Error' -Message $message
-            Exit
+            log -Severity 'Error' -Message $message -terminateOnError
         }
     }
 
@@ -191,8 +189,7 @@ Function Test-SupportedMigrationScenario {
                 }
                 If ($response -eq 'n') {
                     $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                    log -Message $message -Severity 'Information'
-                    Exit
+                    log -Message $message -Severity 'Information' -terminateOnError
                 }
             }
         }

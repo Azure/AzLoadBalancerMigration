@@ -32,8 +32,7 @@ function UpdateVmssInstances {
             address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
             State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@  
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
         finally {
             If (![string]::IsNullorEmpty($updateJob.Error)) {
@@ -42,8 +41,7 @@ function UpdateVmssInstances {
                 address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
                 State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $($updateJob.Error)
 "@  
-                log 'Error' $message
-                Exit
+                log 'Error' $message -terminateOnError
             }
         }
 

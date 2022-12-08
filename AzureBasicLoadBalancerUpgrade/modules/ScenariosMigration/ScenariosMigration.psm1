@@ -82,8 +82,7 @@ function _CreateStandardLoadBalancer {
             file, re-add the original backend pool members (see file 'State-$($BasicLoadBalancer.Name)-ResourceGroupName...'
             BackendIpConfigurations), address the following error, and try again. Error message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
 
 }

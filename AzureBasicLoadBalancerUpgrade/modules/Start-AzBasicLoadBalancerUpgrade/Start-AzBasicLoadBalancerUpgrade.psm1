@@ -137,8 +137,7 @@ function Start-AzBasicLoadBalancerUpgrade {
 
     # validate backup path is directory
     If (!(Test-Path -Path $RecoveryBackupPath -PathType Container )) {
-        Write-Error "The path '$recoveryBackupPath' specified with parameter recoveryBackupPath must exist and be a valid directory."
-        Exit
+        Write-Error "The path '$recoveryBackupPath' specified with parameter recoveryBackupPath must exist and be a valid directory." -terminateOnError
     }
 
     log -Message "############################## Initializing Start-AzBasicLoadBalancerUpgrade ##############################"
@@ -170,9 +169,7 @@ function Start-AzBasicLoadBalancerUpgrade {
             '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
             Error text: $_
 "@
-        log -severity Error -message $message
-
-        Exit
+        log -severity Error -message $message -terminateOnError
     }
 
     # verify basic load balancer configuration is a supported scenario

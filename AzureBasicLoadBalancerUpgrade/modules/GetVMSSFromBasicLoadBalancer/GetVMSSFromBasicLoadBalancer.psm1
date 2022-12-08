@@ -20,8 +20,7 @@ function GetVMSSFromBasicLoadBalancer {
         address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
         State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
     log -Message "[GetVMSSFromBasicLoadBalancer] VMSS loaded Name $($vmss.Name) from RG $($vmss.ResourceGroupName)"
     return , $vmss

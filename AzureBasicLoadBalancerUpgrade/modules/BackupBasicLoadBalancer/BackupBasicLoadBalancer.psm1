@@ -9,8 +9,7 @@ function RestoreLoadBalancer {
     log -Message "[RestoreLoadBalancer] Initiating Restore Load Balancer from JSON Backup"
 
     if (!(Test-Path $BasicLoadBalancerJsonFile)) {
-        log -Severity "Error" -Message "[RestoreLoadBalancer] Unable to load the file $BasicLoadBalancerJsonFile. File not found or missing permission."
-        Exit
+        log -Severity "Error" -Message "[RestoreLoadBalancer] Unable to load the file $BasicLoadBalancerJsonFile. File not found or missing permission." -terminateOnError
     }
     log -Message "[RestoreLoadBalancer] Loading file $BasicLoadBalancerJsonFile"
     $BasicLoadBalancerJson = Get-Content $BasicLoadBalancerJsonFile
@@ -23,8 +22,7 @@ function RestoreLoadBalancer {
     }
     catch {
         $message = "[RestoreLoadBalancer] An error occured while deserializing backup from JSON File. Error: $_"
-        log -Severity Error -Message $message
-        Exit
+        log -Severity Error -Message $message -terminateOnError
     }
 }
 
@@ -36,8 +34,7 @@ function RestoreVMSS {
     log -Message "[RestoreVMSS] Initiating Restore VMSS from JSON Backup"
 
     if (!(Test-Path $VMSSJsonFile)) {
-        log -Severity "Error" -Message "[RestoreVMSS] Unable to load the file $VMSSJsonFile. File not found or missing permission."
-        Exit
+        log -Severity "Error" -Message "[RestoreVMSS] Unable to load the file $VMSSJsonFile. File not found or missing permission." -terminateOnError
     }
     log -Message "[RestoreVMSS] Loading file $VMSSJsonFile"
     $VMSSJson = Get-Content $VMSSJsonFile
@@ -50,8 +47,7 @@ function RestoreVMSS {
     }
     catch {
         $message = "[RestoreVMSS] An error occured while deserializing backup from JSON File. Error: $_"
-        log -Severity Error -Message $message
-        Exit
+        log -Severity Error -Message $message -terminateOnError
     }
 }
 
@@ -88,8 +84,7 @@ function BackupBasicLoadBalancer {
     }
     catch {
         $message = "[BackupBasicLoadBalancer] An error occured while exporting the basic load balancer '$($BasicLoadBalancer.Name)' to an ARM template for backup purposes. Error: $_"
-        log -Severity Error -Message $message
-        Exit
+        log -Severity Error -Message $message -terminateOnError
     }
 
     # Backup VMSS Object
@@ -108,8 +103,7 @@ function BackupBasicLoadBalancer {
         }
         catch {
             $message = "[BackupBasicLoadBalancer] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
-            log -Severity Error -Message $message
-            Exit
+            log -Severity Error -Message $message -terminateOnError
         }
     }
 
