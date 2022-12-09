@@ -1,5 +1,6 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmss\UpdateVmss.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
 function _HardCopyObject {
@@ -71,38 +72,6 @@ function _MigrateNetworkInterfaceConfigurations {
     }
     log -Message "[_MigrateNetworkInterfaceConfigurations] Migrate NetworkInterface Configurations completed"
 }
-
-function _UpdateAzVmss {
-    param (
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
-    )
-    log -Message "[_UpdateAzVmss] Saving VMSS $($vmss.Name)"
-    try {
-        $ErrorActionPreference = 'Stop'
-        Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
-    }
-    catch {
-        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
-        if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
-            $message = @"
-            [_UpdateAzVmss] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
-            Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances
-            must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS
-            Upgrade Policy manually. `nError message: $_
-"@
-            log 'Error' $message
-        }
-        else {
-            $message = @"
-            [_UpdateAzVmss] An error occured when attempting to update VMSS network config new Standard
-            LB backend pool membership. To recover address the following error, and try again specifying the
-            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in
-            this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
-            log 'Error' $message -terminateOnError
-        }
-    }
-}
 function InboundNatPoolsMigration {
     [CmdletBinding()]
     param (
@@ -159,7 +128,7 @@ function InboundNatPoolsMigration {
     _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    _UpdateAzVmss -vmss $vmss
+    UpdateVMSS -vmss $vmss
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
@@ -170,7 +139,7 @@ function InboundNatPoolsMigration {
     #_RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    #_UpdateAzVmss -vmss $vmss
+    #UpdateVMSS -vmss $vmss
     #>
 
     log -Message "[InboundNatPoolsMigration] Inbound NAT Pools Migration Completed"

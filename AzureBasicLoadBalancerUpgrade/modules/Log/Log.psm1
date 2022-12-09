@@ -40,6 +40,9 @@ function log {
             "Debug" {
                 Write-Debug $outputMessage
             }
+            default {
+                Write-Information $outputMessage -InformationAction Continue
+            }
         }
     }
     else {
