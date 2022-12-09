@@ -53,6 +53,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "\NSGCreation\NSGCreation.ps
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\PrivateFEMigration\PrivateFEMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\AddLoadBalancerBackendAddressPool\AddLoadBalancerBackendAddressPool.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\VMSSPublicIPConfigMigration\VMSSPublicIPConfigMigration.psd1")
 
 function _CreateStandardLoadBalancer {
     [CmdletBinding()]
@@ -102,6 +103,9 @@ function PublicLBMigration {
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+    # Remove Public IP Configurations from VMSS
+    RemoveVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Migrate public IP addresses on Basic LB to static (if dynamic)
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
@@ -156,6 +160,12 @@ function InternalLBMigration {
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
+    # Remove Public IP Configurations from VMSS
+    RemoveVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
+
+    # Add Public IP Configurations to VMSS (with Standard SKU)
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
+
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveLBFromVMSS -BasicLoadBalancer $BasicLoadBalancer
 
@@ -204,8 +214,14 @@ function RestoreExternalLBMigration {
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = $vmss
 
+    # Remove Public IP Configurations from VMSS
+    RemoveVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
+
     # Migrate public IP addresses on Basic LB to static (if dynamic)
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
+
+    # Add Public IP Configurations to VMSS
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -250,6 +266,12 @@ function RestoreInternalLBMigration {
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = $vmss
+
+    # Remove Public IP Configurations from VMSS
+    RemoveVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
+
+    # Add Public IP Configurations to VMSS (with Standard SKU)
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
