@@ -14,6 +14,8 @@ function RemoveLBFromVMSS {
     log -Message "[RemoveLBFromVMSS] Building VMSS object from Basic Load Balancer $($BasicLoadBalancer.Name)"
     $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
+    log -Message "[RemoveLBFromVMSS] Cleaning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
+
     log -Message "[RemoveLBFromVMSS] Cleaning healthProbe from NetworkProfile of VMSS $($vmss.Name)"
     $vmss.VirtualMachineProfile.NetworkProfile.healthProbe = $null
 
@@ -24,11 +26,10 @@ function RemoveLBFromVMSS {
         $vmss.UpgradePolicy.Mode = "Manual"
     }
 
-    log -Message "[RemoveLBFromVMSS] Cleaning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
     foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
         foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
             $ipConfiguration.loadBalancerBackendAddressPools = $null
-            $ipConfiguration.loadBalancerInboundNatPools = $null
+            #$ipConfiguration.LoadBalancerInboundNatPools = $null
         }
     }
     log -Message "[RemoveLBFromVMSS] Updating VMSS $($vmss.Name)"
