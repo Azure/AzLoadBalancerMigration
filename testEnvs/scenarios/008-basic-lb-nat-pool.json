@@ -46,7 +46,7 @@
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
           "contentVersion": "1.0.0.0",
-          "parameters": { 
+          "parameters": {
             "adminPassword": {
               "type": "securestring"
             },
@@ -60,6 +60,22 @@
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2022-05-01",
               "name": "pip-01",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Dynamic",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2022-05-01",
+              "name": "pip-02",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "Basic",
@@ -108,7 +124,8 @@
               "location": "[parameters('location')]",
               "dependsOn": [
                 "vnet-01",
-                "lb-basic-01"
+                "lb-basic-01",
+                "[concat('bootdiag',uniqueString(resourceGroup().id))]"
               ],
               "sku": {
                 "name": "Standard_DS1_v2",
@@ -167,6 +184,12 @@
                       "version": "latest"
                     }
                   },
+                  "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                      "enabled": true,
+                      "storageUri": "[reference(concat('bootdiag',uniqueString(resourceGroup().id)), '2021-04-01').primaryEndpoints.blob]"
+                    }
+                  },
                   "networkProfile": {
                     "networkInterfaceConfigurations": [
                       {
@@ -183,6 +206,7 @@
                             {
                               "name": "ipconfig1",
                               "properties": {
+                                "primary": true,
                                 "subnet": {
                                   "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
                                 },
@@ -191,6 +215,34 @@
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
                                   }
+                                ],
+                                "loadBalancerInboundNatPools": [
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-01')]"
+                                  },
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-03')]"
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "name": "ipconfig2",
+                              "properties": {
+                                "primary": false,
+                                "subnet": {
+                                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
+                                },
+                                "privateIPAddressVersion": "IPv4",
+                                "loadBalancerBackendAddressPools": [
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-02')]"
+                                  }
+                                ],
+                                "loadBalancerInboundNatPools": [
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-02')]"
+                                  }
                                 ]
                               }
                             }
@@ -198,11 +250,6 @@
                         }
                       }
                     ]
-                  },
-                  "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                      "enabled": false
-                    }
                   },
                   "priority": "Regular",
                   "scheduledEventsProfile": {}
@@ -242,11 +289,25 @@
                         "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-01')]"
                       }
                     }
+                  },
+                  {
+                    "name": "fe-02",
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-02')]",
+                    "properties": {
+                      "privateIPAllocationMethod": "Dynamic",
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-02')]"
+                      }
+                    }
                   }
                 ],
                 "backendAddressPools": [
                   {
                     "name": "be-01",
+                    "properties": {}
+                  },
+                  {
+                    "name": "be-02",
                     "properties": {}
                   }
                 ],
@@ -295,12 +356,41 @@
                 "inboundNatRules": [],
                 "inboundNatPools": [
                   {
-                    "name": "natpool01",
-                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/inboundNatPools/natpool01')]",
+                    "name": "natpool-01",
                     "properties": {
-                      "frontendPortRangeStart": 8080,
-                      "frontendPortRangeEnd": 8081,
+                      "frontendPortRangeStart": 9080,
+                      "frontendPortRangeEnd": 9085,
                       "backendPort": 8080,
+                      "protocol": "Tcp",
+                      "idleTimeoutInMinutes": 4,
+                      "enableFloatingIP": false,
+                      "enableTcpReset": false,
+                      "frontendIPConfiguration": {
+                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-01')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "natpool-02",
+                    "properties": {
+                      "frontendPortRangeStart": 9180,
+                      "frontendPortRangeEnd": 9185,
+                      "backendPort": 8180,
+                      "protocol": "Tcp",
+                      "idleTimeoutInMinutes": 4,
+                      "enableFloatingIP": false,
+                      "enableTcpReset": false,
+                      "frontendIPConfiguration": {
+                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-01')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "natpool-03",
+                    "properties": {
+                      "frontendPortRangeStart": 9280,
+                      "frontendPortRangeEnd": 9285,
+                      "backendPort": 3389,
                       "protocol": "Tcp",
                       "idleTimeoutInMinutes": 4,
                       "enableFloatingIP": false,
@@ -311,6 +401,26 @@
                     }
                   }
                 ]
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2021-06-01",
+              "name": "[concat('bootdiag',uniqueString(resourceGroup().id))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "virtualNetworkRules": [],
+                  "ipRules": [],
+                  "defaultAction": "Allow"
+                },
+                "accessTier": "Hot"
               }
             }
           ]
@@ -327,7 +437,7 @@
           "location": {
             "value": "[parameters('location')]"
           }
-       }
+        }
       }
     }
   ]
