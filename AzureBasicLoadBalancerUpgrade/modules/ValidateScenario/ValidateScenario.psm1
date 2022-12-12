@@ -127,7 +127,7 @@ Function Test-SupportedMigrationScenario {
     log -Message "[Test-SupportedMigrationScenario] Checking for VMSS with publicIPConfigurations"
     foreach ($vmss in $basicLBVMSSs) {
         $vmssPublicIPConfigurations = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | Select-Object -ExpandProperty IpConfigurations | Select-Object -ExpandProperty PublicIpAddressConfiguration
-        if ($vmssPublicIPConfigurations[0]) {
+        if ($vmssPublicIPConfigurations) {
             $message = @"
             [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has publicIPConfigurations which must be basic sku with a basic LB and cannot be migrated to a Standard LB.
             Remove the publicIPConfigurations and re-run the module.
