@@ -1,10 +1,116 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
+function _HardCopyObject {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $True)][System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]] $listSubResource
+    )
+    $options = [System.Text.Json.JsonSerializerOptions]::new()
+    $options.WriteIndented = $true
+    $options.IgnoreReadOnlyProperties = $true
+    $cgenericListSubResource = [System.Text.Json.JsonSerializer]::Serialize($listSubResource, "System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]", $options)
+    $cgenericListSubResource = [System.Text.Json.JsonSerializer]::Deserialize($cgenericListSubResource, "System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]")
+    # To preserve the original object type in the return we must use a , before the object to be returned
+    return , [System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]]$cgenericListSubResource
+}
+function _MigrateNetworkInterfaceConfigurations {
+    param (
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
+    )
+
+    log -Message "[_MigrateNetworkInterfaceConfigurations] Adding InboundNATPool to VMSS $($vmss.Name)"
+    foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+        $genericListSubResource = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
+        foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
+            If (![string]::IsNullOrEmpty($ipConfiguration.loadBalancerInboundNatPools)) {
+                $genericListSubResource.AddRange($ipConfiguration.loadBalancerInboundNatPools)
+            }
+
+            foreach($InboundNatPool in $BasicLoadBalancer.InboundNatPools) {
+
+                try {
+                    # get the ipconfig from the VMSS as it was prior to starting the upgrade--we'll use this to determine which NAT Pools to assiciate with which ipconfig
+                    $coorespondingRefVmssIpconfig = $refVmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                        Where-Object {$_.Name -eq $networkInterfaceConfiguration.Name} | 
+                        Select-Object -ExpandProperty IpConfigurations | 
+                        Where-Object {$_.Name -eq $ipConfiguration.Name}
+                    $coorespondingRefVmssIpconfigNatPoolNames = @()
+                    $coorespondingRefVmssIpconfig.loadBalancerInboundNatPools.id | ForEach-Object {
+                        $coorespondingRefVmssIpconfigNatPoolNames += $_.Split("/")[-1]
+                    }
+
+                    $message = "[_MigrateNetworkInterfaceConfigurations] Checking if VMSS '$($vmss.Name)' NIC '$($networkInterfaceConfiguration.Name)' IPConfig '$($ipConfiguration.Name)' should be associated with NAT Pool '$($InboundNatPool.Name)'"
+                    log -Message $message
+                    If ($InboundNatPool.Id.split('/')[-1] -in $coorespondingRefVmssIpconfigNatPoolNames) {
+                        $message = "[_MigrateNetworkInterfaceConfigurations] Adding NAT Pool '$($InboundNatPool.Name)' to IPConfig '$($ipConfiguration.Name)'"
+                        log -Message $message
+    
+                        $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
+                        $subResource.Id = ($StdLoadBalancer.InboundNatPools | Where-Object { $_.Name -eq $InboundNatPool.Name }).Id
+                        $genericListSubResource.Add($subResource)
+                    }
+                }
+                catch {
+                    $message = @"
+                        [_MigrateNetworkInterfaceConfigurations] An error occured creating a new VMSS IP Config. To recover
+                        address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
+                        State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
+"@
+                    log 'Error' $message
+                    Exit
+                }
+            }
+            # Taking a hard copy of the object and assigning, it's important because the object was passed by reference
+            $ipConfiguration.loadBalancerInboundNatPools = _HardCopyObject -listSubResource $genericListSubResource
+            $genericListSubResource.Clear()
+        }
+    }
+    log -Message "[_MigrateNetworkInterfaceConfigurations] Migrate NetworkInterface Configurations completed"
+}
+
+function _UpdateAzVmss {
+    param (
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
+    )
+    log -Message "[_UpdateAzVmss] Saving VMSS $($vmss.Name)"
+    try {
+        $ErrorActionPreference = 'Stop'
+        Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
+    }
+    catch {
+        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
+        if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
+            $message = @"
+            [_UpdateAzVmss] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
+            Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances
+            must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS
+            Upgrade Policy manually. `nError message: $_
+"@
+            log 'Error' $message
+        }
+        else {
+            $message = @"
+            [_UpdateAzVmss] An error occured when attempting to update VMSS network config new Standard
+            LB backend pool membership. To recover address the following error, and try again specifying the
+            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in
+            this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
+"@
+            log 'Error' $message
+            Exit
+        }
+    }
+}
 function InboundNatPoolsMigration {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
     log -Message "[InboundNatPoolsMigration] Initiating Inbound NAT Pools Migration"
 
@@ -34,7 +140,6 @@ function InboundNatPoolsMigration {
                 `n$($inboundNatPoolConfig | ConvertTo-Json -Depth 5)$_$_"
             log 'Warning' $message
         }
-
     }
     log -Message "[InboundNatPoolsMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
@@ -50,6 +155,25 @@ function InboundNatPoolsMigration {
 "@
         log 'Warning' $message
     }
+
+    $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+
+    _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
+
+    # Update VMSS on Azure
+    _UpdateAzVmss -vmss $vmss
+
+    # Update Instances
+    UpdateVmssInstances -vmss $vmss
+
+    <#
+    This will happen in the backend pool migration...
+    # Restore VMSS Upgrade Policy Mode
+    #_RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
+
+    # Update VMSS on Azure
+    #_UpdateAzVmss -vmss $vmss
+    #>
 
     log -Message "[InboundNatPoolsMigration] Inbound NAT Pools Migration Completed"
 }
