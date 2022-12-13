@@ -4,7 +4,7 @@ function UpdateVmss {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
     )
-    log -Message "[UpdateVmss] Saving VMSS $($vmss.Name)"
+    log -Message "[UpdateVmss] Updating configuration of VMSS '$($vmss.Name)'"
     try {
         $ErrorActionPreference = 'Stop'
         Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
@@ -30,6 +30,8 @@ function UpdateVmss {
             log 'Error' $message -terminateOnError
         }
     }
+
+    log -Message "[UpdateVmss] Completed update configuration of VMSS '$($vmss.Name)'"
 }
 
-Export-ModuleMember -Function .\UpdateVMSS.psd1
+Export-ModuleMember -Function UpdateVmss
