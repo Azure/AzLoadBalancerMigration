@@ -112,6 +112,9 @@ function PublicLBMigration {
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveLBFromVMSS -BasicLoadBalancer $BasicLoadBalancer
+    
+    # Add Public IP Configurations to VMSS (with Standard SKU)
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -163,11 +166,11 @@ function InternalLBMigration {
     # Remove Public IP Configurations from VMSS
     RemoveVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
-    # Add Public IP Configurations to VMSS (with Standard SKU)
-    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
-
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveLBFromVMSS -BasicLoadBalancer $BasicLoadBalancer
+
+    # Add Public IP Configurations to VMSS (with Standard SKU)
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -221,7 +224,7 @@ function RestoreExternalLBMigration {
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
 
     # Add Public IP Configurations to VMSS
-    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -271,7 +274,7 @@ function RestoreInternalLBMigration {
     RemoveVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Add Public IP Configurations to VMSS (with Standard SKU)
-    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
+    AddVMSSPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName

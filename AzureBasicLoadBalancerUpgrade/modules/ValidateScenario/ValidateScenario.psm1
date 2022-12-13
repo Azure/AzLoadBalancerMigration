@@ -131,7 +131,7 @@ Function Test-SupportedMigrationScenario {
             [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has Public IP Configurations assigning Public IPs to each instance (see: https://learn.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine). 
             These Basic SKU public IP configurations cannot be associated with the VMSS when it is behind a Standard SKU load balancer due to SKU mismatch. Remove the publicIPConfigurations and re-run the module.
 "@
-            log -Severity 'Error' -Message $message -terminateOnError
+            log -Severity 'Error' -Message $message #-terminateOnError
         }
     }
 
