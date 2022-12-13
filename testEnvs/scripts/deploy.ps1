@@ -5,7 +5,8 @@ Param (
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
     [switch]$Cleanup, # removes all test environments (in parallel)
-    [switch]$RunMigration # executes the migration module against all test environments (in parallel)
+    [switch]$RunMigration, # executes the migration module against all test environments (in parallel),
+    [parameter(Mandatory = $false)][string]$resourceGroupSuffix = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -119,13 +120,14 @@ $keyVaultName = (
 $jobs = @()
 
 foreach ($template in $filteredTemplates) {
+    $rgTemplateName = "rg-{0}{1}-{2}" -f $template.BaseName.split('-')[0],$resourceGroupSuffix,$template.BaseName.split('-',2)[1]
     if($template.FullName -like "*.bicep"){
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
             TemplateParameterObject = @{
                 Location                  = $Location
-                ResourceGroupName         = "rg-$($template.BaseName)"
+                ResourceGroupName         = $rgTemplateName
                 KeyVaultName              = $keyVaultName
                 KeyVaultResourceGroupName = $KeyVaultResourceGroupName
             }
@@ -135,7 +137,7 @@ foreach ($template in $filteredTemplates) {
     }
 
     if($template.FullName -like "019*.json"){
-        $rgTemplateName = "rg-$($template.BaseName)"
+
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
@@ -145,7 +147,6 @@ foreach ($template in $filteredTemplates) {
     }
 
     if($template.FullName -like "*.json"){
-        $rgTemplateName = "rg-$($template.BaseName)"
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
