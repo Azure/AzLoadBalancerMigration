@@ -11,7 +11,12 @@ Function Test-SupportedMigrationScenario {
         [Parameter(Mandatory = $true)]
         [ValidatePattern("^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9_])?$")]
         [string]
-        $StdLoadBalancerName
+        $StdLoadBalancerName,
+
+        # force
+        [Parameter(Mandatory = $false)]
+        [switch]
+        $force
     )
 
     $scenario = @{
@@ -186,13 +191,19 @@ Function Test-SupportedMigrationScenario {
                 log -Message $message -Severity 'Warning'
 
                 Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
-                while ($response -ne 'y' -and $response -ne 'n') {
-                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                If (!$force.IsPresent) {
+                    while ($response -ne 'y' -and $response -ne 'n') {
+                        $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                    }
+                    If ($response -eq 'n') {
+                        $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                        log -Message $message -Severity 'Information'
+                        Exit
+                    }
                 }
-                If ($response -eq 'n') {
-                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                    log -Message $message -Severity 'Information'
-                    Exit
+                Else {
+                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    log -Message $message -Severity 'Warning'
                 }
             }
         }
