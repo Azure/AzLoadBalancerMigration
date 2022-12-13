@@ -231,11 +231,7 @@
                                   "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
                                 },
                                 "privateIPAddressVersion": "IPv4",
-                                "loadBalancerBackendAddressPools": [
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-02')]"
-                                  }
-                                ],
+                                "loadBalancerBackendAddressPools": [],
                                 "loadBalancerInboundNatPools": [
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-02')]"
@@ -271,6 +267,18 @@
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-03')]"
                                   }
                                 ]
+                              }
+                            },
+                                                        {
+                              "name": "ipconfig2",
+                              "properties": {
+                                "primary": false,
+                                "subnet": {
+                                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
+                                },
+                                "privateIPAddressVersion": "IPv4",
+                                "loadBalancerBackendAddressPools": [],
+                                "loadBalancerInboundNatPools": []
                               }
                             }
                           ]
@@ -331,10 +339,6 @@
                 "backendAddressPools": [
                   {
                     "name": "be-01",
-                    "properties": {}
-                  },
-                  {
-                    "name": "be-02",
                     "properties": {}
                   }
                 ],
