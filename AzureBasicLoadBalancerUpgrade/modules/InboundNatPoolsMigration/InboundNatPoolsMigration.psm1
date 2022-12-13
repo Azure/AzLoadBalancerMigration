@@ -41,13 +41,18 @@ function _MigrateNetworkInterfaceConfigurations {
                         Select-Object -ExpandProperty IpConfigurations | 
                         Where-Object {$_.Name -eq $ipConfiguration.Name}
                     $coorespondingRefVmssIpconfigNatPoolNames = @()
-                    $coorespondingRefVmssIpconfig.loadBalancerInboundNatPools.id | ForEach-Object {
-                        $coorespondingRefVmssIpconfigNatPoolNames += $_.Split("/")[-1]
+
+                    #if ipconfig has associated nat pools, add their names to the array
+                    If (![string]::IsNullOrEmpty($coorespondingRefVmssIpconfig.loadBalancerInboundNatPools)) {
+                        $coorespondingRefVmssIpconfig.loadBalancerInboundNatPools | ForEach-Object {
+                            log -Severity "Information" -Message "Getting NAT Pool name from ID: '$($_.id)'" 
+                            $coorespondingRefVmssIpconfigNatPoolNames += $_.Id.Split("/")[-1]
+                        }
                     }
 
                     $message = "[_MigrateNetworkInterfaceConfigurations] Checking if VMSS '$($vmss.Name)' NIC '$($networkInterfaceConfiguration.Name)' IPConfig '$($ipConfiguration.Name)' should be associated with NAT Pool '$($InboundNatPool.Name)'"
                     log -Message $message
-                    If ($InboundNatPool.Id.split('/')[-1] -in $coorespondingRefVmssIpconfigNatPoolNames) {
+                    If ($null -ne $InboundNatPool -and $InboundNatPool.Id.split('/')[-1] -in $coorespondingRefVmssIpconfigNatPoolNames) {
                         $message = "[_MigrateNetworkInterfaceConfigurations] Adding NAT Pool '$($InboundNatPool.Name)' to IPConfig '$($ipConfiguration.Name)'"
                         log -Message $message
     
@@ -65,8 +70,12 @@ function _MigrateNetworkInterfaceConfigurations {
                     log 'Error' $message -terminateOnError
                 }
             }
-            # Taking a hard copy of the object and assigning, it's important because the object was passed by reference
-            $ipConfiguration.loadBalancerInboundNatPools = _HardCopyObject -listSubResource $genericListSubResource
+
+            # if nat pools were found, associate them to the interface
+            If (![string]::IsNullOrEmpty($genericListSubResource)) {
+                # Taking a hard copy of the object and assigning, it's important because the object was passed by reference
+                $ipConfiguration.loadBalancerInboundNatPools = _HardCopyObject -listSubResource $genericListSubResource
+            }
             $genericListSubResource.Clear()
         }
     }
