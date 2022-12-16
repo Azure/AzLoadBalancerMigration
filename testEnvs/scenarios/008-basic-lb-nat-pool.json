@@ -219,9 +219,6 @@
                                 "loadBalancerInboundNatPools": [
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-01')]"
-                                  },
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-03')]"
                                   }
                                 ]
                               }
@@ -234,11 +231,7 @@
                                   "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
                                 },
                                 "privateIPAddressVersion": "IPv4",
-                                "loadBalancerBackendAddressPools": [
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-02')]"
-                                  }
-                                ],
+                                "loadBalancerBackendAddressPools": [],
                                 "loadBalancerInboundNatPools": [
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-02')]"
@@ -248,7 +241,49 @@
                             }
                           ]
                         }
-                      }
+                      },
+                                            {
+                        "name": "vmss-01-nic-02configuration-0",
+                        "properties": {
+                          "primary": false,
+                          "enableAcceleratedNetworking": false,
+                          "disableTcpStateTracking": false,
+                          "dnsSettings": {
+                            "dnsServers": []
+                          },
+                          "enableIPForwarding": false,
+                          "ipConfigurations": [
+                            {
+                              "name": "ipconfig1",
+                              "properties": {
+                                "primary": true,
+                                "subnet": {
+                                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
+                                },
+                                "privateIPAddressVersion": "IPv4",
+                                "loadBalancerBackendAddressPools": [],
+                                "loadBalancerInboundNatPools": [
+                                  {
+                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-03')]"
+                                  }
+                                ]
+                              }
+                            },
+                                                        {
+                              "name": "ipconfig2",
+                              "properties": {
+                                "primary": false,
+                                "subnet": {
+                                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
+                                },
+                                "privateIPAddressVersion": "IPv4",
+                                "loadBalancerBackendAddressPools": [],
+                                "loadBalancerInboundNatPools": []
+                              }
+                            }
+                          ]
+                        }
+                                            }
                     ]
                   },
                   "priority": "Regular",
@@ -304,10 +339,6 @@
                 "backendAddressPools": [
                   {
                     "name": "be-01",
-                    "properties": {}
-                  },
-                  {
-                    "name": "be-02",
                     "properties": {}
                   }
                 ],
