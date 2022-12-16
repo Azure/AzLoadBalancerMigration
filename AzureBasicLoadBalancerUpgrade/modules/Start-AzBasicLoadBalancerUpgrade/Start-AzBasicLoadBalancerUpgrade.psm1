@@ -127,7 +127,8 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathVMSS,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
-        [Parameter(Mandatory = $false)][switch] $FollowLog
+        [Parameter(Mandatory = $false)][switch] $FollowLog,
+        [Parameter(Mandatory = $false)][switch] $force
         )
 
     # Set global variable to display log output in console
@@ -185,7 +186,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         $StdLoadBalancerName = $BasicLoadBalancer.Name
     }
 
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent)
 
     # Migration of Frontend IP Configurations
     switch ($scenario.ExternalOrInternal) {
