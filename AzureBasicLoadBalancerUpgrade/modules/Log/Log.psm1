@@ -11,6 +11,7 @@ function log {
         [ValidateSet('Information','Warning','Error','Verbose','Debug')]
         [string]$Severity = 'Information',
 
+        # if specified, the script will exit after logging an event with severity 'Error' 
         [Parameter(Position=1)]
         [switch]
         $terminateOnError
