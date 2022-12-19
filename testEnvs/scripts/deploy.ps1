@@ -5,7 +5,8 @@ Param (
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
     [switch]$Cleanup, # removes all test environments (in parallel)
-    [switch]$RunMigration # executes the migration module against all test environments (in parallel)
+    [switch]$RunMigration, # executes the migration module against all test environments (in parallel),
+    [parameter(Mandatory = $false)][string]$resourceGroupSuffix = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,17 +57,24 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     $ScriptBlock = {
         param($RGName)
         Write-Output $RGName
-        Set-Location 
+        $pwd
         Import-Module ..\..\AzureBasicLoadBalancerUpgrade  -Force
-        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzLoadBalancerMigration\$RGName"
+        $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01
+        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Force
     }
     $scenarios = Get-AzResourceGroup -Name rg-0*
 
+    $jobPool = @()
     foreach($rg in $scenarios){
-        Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'")) > $null
+
+        While (($activeJobs = ($jobPool | Where-Object { $_.State -eq 'Running' }).count) -gt 10) {
+            Write-Host "Currently $activeJobs jobs running, waiting for less than 10"
+            Start-Sleep -Seconds 5
+        }
+
+        $jobPool += Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'"))
     }
 
     Write-Output ("Total Jobs Created: " + $scenarios.Count)
@@ -119,13 +127,14 @@ $keyVaultName = (
 $jobs = @()
 
 foreach ($template in $filteredTemplates) {
+    $rgTemplateName = "rg-{0}{1}-{2}" -f $template.BaseName.split('-')[0],$resourceGroupSuffix,$template.BaseName.split('-',2)[1]
     if($template.FullName -like "*.bicep"){
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
             TemplateParameterObject = @{
                 Location                  = $Location
-                ResourceGroupName         = "rg-$($template.BaseName)"
+                ResourceGroupName         = $rgTemplateName
                 KeyVaultName              = $keyVaultName
                 KeyVaultResourceGroupName = $KeyVaultResourceGroupName
             }
@@ -134,8 +143,8 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
     }
 
-    if($template.FullName -like "019*.json"){
-        $rgTemplateName = "rg-$($template.BaseName)"
+    elseif($template.Name -like "019*.json"){
+
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
@@ -144,8 +153,7 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
     }
 
-    if($template.FullName -like "*.json"){
-        $rgTemplateName = "rg-$($template.BaseName)"
+    elseif($template.Name -like "*.json"){
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
