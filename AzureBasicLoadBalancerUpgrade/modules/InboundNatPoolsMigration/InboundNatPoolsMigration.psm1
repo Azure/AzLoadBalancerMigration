@@ -1,6 +1,5 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmss\UpdateVmss.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1") 
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
 function _HardCopyObject {
@@ -15,6 +14,38 @@ function _HardCopyObject {
     $cgenericListSubResource = [System.Text.Json.JsonSerializer]::Deserialize($cgenericListSubResource, "System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]")
     # To preserve the original object type in the return we must use a , before the object to be returned
     return , [System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]]$cgenericListSubResource
+}
+
+function _UpdateAzVmss {
+    param (
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
+    )
+    log -Message "[_UpdateAzVmss] Saving VMSS $($vmss.Name)"
+    try {
+        $ErrorActionPreference = 'Stop'
+        Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
+    }
+    catch {
+        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
+        if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
+            $message = @"
+            [_UpdateAzVmss] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
+            Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances
+            must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS
+            Upgrade Policy manually. `nError message: $_
+"@
+            log 'Error' $message -terminateOnError
+        }
+        else {
+            $message = @"
+            [_UpdateAzVmss] An error occured when attempting to update VMSS network config new Standard
+            LB backend pool membership. To recover address the following error, and try again specifying the
+            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in
+            this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
+"@
+            log 'Error' $message -terminateOnError
+        }
+    }
 }
 function _MigrateNetworkInterfaceConfigurations {
     param (
@@ -45,7 +76,7 @@ function _MigrateNetworkInterfaceConfigurations {
                     #if ipconfig has associated nat pools, add their names to the array
                     If (![string]::IsNullOrEmpty($coorespondingRefVmssIpconfig.loadBalancerInboundNatPools)) {
                         $coorespondingRefVmssIpconfig.loadBalancerInboundNatPools | ForEach-Object {
-                            log -Severity "Information" -Message "Getting NAT Pool name from ID: '$($_.id)'" 
+                            log -Severity "Debug" -Message "Getting NAT Pool name from ID: '$($_.id)'" 
                             $coorespondingRefVmssIpconfigNatPoolNames += $_.Id.Split("/")[-1]
                         }
                     }
@@ -137,7 +168,7 @@ function InboundNatPoolsMigration {
     _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    UpdateVMSS -vmss $vmss
+    _UpdateAzVMSS -vmss $vmss
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
