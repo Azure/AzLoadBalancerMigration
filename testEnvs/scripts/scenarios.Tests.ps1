@@ -6,7 +6,6 @@
     004-basic-lb-ext-multi-fe.bicep
     005-basic-lb-int-single-be.bicep
     006-basic-lb-int-multi-be.bicep
-    007-basic-lb-int-nat-rule.bicep
     008-basic-lb-nat-pool.bicep
     009-basic-lb-ext-basic-static-pip.bicep
     012-basic-lb-ext-ipv6-fe.bicep
@@ -282,49 +281,6 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '007-basic-lb-int-nat-rule' {
-        BeforeAll {
-            $rgName = 'rg-007-basic-lb-int-nat-rule'
-            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
-            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
-            $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
-            $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
-        }
-
-        It "Load Balancer has a Standard LoadBalancer" {   
-            $lb.SKU.Name | Should -Be 'Standard'
-        }
-
-        It "Load Balancer has 1 FrontendConfiguration" {   
-            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
-        }
-
-        It "Load Balancer FrontendConfiguration has a PrivateIpAddress" {   
-            IsPrivateAddress($lb.FrontendIpConfigurations.PrivateIpAddress) | Should -Be $true
-        }
-
-        It "Load Balancer has 1 LoadBalancingRule" {   
-            $lb.LoadBalancingRules.Count | Should -BeExactly 1
-        }
-
-        It "Load Balancer has 2 BackendAddressPools" {
-            $lb.BackendAddressPools.Count | Should -BeExactly 1
-        }
-
-        It "Load Balancer has 1 Probe" {   
-            $lb.Probes.Count | Should -Be 1
-        }
-
-        It "Load Balancer has 1 inbound Nat rule" {
-            $lb.InboundNatRules.Count | Should -BeExactly 1
-        }
-
-        It "VMSS has 1 LoadBalancer BackendAddress Pool" {   
-            $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
-            Should -BeExactly 1
-        }
-    }
-
     Context '008-basic-lb-nat-pool' {
         BeforeAll {
             $rgName = 'rg-008-basic-lb-nat-pool'
@@ -332,6 +288,22 @@ Describe "Validate Migration Script Results" {
             $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lbName = ($vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Id).Split("/")[-3]
             $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $lbName
+            $nic1IpConfig1 = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                where-object {$_.name -eq 'vmss-01-nic-01'} | 
+                Select-Object -ExpandProperty IpConfigurations |
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic1IpConfig2 = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                where-object {$_.name -eq 'vmss-01-nic-01'} | 
+                Select-Object -ExpandProperty IpConfigurations |
+                Where-Object {$_.name -eq 'ipconfig2'}
+            $nic2IpConfig1 = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                where-object {$_.name -eq 'vmss-01-nic-02'} | 
+                Select-Object -ExpandProperty IpConfigurations |
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic2IpConfig2 = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                where-object {$_.name -eq 'vmss-01-nic-02'} | 
+                Select-Object -ExpandProperty IpConfigurations |
+                Where-Object {$_.name -eq 'ipconfig2'}
         }
 
         It "Load Balancer has a Standard LoadBalancer" {   
@@ -354,13 +326,49 @@ Describe "Validate Migration Script Results" {
             $lb.Probes.Count | Should -Be 1
         }
 
-        It "Load Balancer has 1 inbound Nat Pool" {
-            $lb.InboundNatPools.Count | Should -BeExactly 1
+        It "Load Balancer has 3 inbound Nat Pools" {
+            $lb.InboundNatPools.Count | Should -BeExactly 3
+        }
+
+        It "VMSS Nic 1 IP config 1 should be associated with 1 nat pool" {
+            $nic1IpConfig1.LoadBalancerInboundNatPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS NIC 1 ipconfig 1 should be assocated with NAT Pool 1" {
+            $nic1IpConfig1.LoadBalancerInboundNatPools[0].Name | Should -Be 'natpool-01'
+        }
+
+        It "VMSS Nic 1 ipconfig 1 should be associated with one backend address pool" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS Nic 1 IP config 2 should be associated with 1 nat pool" {
+            $nic1IpConfig2.LoadBalancerInboundNatPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS NIC 1 ipconfig 2 should be assocated with NAT Pool 2" {
+            $nic1IpConfig2.LoadBalancerInboundNatPools[0].Name | Should -Be 'natpool-02'
+        }
+
+        It "vmss nic 2 ipconfig 1 should be associated with 1 nat pool" {
+            $nic2IpConfig1.LoadBalancerInboundNatPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS NIC 2 ipconfig 1 should be assocated with NAT Pool 3" {
+            $nic2IpConfig1.LoadBalancerInboundNatPools[0].Name | Should -Be 'natpool-03'
+        }
+
+        It "VMSS Nic 2 IP config 2 should be associated with no nat pool" {
+            $nic2IpConfig2.LoadBalancerInboundNatPools.Count | Should -BeExactly 0
         }
 
         It "VMSS has 1 LoadBalancer BackendAddress Pool" {   
             $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | 
             Should -BeExactly 1
+        }
+
+        It "LB has 3 nat rules (auto-generated for nat pool)" {
+            $lb.InboundNatRules.Count | Should -BeExactly 3
         }
     }
 
@@ -409,6 +417,7 @@ Describe "Validate Migration Script Results" {
     }
 
     Context '012-basic-lb-ext-ipv6-fe' {
+        # migration should fail!
         BeforeAll {
             $rgName = 'rg-012-basic-lb-ext-ipv6-fe'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -419,8 +428,8 @@ Describe "Validate Migration Script Results" {
             $pip2 = $(Get-AzResource -ResourceID $lb.FrontendIpConfigurations[1].PublicIpAddress.id | Get-AzPublicIpAddress)
         }
 
-        It "Load Balancer has a Standard LoadBalancer" {   
-            $lb.SKU.Name | Should -Be 'Standard'
+        It "Load Balancer has a Basic LoadBalancer" {   
+            $lb.SKU.Name | Should -Be 'Basic'
         }
 
         It "Load Balancer has 2 FrontendConfigurations" {   
@@ -451,8 +460,8 @@ Describe "Validate Migration Script Results" {
             $pip.PublicIpAllocationMethod | Should -Be 'Static'
         }
 
-        It "Public Ip has a Standard SKu" {
-            $pip.Sku.Name | Should -Be 'Standard'
+        It "Public Ip has a Basic SKu" {
+            $pip.Sku.Name | Should -Be 'Basic'
         }
 
         It "Load Balancer has 1 Probe" {   
@@ -505,6 +514,7 @@ Describe "Validate Migration Script Results" {
     }
 
     Context '014-vmss-multi-be-multi-lb' {
+        #migration should fail!
         BeforeAll {
             $rgName = 'rg-014-vmss-multi-be-multi-lb'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -516,8 +526,8 @@ Describe "Validate Migration Script Results" {
             $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
         }
 
-        It "Internal Load Balancer has a Standard SU" {   
-            $lbInt.SKU.Name | Should -Be 'Standard'
+        It "Internal Load Balancer has a Basic SU" {   
+            $lbInt.SKU.Name | Should -Be 'Basic'
         }
 
         It "Internal Load Balancer has 1 FrontendConfiguration" {   
@@ -537,8 +547,8 @@ Describe "Validate Migration Script Results" {
             $lbInt.Probes.Count | Should -Be 1
         }
 
-        It "External Load Balancer has a Standard SKU" {   
-            $lbExt.SKU.Name | Should -Be 'Standard'
+        It "External Load Balancer has a Basic SKU" {   
+            $lbExt.SKU.Name | Should -Be 'Basic'
         }
 
         It "External Load Balancer has 1 FrontendConfiguration" {   
@@ -587,6 +597,62 @@ Describe "Validate Migration Script Results" {
 
         It "VMSS has 2 LoadBalancer BackendAddress Pools" {   
             $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+    }
+
+    Context '017-vmss-multi-ipconfigs-multi-be' {
+        BeforeAll {
+            $rgName = '017-vmss-multi-ipconfigs-multi-be'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
+            $lb = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $nic1IpConfig1 = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                where-object {$_.name -like '*-nic-01'} | 
+                Select-Object -ExpandProperty IpConfigurations |
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic1IpConfig2 = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | 
+                where-object {$_.name -like '*-nic-01'} | 
+                Select-Object -ExpandProperty IpConfigurations |
+                Where-Object {$_.name -eq 'ipconfig2'}
+
+        }
+
+        It "Internal Load Balancer has a Standard SU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer FrontendConfiguration has a Private Ip Address" { 
+            
+            IsPrivateAddress($lb[0].FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
+        }
+
+        It "Internal Load Balancer has 2 LoadBalancing Rule" {   
+            $lb.LoadBalancingRules.Count | Should -BeExactly 2
+        }
+
+        It "Internal Load Balancer has 1 Probe" {   
+            $lb.Probes.Count | Should -Be 1
+        }
+
+        It "Internal load balancer has 2 backend pools" {
+            $lb.BackendAddressPools.Count | Should -Be 2
+        }
+
+        It "VMSS has 2 LoadBalancer BackendAddress Pools" {   
+            $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations[0].IpConfigurations[0].LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].Name | Should -Be 'be-01'
+        }
+
+        It "VMSS nic 1 ipconfig 2 should belong to backend pool 2" {
+            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].Name | Should -Be 'be-02'
         }
     }
 } 
