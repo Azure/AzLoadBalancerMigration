@@ -57,17 +57,24 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     $ScriptBlock = {
         param($RGName)
         Write-Output $RGName
-        Set-Location 
+        $pwd
         Import-Module ..\..\AzureBasicLoadBalancerUpgrade  -Force
-        $path = "C:\Users\$env:USERNAME\Desktop\temp\AzLoadBalancerMigration\$RGName"
+        $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01
+        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Force
     }
     $scenarios = Get-AzResourceGroup -Name rg-0*
 
+    $jobPool = @()
     foreach($rg in $scenarios){
-        Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'")) > $null
+
+        While (($activeJobs = ($jobPool | Where-Object { $_.State -eq 'Running' }).count) -gt 10) {
+            Write-Host "Currently $activeJobs jobs running, waiting for less than 10"
+            Start-Sleep -Seconds 5
+        }
+
+        $jobPool += Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'"))
     }
 
     Write-Output ("Total Jobs Created: " + $scenarios.Count)
@@ -136,7 +143,7 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
     }
 
-    if($template.FullName -like "019*.json"){
+    elseif($template.Name -like "019*.json"){
 
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
@@ -146,7 +153,7 @@ foreach ($template in $filteredTemplates) {
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
     }
 
-    if($template.FullName -like "*.json"){
+    elseif($template.Name -like "*.json"){
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName

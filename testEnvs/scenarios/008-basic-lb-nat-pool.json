@@ -193,7 +193,7 @@
                   "networkProfile": {
                     "networkInterfaceConfigurations": [
                       {
-                        "name": "vmss-01-nic-01configuration-0",
+                        "name": "vmss-01-nic-01",
                         "properties": {
                           "primary": true,
                           "enableAcceleratedNetworking": true,
@@ -243,7 +243,7 @@
                         }
                       },
                                             {
-                        "name": "vmss-01-nic-02configuration-0",
+                        "name": "vmss-01-nic-02",
                         "properties": {
                           "primary": false,
                           "enableAcceleratedNetworking": false,
