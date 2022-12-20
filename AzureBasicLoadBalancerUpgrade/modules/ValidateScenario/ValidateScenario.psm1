@@ -134,9 +134,23 @@ Function Test-SupportedMigrationScenario {
         if ($vmssPublicIPConfigurations) {
             $message = @"
             [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has Public IP Configurations assigning Public IPs to each instance (see: https://learn.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine). 
-            These Basic SKU public IP configurations cannot be associated with the VMSS when it is behind a Standard SKU load balancer due to SKU mismatch. Remove the publicIPConfigurations and re-run the module.
+            Migrating this load balancer will require removing and reassigning Public IPs--CURRENT PUBLIC IPs WILL CHANGE.
 "@
-            log -Severity 'Error' -Message $message #-terminateOnError
+            log -Severity 'Warning' -Message $message
+
+            If (!$force.IsPresent) {
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Error' -terminateOnError
+                }
+            }
+            Else {
+                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                log -Message $message -Severity 'Warning'
+            }
         }
     }
 
@@ -195,7 +209,7 @@ Function Test-SupportedMigrationScenario {
                     }
                     If ($response -eq 'n') {
                         $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                        log -Message $message -Severity 'Information' -terminateOnError
+                        log -Message $message -Severity 'Error' -terminateOnError
                     }
                 }
                 Else {
