@@ -36,8 +36,7 @@ function NSGCreation {
             BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually create an NSG which allows traffic to the
             backend ports on the VM/VMSS and associate it with the VM, VMSS, or subnet. Error: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
 
         log -Message "[NSGCreation] NSG Named: $("NSG-"+$vmss.Name) created."
@@ -107,8 +106,7 @@ function NSGCreation {
             BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually rules in NSG '$("NSG-"+$vmss.Name)' which allows traffic
             to the backend ports on the VM/VMSS and associate the NSG with the VM, VMSS, or subnet. Error: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
 
         # Adding NSG to VMSS
@@ -129,8 +127,7 @@ function NSGCreation {
             BACKEND POOL MEMBERS WILL BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually associate NSG '$("NSG-"+$vmss.Name)'
             with the VM, VMSS, or subnet. Error: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
 
         UpdateVmssInstances -vmss $vmss

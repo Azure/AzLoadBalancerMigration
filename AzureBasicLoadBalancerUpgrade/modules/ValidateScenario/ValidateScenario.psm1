@@ -106,8 +106,7 @@ Function Test-SupportedMigrationScenario {
             [Test-SupportedMigrationScenario] One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
             the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
     }
 
@@ -134,11 +133,24 @@ Function Test-SupportedMigrationScenario {
         $vmssPublicIPConfigurations = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | Select-Object -ExpandProperty IpConfigurations | Select-Object -ExpandProperty PublicIpAddressConfiguration
         if ($vmssPublicIPConfigurations) {
             $message = @"
-            [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has publicIPConfigurations which must be basic sku with a basic LB and cannot be migrated to a Standard LB.
-            Remove the publicIPConfigurations and re-run the module.
+            [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' has Public IP Configurations assigning Public IPs to each instance (see: https://learn.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine). 
+            Migrating this load balancer will require removing and reassigning Public IPs--CURRENT PUBLIC IPs WILL CHANGE.
 "@
-            log -Severity 'Error' -Message $message
-            Exit
+            log -Severity 'Warning' -Message $message
+
+            If (!$force.IsPresent) {
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Error' -terminateOnError
+                }
+            }
+            Else {
+                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                log -Message $message -Severity 'Warning'
+            }
         }
     }
 
@@ -156,7 +168,7 @@ Function Test-SupportedMigrationScenario {
         foreach ($frontendIP in $BasicLoadBalancer.FrontendIpConfigurations) {
             $pip = Get-azPublicIpAddress -Name $frontendIP.PublicIpAddress.Id.split("/")[8] -ResourceGroupName $frontendIP.PublicIpAddress.Id.split("/")[4]
             if ($pip.PublicIpAddressVersion -eq "IPv6") {
-                log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error"
+                log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error" -terminateOnError
                 return
             }
         }
@@ -197,8 +209,7 @@ Function Test-SupportedMigrationScenario {
                     }
                     If ($response -eq 'n') {
                         $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                        log -Message $message -Severity 'Information'
-                        Exit
+                        log -Message $message -Severity 'Error' -terminateOnError
                     }
                 }
                 Else {
