@@ -23,8 +23,7 @@ function PrivateFEMigration {
                 VNET, then try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located
                 either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
 
         try {
@@ -37,8 +36,7 @@ function PrivateFEMigration {
                 -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or 
                 the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-            log 'Error' $message
-            Exit
+            log 'Error' $message -terminateOnError
         }
     }
     log -Message "[PrivateFEMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
@@ -53,8 +51,7 @@ function PrivateFEMigration {
             -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or 
             the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
-        log 'Error' $message
-        Exit
+        log 'Error' $message -terminateOnError
     }
 
     log -Message "[PrivateFEMigration] Private Frontend Migration Completed"
