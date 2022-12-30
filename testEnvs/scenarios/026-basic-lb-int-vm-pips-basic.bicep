@@ -114,7 +114,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
       }
     }
     osType: 'Windows'
-    skuName: 'Standard_DS1_v2'
+    skuName: 'Standard_D2_v4'
     // Non-required parameters
     adminPassword: kv1.getSecret('adminPassword')
     nicConfigurations: [
@@ -123,6 +123,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
           {
             name: 'ipconfig1'
             properties: {
+              primary: true
               subnet: {
                 id: virtualNetworks.outputs.subnetResourceIds[0]
               }
@@ -139,8 +140,61 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
               }
             }
           }
+          {
+            name: 'ipconfig2'
+            properties: {
+              primary: false
+              subnet: {
+                id: virtualNetworks.outputs.subnetResourceIds[0]
+              }
+              loadBalancerBackendAddressPools: [
+                {
+                  id: loadbalancer.outputs.backendpools[0].id
+                }
+              ]
+              publicIPAddressConfiguration: {
+                name: 'pipconfig2'
+                sku: {
+                  name: 'Basic'
+                }
+              }
+            }
+          }
         ]
+        properties: {
+          primary: true
+          enableAcceleratedNetworking: false
+        }
         nicSuffix: '-nic-01'
+      }
+      {
+        properties: {
+          primary: false
+          enableAcceleratedNetworking: false
+        }
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            properties: {
+              primary: true
+              subnet: {
+                id: virtualNetworks.outputs.subnetResourceIds[0]
+              }
+              loadBalancerBackendAddressPools: [
+                {
+                  id: loadbalancer.outputs.backendpools[0].id
+                }
+              ]
+              publicIPAddressConfiguration: {
+                name: 'pipconfig3'
+                sku: {
+                  name: 'Basic'
+                }
+              }
+            }
+          }
+        ]
+        nicSuffix: '-nic-02'
       }
     ]
   }
