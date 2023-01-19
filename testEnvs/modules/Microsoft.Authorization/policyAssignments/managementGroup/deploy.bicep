@@ -53,10 +53,16 @@ param notScopes array = []
 @sys.description('Optional. Location for all resources.')
 param location string = deployment().location
 
-@sys.description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@sys.description('Optional. The policy property value override. Allows changing the effect of a policy definition without modifying the underlying policy definition or using a parameterized effect in the policy definition.')
+param overrides array = []
 
-var identity_var = identity == 'SystemAssigned' ? {
+@sys.description('Optional. The resource selector list to filter policies by resource properties. Facilitates safe deployment practices (SDP) by enabling gradual roll out policy assignments based on factors like resource location, resource type, or whether a resource has a location.')
+param resourceSelectors array = []
+
+@sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
+
+var identityVar = identity == 'SystemAssigned' ? {
   type: identity
 } : identity == 'UserAssigned' ? {
   type: identity
@@ -78,7 +84,7 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
-resource policyAssignment 'Microsoft.Authorization/policyAssignments@2021-06-01' = {
+resource policyAssignment 'Microsoft.Authorization/policyAssignments@2022-06-01' = {
   name: name
   location: location
   properties: {
@@ -90,8 +96,10 @@ resource policyAssignment 'Microsoft.Authorization/policyAssignments@2021-06-01'
     nonComplianceMessages: !empty(nonComplianceMessages) ? nonComplianceMessages : []
     enforcementMode: enforcementMode
     notScopes: !empty(notScopes) ? notScopes : []
+    overrides: !empty(overrides) ? overrides : []
+    resourceSelectors: !empty(resourceSelectors) ? resourceSelectors : []
   }
-  identity: identity_var
+  identity: identityVar
 }
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for roleDefinitionId in roleDefinitionIds: if (!empty(roleDefinitionIds) && identity == 'SystemAssigned') {
@@ -110,7 +118,7 @@ output name string = policyAssignment.name
 output principalId string = identity == 'SystemAssigned' ? policyAssignment.identity.principalId : ''
 
 @sys.description('Policy Assignment resource ID.')
-output resourceId string = extensionResourceId(tenantResourceId('Microsoft.Management/managementGroups', managementGroupId), 'Microsoft.Authorization/policyAssignments', policyAssignment.name)
+output resourceId string = policyAssignment.id
 
 @sys.description('The location the resource was deployed into.')
 output location string = policyAssignment.location

@@ -10,10 +10,10 @@ param location string = resourceGroup().location
 @description('Optional. Tags of the resource.')
 param tags object = {}
 
-@description('Optional. An array of IP address ranges that can be used by subnets of the virtual network. Must be provided if no bgpProperties or VPNSiteLinks are configured.')
+@description('Conditional. An array of IP address ranges that can be used by subnets of the virtual network. Required if no bgpProperties or VPNSiteLinks are configured.')
 param addressPrefixes array = []
 
-@description('Optional. BGP settings details. Must be provided if no addressPrefixes or VPNSiteLinks are configured. Note: This is a deprecated property, please use the corresponding VpnSiteLinks property instead.')
+@description('Conditional. BGP settings details. Note: This is a deprecated property, please use the corresponding VpnSiteLinks property instead. Required if no addressPrefixes or VPNSiteLinks are configured.')
 param bgpProperties object = {}
 
 @description('Optional. List of properties of the device.')
@@ -28,8 +28,8 @@ param isSecuritySite bool = false
 @description('Optional. The Office365 breakout policy.')
 param o365Policy object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 @description('Optional. List of all VPN site links.')
 param vpnSiteLinks array = []
@@ -77,7 +77,7 @@ resource vpnSite 'Microsoft.Network/vpnSites@2021-08-01' = {
   }
 }
 
-resource vpnSite_lock 'Microsoft.Authorization/locks@2017-04-01' = if (!empty(lock)) {
+resource vpnSite_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${vpnSite.name}-${lock}-lock'
   properties: {
     level: any(lock)

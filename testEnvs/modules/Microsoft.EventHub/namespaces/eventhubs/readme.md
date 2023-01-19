@@ -13,7 +13,7 @@ This module deploys an Event Hub.
 
 | Resource Type | API Version |
 | :-- | :-- |
-| `Microsoft.Authorization/locks` | [2017-04-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2017-04-01/locks) |
+| `Microsoft.Authorization/locks` | [2020-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2020-05-01/locks) |
 | `Microsoft.Authorization/roleAssignments` | [2022-04-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2022-04-01/roleAssignments) |
 | `Microsoft.EventHub/namespaces/eventhubs` | [2021-11-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.EventHub/2021-11-01/namespaces/eventhubs) |
 | `Microsoft.EventHub/namespaces/eventhubs/authorizationRules` | [2021-11-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.EventHub/2021-11-01/namespaces/eventhubs/authorizationRules) |
@@ -22,19 +22,22 @@ This module deploys an Event Hub.
 ## Parameters
 
 **Required parameters**
+
 | Parameter Name | Type | Description |
 | :-- | :-- | :-- |
 | `name` | string | The name of the event hub. |
 
 **Conditional parameters**
+
 | Parameter Name | Type | Description |
 | :-- | :-- | :-- |
 | `namespaceName` | string | The name of the parent event hub namespace. Required if the template is used in a standalone deployment. |
 
 **Optional parameters**
+
 | Parameter Name | Type | Default Value | Allowed Values | Description |
 | :-- | :-- | :-- | :-- | :-- |
-| `authorizationRules` | _[authorizationRules](authorizationRules/readme.md)_ array | `[System.Collections.Hashtable]` |  | Authorization Rules for the event hub. |
+| `authorizationRules` | _[authorizationRules](authorizationRules/readme.md)_ array | `[System.Management.Automation.OrderedHashtable]` |  | Authorization Rules for the event hub. |
 | `captureDescriptionDestinationArchiveNameFormat` | string | `'{Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}'` |  | Blob naming convention for archive, e.g. {Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}. Here all the parameters (Namespace,EventHub .. etc) are mandatory irrespective of order. |
 | `captureDescriptionDestinationBlobContainer` | string | `''` |  | Blob container Name. |
 | `captureDescriptionDestinationName` | string | `'EventHubArchive.AzureBlockBlob'` |  | Name for capture destination. |
@@ -44,8 +47,8 @@ This module deploys an Event Hub.
 | `captureDescriptionIntervalInSeconds` | int | `300` |  | The time window allows you to set the frequency with which the capture to Azure Blobs will happen. |
 | `captureDescriptionSizeLimitInBytes` | int | `314572800` |  | The size window defines the amount of data built up in your Event Hub before an capture operation. |
 | `captureDescriptionSkipEmptyArchives` | bool | `False` |  | A value that indicates whether to Skip Empty Archives. |
-| `consumerGroups` | _[consumerGroups](consumerGroups/readme.md)_ array | `[System.Collections.Hashtable]` |  | The consumer groups to create in this event hub instance. |
-| `enableDefaultTelemetry` | bool | `True` |  | Enable telemetry via the Customer Usage Attribution ID (GUID). |
+| `consumerGroups` | _[consumerGroups](consumerGroups/readme.md)_ array | `[System.Management.Automation.OrderedHashtable]` |  | The consumer groups to create in this event hub instance. |
+| `enableDefaultTelemetry` | bool | `True` |  | Enable telemetry via a Globally Unique Identifier (GUID). |
 | `lock` | string | `''` | `['', CanNotDelete, ReadOnly]` | Specify the type of lock. |
 | `messageRetentionInDays` | int | `1` |  | Number of days to retain the events for this Event Hub, value should be 1 to 7 days. |
 | `partitionCount` | int | `2` |  | Number of partitions created for the Event Hub, allowed values are from 1 to 32 partitions. |
