@@ -20,8 +20,11 @@ param roleAssignments array = []
 @description('Optional. Tags of the storage account resource.')
 param tags object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. The ID of the resource that manages this resource group.')
+param managedBy string = ''
+
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
@@ -36,10 +39,11 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
-resource resourceGroup 'Microsoft.Resources/resourceGroups@2019-05-01' = {
+resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   location: location
   name: name
   tags: tags
+  managedBy: managedBy
   properties: {}
 }
 
