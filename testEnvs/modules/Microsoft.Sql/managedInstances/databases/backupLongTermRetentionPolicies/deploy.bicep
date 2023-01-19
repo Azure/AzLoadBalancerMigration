@@ -19,8 +19,8 @@ param monthlyRetention string = 'P1Y'
 @description('Optional. The yearly retention policy for an LTR backup in an ISO 8601 format.')
 param yearlyRetention string = 'P5Y'
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name)}'
@@ -34,7 +34,7 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
-resource managedInstance 'Microsoft.Sql/managedInstances@2021-05-01-preview' existing = {
+resource managedInstance 'Microsoft.Sql/managedInstances@2022-02-01-preview' existing = {
   name: managedInstanceName
 
   resource managedInstaceDatabase 'databases@2020-02-02-preview' existing = {
@@ -42,7 +42,7 @@ resource managedInstance 'Microsoft.Sql/managedInstances@2021-05-01-preview' exi
   }
 }
 
-resource backupLongTermRetentionPolicy 'Microsoft.Sql/managedInstances/databases/backupLongTermRetentionPolicies@2021-02-01-preview' = {
+resource backupLongTermRetentionPolicy 'Microsoft.Sql/managedInstances/databases/backupLongTermRetentionPolicies@2022-02-01-preview' = {
   name: name
   parent: managedInstance::managedInstaceDatabase
   properties: {

@@ -13,8 +13,8 @@ param remoteVirtualNetworkId string
 @description('Optional. Routing Configuration indicating the associated and propagated route tables for this connection.')
 param routingConfiguration object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name)}'
@@ -28,11 +28,11 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
-resource virtualHub 'Microsoft.Network/virtualHubs@2021-08-01' existing = {
+resource virtualHub 'Microsoft.Network/virtualHubs@2022-05-01' existing = {
   name: virtualHubName
 }
 
-resource hubVirtualNetworkConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2021-08-01' = {
+resource hubVirtualNetworkConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2022-05-01' = {
   name: name
   parent: virtualHub
   properties: {

@@ -7,13 +7,13 @@ param name string
 param displayName string = ''
 
 @description('Optional. The management group parent ID. Defaults to current scope.')
-param parentId string = ''
+param parentId string = last(split(az.managementGroup().id, '/'))
 
-@sys.description('Optional. Location deployment metadata.')
+@description('Optional. Location deployment metadata.')
 param location string = deployment().location
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
@@ -28,6 +28,11 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
+resource parentManagementGroup 'Microsoft.Management/managementGroups@2021-04-01' existing = {
+  name: parentId
+  scope: tenant()
+}
+
 resource managementGroup 'Microsoft.Management/managementGroups@2021-04-01' = {
   name: name
   scope: tenant()
@@ -35,7 +40,7 @@ resource managementGroup 'Microsoft.Management/managementGroups@2021-04-01' = {
     displayName: displayName
     details: !empty(parentId) ? {
       parent: {
-        id: '/providers/Microsoft.Management/managementGroups/${parentId}'
+        id: parentManagementGroup.id
       }
     } : null
   }
