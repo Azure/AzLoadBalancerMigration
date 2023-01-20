@@ -10,8 +10,8 @@ param connectorEndpointsConfiguration object = {}
 @description('Optional. The access control configuration for accessing workflow run contents.')
 param contentsAccessControlConfiguration object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 @description('Optional. Parameters for the definition template.')
 param definitionParameters object = {}
@@ -25,8 +25,8 @@ param userAssignedIdentities object = {}
 @description('Optional. The integration account.')
 param integrationAccount object = {}
 
-@description('Optional. The integration service environment.')
-param integrationServiceEnvironment object = {}
+@description('Optional. The integration service environment Id.')
+param integrationServiceEnvironmentResourceId string = ''
 
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location
@@ -97,12 +97,13 @@ param workflowStaticResults object = {}
 @description('Optional. The definitions for one or more triggers that instantiate your workflow. You can define more than one trigger, but only with the Workflow Definition Language, not visually through the Logic Apps Designer.')
 param workflowTriggers object = {}
 
-@description('Optional. The name of logs that will be streamed.')
+@description('Optional. The name of logs that will be streamed. "allLogs" includes all possible logs for the resource.')
 @allowed([
+  'allLogs'
   'WorkflowRuntime'
 ])
 param diagnosticLogCategoriesToEnable array = [
-  'WorkflowRuntime'
+  'allLogs'
 ]
 
 @description('Optional. The name of metrics that will be streamed.')
@@ -116,7 +117,7 @@ param diagnosticMetricsToEnable array = [
 @description('Optional. The name of the diagnostic setting, if deployed.')
 param diagnosticSettingsName string = '${name}-diagnosticSettings'
 
-var diagnosticsLogs = [for category in diagnosticLogCategoriesToEnable: {
+var diagnosticsLogsSpecified = [for category in filter(diagnosticLogCategoriesToEnable, item => item != 'allLogs'): {
   category: category
   enabled: true
   retentionPolicy: {
@@ -124,6 +125,17 @@ var diagnosticsLogs = [for category in diagnosticLogCategoriesToEnable: {
     days: diagnosticLogsRetentionInDays
   }
 }]
+
+var diagnosticsLogs = contains(diagnosticLogCategoriesToEnable, 'allLogs') ? [
+  {
+    categoryGroup: 'allLogs'
+    enabled: true
+    retentionPolicy: {
+      enabled: true
+      days: diagnosticLogsRetentionInDays
+    }
+  }
+] : diagnosticsLogsSpecified
 
 var diagnosticsMetrics = [for metric in diagnosticMetricsToEnable: {
   category: metric
@@ -172,7 +184,10 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
       workflowManagement: !empty(workflowManagementAccessControlConfiguration) ? workflowManagementAccessControlConfiguration : null
     }
     integrationAccount: !empty(integrationAccount) ? integrationAccount : null
-    integrationServiceEnvironment: !empty(integrationServiceEnvironment) ? integrationServiceEnvironment : null
+    integrationServiceEnvironment: !empty(integrationServiceEnvironmentResourceId) ? {
+      id: integrationServiceEnvironmentResourceId
+    } : null
+
     definition: {
       '$schema': 'https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#'
       actions: workflowActions
@@ -186,7 +201,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
   }
 }
 
-resource logicApp_lock 'Microsoft.Authorization/locks@2017-04-01' = if (!empty(lock)) {
+resource logicApp_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${logicApp.name}-${lock}-lock'
   properties: {
     level: any(lock)

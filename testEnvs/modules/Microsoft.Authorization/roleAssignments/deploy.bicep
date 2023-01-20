@@ -44,8 +44,8 @@ param conditionVersion string = '2.0'
 ])
 param principalType string = ''
 
-@sys.description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 var enableReferencedModulesTelemetry = false
 

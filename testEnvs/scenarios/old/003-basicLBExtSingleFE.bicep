@@ -45,7 +45,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
 }
 
 // basic lb
-module loadbalancer '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
+module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
   name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
