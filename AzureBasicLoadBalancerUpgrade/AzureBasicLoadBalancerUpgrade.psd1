@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '0.1.7'
+    ModuleVersion = '0.1.8'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -21,7 +21,7 @@
     GUID = 'd6a9de52-b84f-40c3-b4c8-81fab6e3ec99'
 
     # Author of this module
-    Author = 'Victor Santana, Matthew Bratschun'
+    Author = 'FastTrack for Azure'
 
     # Company or vendor of this module
     CompanyName = 'Microsoft'
