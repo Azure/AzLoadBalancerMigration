@@ -37,7 +37,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
 }
 
 // basic lb
-module loadbalancer01 '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
+module loadbalancer01 '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
   name: 'lb-basic-01'
   scope: resourceGroup(resourceGroupName)
   params: {
@@ -101,7 +101,7 @@ module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' 
 }
 
 // basic lb
-module loadbalancer02 '../modules/Microsoft.Network/loadBalancers/deploy.bicep' = {
+module loadbalancer02 '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
   name: 'lb-basicext02'
   scope: resourceGroup(resourceGroupName)
   params: {

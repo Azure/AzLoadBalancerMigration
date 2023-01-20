@@ -47,8 +47,8 @@ param idleTimeoutInMinutes int = 4
 ])
 param protocol string = 'Tcp'
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name)}'
@@ -72,7 +72,7 @@ resource inboundNatRule 'Microsoft.Network/loadBalancers/inboundNatRules@2021-08
     frontendPort: frontendPort
     backendPort: backendPort
     backendAddressPool: !empty(backendAddressPoolName) ? {
-      id: az.resourceId('Microsoft.Network/loadBalancers/backendAddressPools', name, backendAddressPoolName)
+      id: '${loadBalancer.id}/backendAddressPools/${backendAddressPoolName}'
     } : null
     enableFloatingIP: enableFloatingIP
     enableTcpReset: enableTcpReset
