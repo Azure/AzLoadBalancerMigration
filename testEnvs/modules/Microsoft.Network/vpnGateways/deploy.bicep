@@ -36,8 +36,8 @@ param tags object = {}
 @description('Optional. Specify the type of lock.')
 param lock string = ''
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 var enableReferencedModulesTelemetry = false
 
@@ -68,7 +68,7 @@ resource vpnGateway 'Microsoft.Network/vpnGateways@2021-08-01' = {
   }
 }
 
-resource vpnGateway_lock 'Microsoft.Authorization/locks@2017-04-01' = if (!empty(lock)) {
+resource vpnGateway_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${vpnGateway.name}-${lock}-lock'
   properties: {
     level: any(lock)
