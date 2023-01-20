@@ -1,7 +1,7 @@
 @description('Optional. Name of the network watcher resource. Must be in the resource group where the Flow log will be created and same region as the NSG.')
 param networkWatcherName string = 'NetworkWatcher_${resourceGroup().location}'
 
-@description('Optional. Name of the resource.')
+@description('Required. Name of the resource.')
 param name string
 
 @description('Optional. Tags of the resource.')
@@ -22,8 +22,8 @@ param testGroups array = []
 @description('Optional. Specify the Log Analytics Workspace Resource ID.')
 param workspaceResourceId string = ''
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 var outputs = !empty(workspaceResourceId) ? [
   {

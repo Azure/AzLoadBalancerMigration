@@ -18,6 +18,7 @@ param description string = ''
   'Microsoft.KeyVault.Data'
   'Microsoft.ContainerService.Data'
   'Microsoft.Kubernetes.Data'
+  'Microsoft.Network.Data'
 ])
 param mode string = 'All'
 
@@ -30,14 +31,11 @@ param parameters object = {}
 @sys.description('Required. The Policy Rule details for the Policy Definition.')
 param policyRule object
 
-@sys.description('Optional. The subscription ID of the subscription.')
-param subscriptionId string = subscription().subscriptionId
-
 @sys.description('Optional. Location deployment metadata.')
 param location string = deployment().location
 
-@sys.description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
@@ -69,7 +67,7 @@ resource policyDefinition 'Microsoft.Authorization/policyDefinitions@2021-06-01'
 output name string = policyDefinition.name
 
 @sys.description('Policy Definition resource ID.')
-output resourceId string = subscriptionResourceId(subscriptionId, 'Microsoft.Authorization/policyDefinitions', policyDefinition.name)
+output resourceId string = policyDefinition.id
 
 @sys.description('Policy Definition Role Definition IDs.')
 output roleDefinitionIds array = (contains(policyDefinition.properties.policyRule.then, 'details') ? ((contains(policyDefinition.properties.policyRule.then.details, 'roleDefinitionIds') ? policyDefinition.properties.policyRule.then.details.roleDefinitionIds : [])) : [])

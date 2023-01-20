@@ -1,6 +1,6 @@
 @description('Required. Name of the DDoS protection plan to assign the VNET to.')
 @minLength(1)
-param name string = ''
+param name string
 
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location
@@ -19,8 +19,8 @@ param roleAssignments array = []
 @description('Optional. Tags of the resource.')
 param tags object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
@@ -41,7 +41,7 @@ resource ddosProtectionPlan 'Microsoft.Network/ddosProtectionPlans@2021-08-01' =
   properties: {}
 }
 
-resource ddosProtectionPlan_lock 'Microsoft.Authorization/locks@2017-04-01' = if (!empty(lock)) {
+resource ddosProtectionPlan_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${ddosProtectionPlan.name}-${lock}-lock'
   properties: {
     level: any(lock)
