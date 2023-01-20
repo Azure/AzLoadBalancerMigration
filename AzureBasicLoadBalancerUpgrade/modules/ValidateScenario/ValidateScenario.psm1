@@ -27,7 +27,7 @@ Function Test-SupportedMigrationScenario {
     log -Message "[Test-SupportedMigrationScenario] Verifying if Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
 
     # create array of VMSSes associated with the load balancer for following checks
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{ (($_ -split '/virtualMachines/')[0]).ToLower() } | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object{ ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
     $basicLBVMSSs = @()
     ForEach ($vmssId in $vmssIds) {
         $basicLBVMSSs += Get-AzResource -ResourceId $vmssId | Get-AzVMSS
