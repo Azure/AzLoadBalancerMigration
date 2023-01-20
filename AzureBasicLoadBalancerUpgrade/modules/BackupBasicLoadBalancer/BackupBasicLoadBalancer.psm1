@@ -88,7 +88,7 @@ function BackupBasicLoadBalancer {
     }
 
     # Backup VMSS Object
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { (($_ -split '/virtualMachines/')[0]).ToLower() } | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
     foreach ($vmssId in $vmssIds) {
         $message = "[BackupBasicLoadBalancer] Attempting to create a file-based backup VMSS with id '$vmssId'"
         log -Severity Information -Message $message
