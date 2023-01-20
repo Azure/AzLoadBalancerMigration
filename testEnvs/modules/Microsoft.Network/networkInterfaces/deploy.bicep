@@ -7,8 +7,8 @@ param location string = resourceGroup().location
 @description('Optional. Tags of the resource.')
 param tags object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 @description('Optional. Indicates whether IP forwarding is enabled on this network interface.')
 param enableIPForwarding bool = false
@@ -100,7 +100,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2021-08-01' = {
       id: networkSecurityGroupResourceId
     } : null
     ipConfigurations: [for (ipConfiguration, index) in ipConfigurations: {
-      name: !empty(ipConfiguration.name) ? ipConfiguration.name : null
+      name: contains(ipConfiguration, 'name') ? ipConfiguration.name : 'ipconfig0${index + 1}'
       properties: {
         primary: index == 0 ? true : false
         privateIPAllocationMethod: contains(ipConfiguration, 'privateIPAllocationMethod') ? (!empty(ipConfiguration.privateIPAllocationMethod) ? ipConfiguration.privateIPAllocationMethod : null) : null
@@ -135,7 +135,7 @@ resource networkInterface_diagnosticSettings 'Microsoft.Insights/diagnosticSetti
   scope: networkInterface
 }
 
-resource networkInterface_lock 'Microsoft.Authorization/locks@2017-04-01' = if (!empty(lock)) {
+resource networkInterface_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${networkInterface.name}-${lock}-lock'
   properties: {
     level: any(lock)

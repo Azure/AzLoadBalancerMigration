@@ -14,30 +14,39 @@ This module deploys a Static Web App.
 
 | Resource Type | API Version |
 | :-- | :-- |
-| `Microsoft.Authorization/locks` | [2017-04-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2017-04-01/locks) |
+| `Microsoft.Authorization/locks` | [2020-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2020-05-01/locks) |
 | `Microsoft.Authorization/roleAssignments` | [2022-04-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2022-04-01/roleAssignments) |
-| `Microsoft.Network/privateEndpoints` | [2021-08-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2021-08-01/privateEndpoints) |
-| `Microsoft.Network/privateEndpoints/privateDnsZoneGroups` | [2021-08-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2021-08-01/privateEndpoints/privateDnsZoneGroups) |
+| `Microsoft.Network/privateEndpoints` | [2022-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2022-05-01/privateEndpoints) |
+| `Microsoft.Network/privateEndpoints/privateDnsZoneGroups` | [2022-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2022-05-01/privateEndpoints/privateDnsZoneGroups) |
 | `Microsoft.Web/staticSites` | [2021-03-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Web/2021-03-01/staticSites) |
+| `Microsoft.Web/staticSites/config` | [2022-03-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Web/staticSites/config) |
+| `Microsoft.Web/staticSites/customDomains` | [2022-03-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Web/2022-03-01/staticSites/customDomains) |
+| `Microsoft.Web/staticSites/linkedBackends` | [2022-03-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Web/2022-03-01/staticSites/linkedBackends) |
 
 ## Parameters
 
 **Required parameters**
+
 | Parameter Name | Type | Description |
 | :-- | :-- | :-- |
 | `name` | string | Name of the static site. |
 
 **Optional parameters**
+
 | Parameter Name | Type | Default Value | Allowed Values | Description |
 | :-- | :-- | :-- | :-- | :-- |
-| `allowConfigFileUpdates` | bool | `True` |  | If config file is locked for this static web app. |
+| `allowConfigFileUpdates` | bool | `True` |  | False if config file is locked for this static web app; otherwise, true. |
+| `appSettings` | object | `{object}` |  | Static site app settings. |
 | `branch` | string | `''` |  | The branch name of the GitHub repository. |
 | `buildProperties` | object | `{object}` |  | Build properties for the static site. |
-| `enableDefaultTelemetry` | bool | `True` |  | Enable telemetry via the Customer Usage Attribution ID (GUID). |
+| `customDomains` | _[customDomains](customDomains/readme.md)_ array | `[]` |  | The custom domains associated with this static site. The deployment will fail as long as the validation records are not present. |
+| `enableDefaultTelemetry` | bool | `True` |  | Enable telemetry via a Globally Unique Identifier (GUID). |
 | `enterpriseGradeCdnStatus` | string | `'Disabled'` | `[Disabled, Disabling, Enabled, Enabling]` | State indicating the status of the enterprise grade CDN serving traffic to the static web app. |
-| `location` | string | `[resourceGroup().location]` |  | Location to deploy static site. The following locations are supported: CentralUS, EastUS2, EastAsia, WestEurope, WestUS2. |
+| `functionAppSettings` | object | `{object}` |  | Function app settings. |
+| `linkedBackend` | object | `{object}` |  | Object with "resourceId" and "location" of the a user defined function app. |
+| `location` | string | `[resourceGroup().location]` |  | Location for all resources. |
 | `lock` | string | `''` | `['', CanNotDelete, ReadOnly]` | Specify the type of lock. |
-| `privateEndpoints` | array | `[]` |  | Configuration details for private endpoints. For security reasons, it is recommended to use private endpoints whenever possible. |
+| `privateEndpoints` | array | `[]` |  | Configuration details for private endpoints. For security reasons, it is recommended to use private endpoints whenever possible. Note, requires the 'sku' to be 'Standard'. |
 | `provider` | string | `'None'` |  | The provider that submitted the last deployment to the primary environment of the static site. |
 | `repositoryToken` | secureString | `''` |  | The Personal Access Token for accessing the GitHub repository. |
 | `repositoryUrl` | string | `''` |  | The name of the GitHub repository. |
@@ -68,11 +77,23 @@ To use Private Endpoint the following dependencies must be deployed:
         {
             "name": "sxx-az-pe", // Optional: Name will be automatically generated if one is not provided here
             "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001",
-            "service": "<<serviceName>>", // e.g. vault, registry, file, blob, queue, table etc.
-            "privateDnsZoneResourceIds": [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
-                "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
+            "service": "<serviceName>", // e.g. vault, registry, blob
+            "privateDnsZoneGroup": {
+                "privateDNSResourceIds": [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
+                    "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/<privateDnsZoneName>" // e.g. privatelink.vaultcore.azure.net, privatelink.azurecr.io, privatelink.blob.core.windows.net
+                ]
+            },
+            "ipConfigurations":[
+                {
+                    "name": "myIPconfigTest02",
+                    "properties": {
+                        "groupId": "blob",
+                        "memberName": "blob",
+                        "privateIPAddress": "10.0.0.30"
+                    }
+                }
             ],
-            "customDnsConfigs": [ // Optional
+            "customDnsConfigs": [
                 {
                     "fqdn": "customname.test.local",
                     "ipAddresses": [
@@ -84,7 +105,7 @@ To use Private Endpoint the following dependencies must be deployed:
         // Example showing only mandatory fields
         {
             "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001",
-            "service": "<<serviceName>>" // e.g. vault, registry, file, blob, queue, table etc.
+            "service": "<serviceName>" // e.g. vault, registry, blob
         }
     ]
 }
@@ -102,11 +123,12 @@ privateEndpoints:  [
     {
         name: 'sxx-az-pe' // Optional: Name will be automatically generated if one is not provided here
         subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001'
-        service: '<<serviceName>>' // e.g. vault registry file blob queue table etc.
-        privateDnsZoneResourceIds: [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
-            '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net'
-        ]
-        // Optional
+        service: '<serviceName>' // e.g. vault, registry, blob
+        privateDnsZoneGroup: {
+            privateDNSResourceIds: [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
+                '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/<privateDnsZoneName>' // e.g. privatelink.vaultcore.azure.net, privatelink.azurecr.io, privatelink.blob.core.windows.net
+            ]
+        }
         customDnsConfigs: [
             {
                 fqdn: 'customname.test.local'
@@ -115,11 +137,21 @@ privateEndpoints:  [
                 ]
             }
         ]
+        ipConfigurations:[
+          {
+            name: 'myIPconfigTest02'
+            properties: {
+              groupId: 'blob'
+              memberName: 'blob'
+              privateIPAddress: '10.0.0.30'
+            }
+          }
+        ]
     }
     // Example showing only mandatory fields
     {
         subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001'
-        service: '<<serviceName>>' // e.g. vault registry file blob queue table etc.
+        service: '<serviceName>' // e.g. vault, registry, blob
     }
 ]
 ```
@@ -238,8 +270,8 @@ You can specify multiple user assigned identities to a resource by providing add
 ```json
 "userAssignedIdentities": {
     "value": {
-        "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001": {},
-        "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002": {}
+        "/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001": {},
+        "/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002": {}
     }
 }
 ```
@@ -252,9 +284,42 @@ You can specify multiple user assigned identities to a resource by providing add
 
 ```bicep
 userAssignedIdentities: {
-    '/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001': {}
-    '/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002': {}
+    '/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001': {}
+    '/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002': {}
 }
+```
+
+</details>
+<p>
+
+### Parameter Usage: `customDomains`
+
+<details>
+
+<summary>Parameter JSON format</summary>
+
+```json
+"customDomains": {
+  "value": [
+    "<<namePrefix>>domain1.domain",
+    "<<namePrefix>>domain2.domain.domain",
+    "<<namePrefix>>domain3.domain.domain.domain"
+  ]
+}
+```
+
+</details>
+
+<details>
+
+<summary>Bicep format</summary>
+
+```bicep
+customDomains: [
+  'carmldomain1.domain'
+  'carmldomain2.domain.domain'
+  'carmldomain3.domain.domain.domain'
+]
 ```
 
 </details>
@@ -264,6 +329,7 @@ userAssignedIdentities: {
 
 | Output Name | Type | Description |
 | :-- | :-- | :-- |
+| `defaultHostname` | string | The default autogenerated hostname for the static site. |
 | `location` | string | The location the resource was deployed into. |
 | `name` | string | The name of the static site. |
 | `resourceGroupName` | string | The resource group the static site was deployed into. |
@@ -282,9 +348,10 @@ This section gives you an overview of all local-referenced module files (i.e., o
 
 The following module usage examples are retrieved from the content of the files hosted in the module's `.test` folder.
    >**Note**: The name of each example is based on the name of the file from which it is taken.
+
    >**Note**: Each example lists all the required parameters first, followed by the rest - each in alphabetical order.
 
-<h3>Example 1: Min</h3>
+<h3>Example 1: Common</h3>
 
 <details>
 
@@ -292,62 +359,43 @@ The following module usage examples are retrieved from the content of the files 
 
 ```bicep
 module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-staticSites'
-  params: {
-    name: '<<namePrefix>>-az-wss-min-001'
-  }
-}
-```
-
-</details>
-<p>
-
-<details>
-
-<summary>via JSON Parameter file</summary>
-
-```json
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "name": {
-      "value": "<<namePrefix>>-az-wss-min-001"
-    }
-  }
-}
-```
-
-</details>
-<p>
-
-<h3>Example 2: Parameters</h3>
-
-<details>
-
-<summary>via Bicep module</summary>
-
-```bicep
-module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-staticSites'
+  name: '${uniqueString(deployment().name, location)}-test-wsscom'
   params: {
     // Required parameters
-    name: '<<namePrefix>>-az-wss-x-001'
+    name: '<<namePrefix>>wsscom001'
     // Non-required parameters
     allowConfigFileUpdates: true
+    appSettings: {
+      foo: 'bar'
+      setting: 1
+    }
+    enableDefaultTelemetry: '<enableDefaultTelemetry>'
     enterpriseGradeCdnStatus: 'Disabled'
+    functionAppSettings: {
+      foo: 'bar'
+      setting: 1
+    }
+    linkedBackend: {
+      resourceId: '<resourceId>'
+    }
     lock: 'CanNotDelete'
     privateEndpoints: [
       {
+        privateDnsZoneGroup: {
+          privateDNSResourceIds: [
+            '<privateDNSZoneResourceId>'
+          ]
+        }
         service: 'staticSites'
-        subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/adp-<<namePrefix>>-az-vnet-x-001/subnets/<<namePrefix>>-az-subnet-x-005-privateEndpoints'
+        subnetResourceId: '<subnetResourceId>'
       }
     ]
     roleAssignments: [
       {
         principalIds: [
-          '<<deploymentSpId>>'
+          '<managedIdentityPrincipalId>'
         ]
+        principalType: 'ServicePrincipal'
         roleDefinitionIdOrName: 'Reader'
       }
     ]
@@ -355,7 +403,7 @@ module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
     stagingEnvironmentPolicy: 'Enabled'
     systemAssignedIdentity: true
     userAssignedIdentities: {
-      '/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-<<namePrefix>>-az-msi-x-001': {}
+      '<managedIdentityResourceId>': {}
     }
   }
 }
@@ -375,14 +423,34 @@ module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
   "parameters": {
     // Required parameters
     "name": {
-      "value": "<<namePrefix>>-az-wss-x-001"
+      "value": "<<namePrefix>>wsscom001"
     },
     // Non-required parameters
     "allowConfigFileUpdates": {
       "value": true
     },
+    "appSettings": {
+      "value": {
+        "foo": "bar",
+        "setting": 1
+      }
+    },
+    "enableDefaultTelemetry": {
+      "value": "<enableDefaultTelemetry>"
+    },
     "enterpriseGradeCdnStatus": {
       "value": "Disabled"
+    },
+    "functionAppSettings": {
+      "value": {
+        "foo": "bar",
+        "setting": 1
+      }
+    },
+    "linkedBackend": {
+      "value": {
+        "resourceId": "<resourceId>"
+      }
     },
     "lock": {
       "value": "CanNotDelete"
@@ -390,8 +458,13 @@ module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
     "privateEndpoints": {
       "value": [
         {
+          "privateDnsZoneGroup": {
+            "privateDNSResourceIds": [
+              "<privateDNSZoneResourceId>"
+            ]
+          },
           "service": "staticSites",
-          "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/adp-<<namePrefix>>-az-vnet-x-001/subnets/<<namePrefix>>-az-subnet-x-005-privateEndpoints"
+          "subnetResourceId": "<subnetResourceId>"
         }
       ]
     },
@@ -399,8 +472,9 @@ module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
       "value": [
         {
           "principalIds": [
-            "<<deploymentSpId>>"
+            "<managedIdentityPrincipalId>"
           ],
+          "principalType": "ServicePrincipal",
           "roleDefinitionIdOrName": "Reader"
         }
       ]
@@ -416,8 +490,53 @@ module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
     },
     "userAssignedIdentities": {
       "value": {
-        "/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-<<namePrefix>>-az-msi-x-001": {}
+        "<managedIdentityResourceId>": {}
       }
+    }
+  }
+}
+```
+
+</details>
+<p>
+
+<h3>Example 2: Min</h3>
+
+<details>
+
+<summary>via Bicep module</summary>
+
+```bicep
+module staticSites './Microsoft.Web/staticSites/deploy.bicep' = {
+  name: '${uniqueString(deployment().name, location)}-test-wssmin'
+  params: {
+    // Required parameters
+    name: '<<namePrefix>>wssmin001'
+    // Non-required parameters
+    enableDefaultTelemetry: '<enableDefaultTelemetry>'
+  }
+}
+```
+
+</details>
+<p>
+
+<details>
+
+<summary>via JSON Parameter file</summary>
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    // Required parameters
+    "name": {
+      "value": "<<namePrefix>>wssmin001"
+    },
+    // Non-required parameters
+    "enableDefaultTelemetry": {
+      "value": "<enableDefaultTelemetry>"
     }
   }
 }
