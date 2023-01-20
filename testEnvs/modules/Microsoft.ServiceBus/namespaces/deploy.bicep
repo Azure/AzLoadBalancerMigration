@@ -1,6 +1,6 @@
-@description('Optional. Name of the Service Bus Namespace. If no name is provided, then unique name will be created.')
+@description('Required. Name of the Service Bus Namespace.')
 @maxLength(50)
-param name string = ''
+param name string
 
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location
@@ -77,11 +77,8 @@ param networkRuleSets object = {}
 @description('Optional. Tags of the resource.')
 param tags object = {}
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
-
-@description('Generated. Do not provide a value! This date value is used to generate a SAS token to access the modules.')
-param baseTime string = utcNow('u')
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 @description('Optional. The queues to create in the service bus namespace.')
 param queues array = []
@@ -89,7 +86,7 @@ param queues array = []
 @description('Optional. The topics to create in the service bus namespace.')
 param topics array = []
 
-@description('Optional. The resource ID of a key vault to reference a customer managed key for encryption from.')
+@description('Conditional. The resource ID of a key vault to reference a customer managed key for encryption from. Required if \'cMKKeyName\' is not empty.')
 param cMKKeyVaultResourceId string = ''
 
 @description('Optional. The name of the customer managed key to use for encryption. If not provided, encryption is automatically enabled with a Microsoft-managed key.')
@@ -104,12 +101,13 @@ param cMKUserAssignedIdentityResourceId string = ''
 @description('Optional. Enable infrastructure encryption (double encryption). Note, this setting requires the configuration of Customer-Managed-Keys (CMK) via the corresponding module parameters.')
 param requireInfrastructureEncryption bool = true
 
-@description('Optional. The name of logs that will be streamed.')
+@description('Optional. The name of logs that will be streamed. "allLogs" includes all possible logs for the resource.')
 @allowed([
+  'allLogs'
   'OperationalLogs'
 ])
 param diagnosticLogCategoriesToEnable array = [
-  'OperationalLogs'
+  'allLogs'
 ]
 
 @description('Optional. The name of metrics that will be streamed.')
@@ -123,7 +121,7 @@ param diagnosticMetricsToEnable array = [
 @description('Optional. The name of the diagnostic setting, if deployed.')
 param diagnosticSettingsName string = '${name}-diagnosticSettings'
 
-var diagnosticsLogs = [for category in diagnosticLogCategoriesToEnable: {
+var diagnosticsLogsSpecified = [for category in filter(diagnosticLogCategoriesToEnable, item => item != 'allLogs'): {
   category: category
   enabled: true
   retentionPolicy: {
@@ -131,6 +129,17 @@ var diagnosticsLogs = [for category in diagnosticLogCategoriesToEnable: {
     days: diagnosticLogsRetentionInDays
   }
 }]
+
+var diagnosticsLogs = contains(diagnosticLogCategoriesToEnable, 'allLogs') ? [
+  {
+    categoryGroup: 'allLogs'
+    enabled: true
+    retentionPolicy: {
+      enabled: true
+      days: diagnosticLogsRetentionInDays
+    }
+  }
+] : diagnosticsLogsSpecified
 
 var diagnosticsMetrics = [for metric in diagnosticMetricsToEnable: {
   category: metric
@@ -141,10 +150,6 @@ var diagnosticsMetrics = [for metric in diagnosticMetricsToEnable: {
     days: diagnosticLogsRetentionInDays
   }
 }]
-
-var maxNameLength = 50
-var uniqueServiceBusNamespaceNameUntrim = uniqueString('Service Bus Namespace${baseTime}')
-var uniqueServiceBusNamespaceName = ((length(uniqueServiceBusNamespaceNameUntrim) > maxNameLength) ? substring(uniqueServiceBusNamespaceNameUntrim, 0, maxNameLength) : uniqueServiceBusNamespaceNameUntrim)
 
 var identityType = systemAssignedIdentity ? (!empty(userAssignedIdentities) ? 'SystemAssigned,UserAssigned' : 'SystemAssigned') : (!empty(userAssignedIdentities) ? 'UserAssigned' : 'None')
 
@@ -178,7 +183,7 @@ resource cMKKeyVaultKey 'Microsoft.KeyVault/vaults/keys@2021-10-01' existing = i
 }
 
 resource serviceBusNamespace 'Microsoft.ServiceBus/namespaces@2021-11-01' = {
-  name: !empty(name) ? name : uniqueServiceBusNamespaceName
+  name: name
   location: location
   tags: empty(tags) ? null : tags
   sku: {
@@ -314,7 +319,7 @@ module serviceBusNamespace_topics 'topics/deploy.bicep' = [for (topic, index) in
   }
 }]
 
-resource serviceBusNamespace_lock 'Microsoft.Authorization/locks@2017-04-01' = if (!empty(lock)) {
+resource serviceBusNamespace_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${serviceBusNamespace.name}-${lock}-lock'
   properties: {
     level: any(lock)
@@ -353,6 +358,9 @@ module serviceBusNamespace_privateEndpoints '../../Microsoft.Network/privateEndp
     tags: contains(privateEndpoint, 'tags') ? privateEndpoint.tags : {}
     manualPrivateLinkServiceConnections: contains(privateEndpoint, 'manualPrivateLinkServiceConnections') ? privateEndpoint.manualPrivateLinkServiceConnections : []
     customDnsConfigs: contains(privateEndpoint, 'customDnsConfigs') ? privateEndpoint.customDnsConfigs : []
+    ipConfigurations: contains(privateEndpoint, 'ipConfigurations') ? privateEndpoint.ipConfigurations : []
+    applicationSecurityGroups: contains(privateEndpoint, 'applicationSecurityGroups') ? privateEndpoint.applicationSecurityGroups : []
+    customNetworkInterfaceName: contains(privateEndpoint, 'customNetworkInterfaceName') ? privateEndpoint.customNetworkInterfaceName : ''
   }
 }]
 

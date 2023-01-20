@@ -18,21 +18,24 @@ This module deploys a variable to an Azure Automation Account.
 ## Parameters
 
 **Required parameters**
+
 | Parameter Name | Type | Description |
 | :-- | :-- | :-- |
 | `name` | string | The name of the variable. |
 | `value` | string | The value of the variable. |
 
 **Conditional parameters**
+
 | Parameter Name | Type | Description |
 | :-- | :-- | :-- |
 | `automationAccountName` | string | The name of the parent Automation Account. Required if the template is used in a standalone deployment. |
 
 **Optional parameters**
+
 | Parameter Name | Type | Default Value | Description |
 | :-- | :-- | :-- | :-- |
 | `description` | string | `''` | The description of the variable. |
-| `enableDefaultTelemetry` | bool | `True` | Enable telemetry via the Customer Usage Attribution ID (GUID). |
+| `enableDefaultTelemetry` | bool | `True` | Enable telemetry via a Globally Unique Identifier (GUID). |
 | `isEncrypted` | bool | `True` | If the variable should be encrypted. For security reasons encryption of variables should be enabled. |
 
 

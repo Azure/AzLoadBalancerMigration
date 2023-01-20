@@ -22,8 +22,8 @@ param maxThroughput int = 4000
 @description('Optional. Request Units per second (for example 10000). Cannot be set together with `maxThroughput`.')
 param throughput int = -1
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 var enableReferencedModulesTelemetry = false
 
@@ -46,7 +46,7 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
-resource databaseAccount 'Microsoft.DocumentDB/databaseAccounts@2022-02-15-preview' existing = {
+resource databaseAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' existing = {
   name: databaseAccountName
 }
 
@@ -57,7 +57,7 @@ var databaseOptions = contains(databaseAccount.properties.capabilities, { name: 
   throughput: throughput != -1 ? throughput : null
 }
 
-resource gremlinDatabase 'Microsoft.DocumentDB/databaseAccounts/gremlinDatabases@2022-02-15-preview' = {
+resource gremlinDatabase 'Microsoft.DocumentDB/databaseAccounts/gremlinDatabases@2022-08-15' = {
   name: name
   tags: tags
   parent: databaseAccount
@@ -77,7 +77,7 @@ module gremlinDatabase_gremlinGraphs 'graphs/deploy.bicep' = [for graph in graph
     gremlinDatabaseName: name
     databaseAccountName: databaseAccountName
     enableDefaultTelemetry: enableReferencedModulesTelemetry
-    automaticIndexing: contains(graph, 'automaticIndexing') ? graph.automaticIndexing : true
+    indexingPolicy: contains(graph, 'indexingPolicy') ? graph.indexingPolicy : true
     partitionKeyPaths: !empty(graph.partitionKeyPaths) ? graph.partitionKeyPaths : []
   }
 }]

@@ -14,27 +14,29 @@ This module deploys a Web PubSub Service resource.
 
 | Resource Type | API Version |
 | :-- | :-- |
-| `Microsoft.Authorization/locks` | [2017-04-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2017-04-01/locks) |
+| `Microsoft.Authorization/locks` | [2020-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2020-05-01/locks) |
 | `Microsoft.Authorization/roleAssignments` | [2022-04-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Authorization/2022-04-01/roleAssignments) |
-| `Microsoft.Network/privateEndpoints` | [2021-08-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2021-08-01/privateEndpoints) |
-| `Microsoft.Network/privateEndpoints/privateDnsZoneGroups` | [2021-08-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2021-08-01/privateEndpoints/privateDnsZoneGroups) |
+| `Microsoft.Network/privateEndpoints` | [2022-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2022-05-01/privateEndpoints) |
+| `Microsoft.Network/privateEndpoints/privateDnsZoneGroups` | [2022-05-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/2022-05-01/privateEndpoints/privateDnsZoneGroups) |
 | `Microsoft.SignalRService/webPubSub` | [2021-10-01](https://docs.microsoft.com/en-us/azure/templates/Microsoft.SignalRService/2021-10-01/webPubSub) |
 
 ## Parameters
 
 **Required parameters**
+
 | Parameter Name | Type | Description |
 | :-- | :-- | :-- |
 | `name` | string | The name of the Web PubSub Service resource. |
 
 **Optional parameters**
+
 | Parameter Name | Type | Default Value | Allowed Values | Description |
 | :-- | :-- | :-- | :-- | :-- |
 | `capacity` | int | `1` |  | The unit count of the resource. 1 by default. |
 | `clientCertEnabled` | bool | `False` |  | Request client certificate during TLS handshake if enabled. |
 | `disableAadAuth` | bool | `False` |  | When set as true, connection with AuthType=aad won't work. |
 | `disableLocalAuth` | bool | `True` |  | Disables all authentication methods other than AAD authentication. For security reasons, this value should be set to `true`. |
-| `enableDefaultTelemetry` | bool | `True` |  | Enable telemetry via the Customer Usage Attribution ID (GUID). |
+| `enableDefaultTelemetry` | bool | `True` |  | Enable telemetry via a Globally Unique Identifier (GUID). |
 | `location` | string | `[resourceGroup().location]` |  | The location for the resource. |
 | `lock` | string | `''` | `['', CanNotDelete, ReadOnly]` | Specify the type of lock. |
 | `networkAcls` | object | `{object}` |  | Networks ACLs, this value contains IPs to allow and/or Subnet information. Can only be set if the 'SKU' is not 'Free_F1'. For security reasons, it is recommended to set the DefaultAction Deny. |
@@ -66,11 +68,23 @@ To use Private Endpoint the following dependencies must be deployed:
         {
             "name": "sxx-az-pe", // Optional: Name will be automatically generated if one is not provided here
             "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001",
-            "service": "<<serviceName>>", // e.g. vault, registry, file, blob, queue, table etc.
-            "privateDnsZoneResourceIds": [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
-                "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
+            "service": "<serviceName>", // e.g. vault, registry, blob
+            "privateDnsZoneGroup": {
+                "privateDNSResourceIds": [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
+                    "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/<privateDnsZoneName>" // e.g. privatelink.vaultcore.azure.net, privatelink.azurecr.io, privatelink.blob.core.windows.net
+                ]
+            },
+            "ipConfigurations":[
+                {
+                    "name": "myIPconfigTest02",
+                    "properties": {
+                        "groupId": "blob",
+                        "memberName": "blob",
+                        "privateIPAddress": "10.0.0.30"
+                    }
+                }
             ],
-            "customDnsConfigs": [ // Optional
+            "customDnsConfigs": [
                 {
                     "fqdn": "customname.test.local",
                     "ipAddresses": [
@@ -82,7 +96,7 @@ To use Private Endpoint the following dependencies must be deployed:
         // Example showing only mandatory fields
         {
             "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001",
-            "service": "<<serviceName>>" // e.g. vault, registry, file, blob, queue, table etc.
+            "service": "<serviceName>" // e.g. vault, registry, blob
         }
     ]
 }
@@ -100,11 +114,12 @@ privateEndpoints:  [
     {
         name: 'sxx-az-pe' // Optional: Name will be automatically generated if one is not provided here
         subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001'
-        service: '<<serviceName>>' // e.g. vault registry file blob queue table etc.
-        privateDnsZoneResourceIds: [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
-            '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net'
-        ]
-        // Optional
+        service: '<serviceName>' // e.g. vault, registry, blob
+        privateDnsZoneGroup: {
+            privateDNSResourceIds: [ // Optional: No DNS record will be created if a private DNS zone Resource ID is not specified
+                '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/<privateDnsZoneName>' // e.g. privatelink.vaultcore.azure.net, privatelink.azurecr.io, privatelink.blob.core.windows.net
+            ]
+        }
         customDnsConfigs: [
             {
                 fqdn: 'customname.test.local'
@@ -113,11 +128,21 @@ privateEndpoints:  [
                 ]
             }
         ]
+        ipConfigurations:[
+          {
+            name: 'myIPconfigTest02'
+            properties: {
+              groupId: 'blob'
+              memberName: 'blob'
+              privateIPAddress: '10.0.0.30'
+            }
+          }
+        ]
     }
     // Example showing only mandatory fields
     {
         subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/sxx-az-vnet-x-001/subnets/sxx-az-subnet-x-001'
-        service: '<<serviceName>>' // e.g. vault registry file blob queue table etc.
+        service: '<serviceName>' // e.g. vault, registry, blob
     }
 ]
 ```
@@ -236,8 +261,8 @@ You can specify multiple user assigned identities to a resource by providing add
 ```json
 "userAssignedIdentities": {
     "value": {
-        "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001": {},
-        "/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002": {}
+        "/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001": {},
+        "/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002": {}
     }
 }
 ```
@@ -250,8 +275,8 @@ You can specify multiple user assigned identities to a resource by providing add
 
 ```bicep
 userAssignedIdentities: {
-    '/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001': {}
-    '/subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002': {}
+    '/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-001': {}
+    '/subscriptions/<<subscriptionId>>/resourcegroups/validation-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adp-sxx-az-msi-x-002': {}
 }
 ```
 
@@ -263,6 +288,7 @@ userAssignedIdentities: {
 Using this object you can configure the service's firewall. Note, that the `defaultAction` either allows all / denies all communication via the `publicNetwork` and `privateEndpoints`. You can subsequently allow/deny individual actions using the corresponding arrays.
 
 Either block supports any array of values:
+
 - 'ClientConnection'
 - 'RESTAPI'
 - 'ServerConnection'
@@ -354,9 +380,10 @@ This section gives you an overview of all local-referenced module files (i.e., o
 
 The following module usage examples are retrieved from the content of the files hosted in the module's `.test` folder.
    >**Note**: The name of each example is based on the name of the file from which it is taken.
+
    >**Note**: Each example lists all the required parameters first, followed by the rest - each in alphabetical order.
 
-<h3>Example 1: Min</h3>
+<h3>Example 1: Common</h3>
 
 <details>
 
@@ -364,53 +391,17 @@ The following module usage examples are retrieved from the content of the files 
 
 ```bicep
 module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-webPubSub'
-  params: {
-    name: '<<namePrefix>>-az-pubsub-min-001'
-  }
-}
-```
-
-</details>
-<p>
-
-<details>
-
-<summary>via JSON Parameter file</summary>
-
-```json
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "name": {
-      "value": "<<namePrefix>>-az-pubsub-min-001"
-    }
-  }
-}
-```
-
-</details>
-<p>
-
-<h3>Example 2: Parameters</h3>
-
-<details>
-
-<summary>via Bicep module</summary>
-
-```bicep
-module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-webPubSub'
+  name: '${uniqueString(deployment().name, location)}-test-srswpscom'
   params: {
     // Required parameters
-    name: '<<namePrefix>>-az-pubsub-x-001'
+    name: '<<namePrefix>>-srswpscom-001'
     // Non-required parameters
     capacity: 2
     clientCertEnabled: false
     disableAadAuth: false
     disableLocalAuth: true
-    location: 'westeurope'
+    enableDefaultTelemetry: '<enableDefaultTelemetry>'
+    location: '<location>'
     lock: 'CanNotDelete'
     networkAcls: {
       defaultAction: 'Allow'
@@ -421,7 +412,7 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
             'ServerConnection'
             'Trace'
           ]
-          name: 'pe-<<namePrefix>>-az-pubsub-x-001-webpubsub-0'
+          name: 'pe-<<namePrefix>>-srswpscom-001'
         }
       ]
       publicNetwork: {
@@ -434,13 +425,13 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
     }
     privateEndpoints: [
       {
-        privateDnsZoneGroups: {
+        privateDnsZoneGroup: {
           privateDNSResourceIds: [
-            '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.webpubsub.azure.com'
+            '<privateDNSResourceId>'
           ]
         }
         service: 'webpubsub'
-        subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/adp-<<namePrefix>>-az-vnet-x-001/subnets/<<namePrefix>>-az-subnet-x-005-privateEndpoints'
+        subnetResourceId: '<subnetResourceId>'
       }
     ]
     resourceLogConfigurationsToEnable: [
@@ -449,7 +440,7 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
     roleAssignments: [
       {
         principalIds: [
-          '<<deploymentSpId>>'
+          '<managedIdentityPrincipalId>'
         ]
         roleDefinitionIdOrName: 'Reader'
       }
@@ -477,7 +468,7 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
   "parameters": {
     // Required parameters
     "name": {
-      "value": "<<namePrefix>>-az-pubsub-x-001"
+      "value": "<<namePrefix>>-srswpscom-001"
     },
     // Non-required parameters
     "capacity": {
@@ -492,8 +483,11 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
     "disableLocalAuth": {
       "value": true
     },
+    "enableDefaultTelemetry": {
+      "value": "<enableDefaultTelemetry>"
+    },
     "location": {
-      "value": "westeurope"
+      "value": "<location>"
     },
     "lock": {
       "value": "CanNotDelete"
@@ -508,7 +502,7 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
               "ServerConnection",
               "Trace"
             ],
-            "name": "pe-<<namePrefix>>-az-pubsub-x-001-webpubsub-0"
+            "name": "pe-<<namePrefix>>-srswpscom-001"
           }
         ],
         "publicNetwork": {
@@ -523,13 +517,13 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
     "privateEndpoints": {
       "value": [
         {
-          "privateDnsZoneGroups": {
+          "privateDnsZoneGroup": {
             "privateDNSResourceIds": [
-              "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.webpubsub.azure.com"
+              "<privateDNSResourceId>"
             ]
           },
           "service": "webpubsub",
-          "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/adp-<<namePrefix>>-az-vnet-x-001/subnets/<<namePrefix>>-az-subnet-x-005-privateEndpoints"
+          "subnetResourceId": "<subnetResourceId>"
         }
       ]
     },
@@ -542,7 +536,7 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
       "value": [
         {
           "principalIds": [
-            "<<deploymentSpId>>"
+            "<managedIdentityPrincipalId>"
           ],
           "roleDefinitionIdOrName": "Reader"
         }
@@ -566,6 +560,51 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
 </details>
 <p>
 
+<h3>Example 2: Min</h3>
+
+<details>
+
+<summary>via Bicep module</summary>
+
+```bicep
+module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
+  name: '${uniqueString(deployment().name, location)}-test-srswpsmin'
+  params: {
+    // Required parameters
+    name: '<<namePrefix>>-srswpsmin-001'
+    // Non-required parameters
+    enableDefaultTelemetry: '<enableDefaultTelemetry>'
+  }
+}
+```
+
+</details>
+<p>
+
+<details>
+
+<summary>via JSON Parameter file</summary>
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    // Required parameters
+    "name": {
+      "value": "<<namePrefix>>-srswpsmin-001"
+    },
+    // Non-required parameters
+    "enableDefaultTelemetry": {
+      "value": "<enableDefaultTelemetry>"
+    }
+  }
+}
+```
+
+</details>
+<p>
+
 <h3>Example 3: Pe</h3>
 
 <details>
@@ -574,20 +613,21 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
 
 ```bicep
 module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
-  name: '${uniqueString(deployment().name)}-webPubSub'
+  name: '${uniqueString(deployment().name, location)}-test-srswpspe'
   params: {
     // Required parameters
-    name: '<<namePrefix>>-az-pubsub-pe-001'
+    name: '<<namePrefix>>-srswpspe-001'
     // Non-required parameters
+    enableDefaultTelemetry: '<enableDefaultTelemetry>'
     privateEndpoints: [
       {
-        privateDnsZoneGroups: {
+        privateDnsZoneGroup: {
           privateDNSResourceIds: [
-            '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.webpubsub.azure.com'
+            '<privateDNSResourceId>'
           ]
         }
         service: 'webpubsub'
-        subnetResourceId: '/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/adp-<<namePrefix>>-az-vnet-x-001/subnets/<<namePrefix>>-az-subnet-x-005-privateEndpoints'
+        subnetResourceId: '<subnetResourceId>'
       }
     ]
     sku: 'Standard_S1'
@@ -609,19 +649,22 @@ module webPubSub './Microsoft.SignalRService/webPubSub/deploy.bicep' = {
   "parameters": {
     // Required parameters
     "name": {
-      "value": "<<namePrefix>>-az-pubsub-pe-001"
+      "value": "<<namePrefix>>-srswpspe-001"
     },
     // Non-required parameters
+    "enableDefaultTelemetry": {
+      "value": "<enableDefaultTelemetry>"
+    },
     "privateEndpoints": {
       "value": [
         {
-          "privateDnsZoneGroups": {
+          "privateDnsZoneGroup": {
             "privateDNSResourceIds": [
-              "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/privateDnsZones/privatelink.webpubsub.azure.com"
+              "<privateDNSResourceId>"
             ]
           },
           "service": "webpubsub",
-          "subnetResourceId": "/subscriptions/<<subscriptionId>>/resourceGroups/validation-rg/providers/Microsoft.Network/virtualNetworks/adp-<<namePrefix>>-az-vnet-x-001/subnets/<<namePrefix>>-az-subnet-x-005-privateEndpoints"
+          "subnetResourceId": "<subnetResourceId>"
         }
       ]
     },

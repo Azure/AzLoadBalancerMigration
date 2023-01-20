@@ -13,8 +13,8 @@ param charset string = ''
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location
 
-@description('Optional. Enable telemetry via the Customer Usage Attribution ID (GUID).')
-param enableDefaultTelemetry bool = false
+@description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
+param enableDefaultTelemetry bool = true
 
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
@@ -28,11 +28,11 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
   }
 }
 
-resource flexibleServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview' existing = {
+resource flexibleServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-12-01' existing = {
   name: flexibleServerName
 }
 
-resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-01-20-preview' = {
+resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-12-01' = {
   name: name
   parent: flexibleServer
   properties: {

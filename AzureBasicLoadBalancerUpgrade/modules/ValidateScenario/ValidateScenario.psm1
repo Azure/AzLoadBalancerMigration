@@ -62,7 +62,7 @@ Function Test-SupportedMigrationScenario {
     # Basic Load Balancers doesn't allow more than one VMSS as a backend pool becuase they would be under different availability sets.
     # This is a sanity check to make sure that the script is not run on a Basic Load Balancer that has more than one VMSS in the backend pool.
     log -Message "[Test-SupportedMigrationScenario] Checking if there are more than one VMSS in the backend pool"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0] } | Select-Object -Unique
+    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
     if ($vmssIds.count -gt 1) {
         log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has more than one VMSS in the backend pool, exiting" -Severity 'Error'
         return
