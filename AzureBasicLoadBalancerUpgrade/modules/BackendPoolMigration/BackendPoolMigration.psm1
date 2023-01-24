@@ -133,7 +133,7 @@ function BackendPoolMigration {
     _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss
 
     # Update VMSS on Azure
-    UpdateVMSS -vmss $vmss
+    UpdateVmss -vmss $vmss
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
@@ -142,7 +142,7 @@ function BackendPoolMigration {
     _RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    UpdateVMSS -vmss $vmss
+    UpdateVmss -vmss $vmss
 
     #log -Message "[BackendPoolMigration] Updating VMSS Instances $($vmss.Name)"
     #UpdateVmssInstances -vmss $vmss
