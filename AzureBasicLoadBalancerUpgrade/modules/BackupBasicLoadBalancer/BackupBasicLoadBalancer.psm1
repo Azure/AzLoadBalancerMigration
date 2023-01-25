@@ -26,27 +26,27 @@ function RestoreLoadBalancer {
     }
 }
 
-function RestoreVMSS {
+function RestoreVmss {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][string] $VMSSJsonFile
     )
-    log -Message "[RestoreVMSS] Initiating Restore VMSS from JSON Backup"
+    log -Message "[RestoreVmss] Initiating Restore VMSS from JSON Backup"
 
     if (!(Test-Path $VMSSJsonFile)) {
-        log -Severity "Error" -Message "[RestoreVMSS] Unable to load the file $VMSSJsonFile. File not found or missing permission." -terminateOnError
+        log -Severity "Error" -Message "[RestoreVmss] Unable to load the file $VMSSJsonFile. File not found or missing permission." -terminateOnError
     }
-    log -Message "[RestoreVMSS] Loading file $VMSSJsonFile"
+    log -Message "[RestoreVmss] Loading file $VMSSJsonFile"
     $VMSSJson = Get-Content $VMSSJsonFile
     try {
         $ErrorActionPreference = 'Stop'
-        log -Message "[RestoreVMSS] Deserializing backup to a object type [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet]"
+        log -Message "[RestoreVmss] Deserializing backup to a object type [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet]"
         $vmss = [System.Text.Json.JsonSerializer]::Deserialize($VMSSJson, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet])
-        log -Message "[RestoreVMSS] Deserialization Completed"
+        log -Message "[RestoreVmss] Deserialization Completed"
         return $vmss
     }
     catch {
-        $message = "[RestoreVMSS] An error occured while deserializing backup from JSON File. Error: $_"
+        $message = "[RestoreVmss] An error occured while deserializing backup from JSON File. Error: $_"
         log -Severity Error -Message $message -terminateOnError
     }
 }
@@ -110,4 +110,4 @@ function BackupBasicLoadBalancer {
 }
 Export-ModuleMember -Function BackupBasicLoadBalancer
 Export-ModuleMember -Function RestoreLoadBalancer
-Export-ModuleMember -Function RestoreVMSS
+Export-ModuleMember -Function RestoreVmss
