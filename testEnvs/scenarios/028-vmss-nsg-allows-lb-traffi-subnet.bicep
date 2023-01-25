@@ -26,7 +26,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
         networkSecurityGroupId: networkSecurityGroups.outputs.resourceId
       }
@@ -66,9 +66,25 @@ module networkSecurityGroups '../modules/Microsoft.Network/networkSecurityGroups
   ]
 }
 
+module publicIP01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+  name: 'pip-01'
+  params: {
+    name: 'pip-01'
+    location: location
+    publicIPAddressVersion: 'IPv4'
+    skuTier: 'Regional'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
+  }
+  scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
+}
+
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
-  name: 'lb-basic-01'
+  name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
     name: 'lb-basic-01'
@@ -76,7 +92,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: publicIP01.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -164,7 +180,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
         ]
-        nicSuffix: '-nic-01'     
+        nicSuffix: '-nic-01'
       }
     ]
   }
@@ -172,4 +188,3 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     rg
   ]
 }
-
