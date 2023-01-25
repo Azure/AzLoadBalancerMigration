@@ -42,7 +42,7 @@
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\PublicFEMigration\PublicFEMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\RemoveLBFromVmss\RemoveLBFromVmss.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\RemoveLoadBalancerFromVmss\RemoveLoadBalancerFromVmss.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackendPoolMigration\BackendPoolMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\NatRulesMigration\NatRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\InboundNatPoolsMigration\InboundNatPoolsMigration.psd1")
@@ -111,7 +111,7 @@ function PublicLBMigration {
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLBFromVmss -BasicLoadBalancer $BasicLoadBalancer
+    RemoveLoadBalancerFromVmss -BasicLoadBalancer $BasicLoadBalancer
     
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
@@ -167,7 +167,7 @@ function InternalLBMigration {
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLBFromVmss -BasicLoadBalancer $BasicLoadBalancer
+    RemoveLoadBalancerFromVmss -BasicLoadBalancer $BasicLoadBalancer
 
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
