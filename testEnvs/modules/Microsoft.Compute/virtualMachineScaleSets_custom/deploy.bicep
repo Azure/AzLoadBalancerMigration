@@ -436,7 +436,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2022-03-01' = {
           name: '${name}${nicConfiguration.nicSuffix}configuration-${index}'
           properties: {
             primary: (index == 0) ? true : any(null)
-            enableAcceleratedNetworking: contains(nicConfiguration, 'enableAcceleratedNetworking') ? nicConfiguration.enableAcceleratedNetworking : false // default to disable accelerated networking
+            enableAcceleratedNetworking: false //disable accelerated networking default
             networkSecurityGroup: contains(nicConfiguration, 'nsgId') ? {
               id: nicConfiguration.nsgId
             } : null
