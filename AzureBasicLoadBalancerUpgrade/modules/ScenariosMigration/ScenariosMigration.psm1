@@ -39,21 +39,21 @@
 
 #>
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\PublicFEMigration\PublicFEMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\RemoveLoadBalancerFromVmss\RemoveLoadBalancerFromVmss.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackendPoolMigration\BackendPoolMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\NatRulesMigration\NatRulesMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\InboundNatPoolsMigration\InboundNatPoolsMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ProbesMigration\ProbesMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\LoadBalacingRulesMigration\LoadBalacingRulesMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\OutboundRulesCreation\OutboundRulesCreation.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\NsgCreation\NsgCreation.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\PrivateFEMigration\PrivateFEMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVmssFromBasicLoadBalancer\GetVmssFromBasicLoadBalancer.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\AddLoadBalancerBackendAddressPool\AddLoadBalancerBackendAddressPool.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\VmssPublicIPConfigMigration\VmssPublicIPConfigMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackupBasicLoadBalancer/BackupBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/PublicFEMigration/PublicFEMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/RemoveLoadBalancerFromVmss/RemoveLoadBalancerFromVmss.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackendPoolMigration/BackendPoolMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/NatRulesMigration/NatRulesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/InboundNatPoolsMigration/InboundNatPoolsMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/ProbesMigration/ProbesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/LoadBalacingRulesMigration/LoadBalacingRulesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/OutboundRulesCreation/OutboundRulesCreation.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/NsgCreation/NsgCreation.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/PrivateFEMigration/PrivateFEMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/AddLoadBalancerBackendAddressPool/AddLoadBalancerBackendAddressPool.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/VmssPublicIPConfigMigration/VmssPublicIPConfigMigration.psd1")
 
 function _CreateStandardLoadBalancer {
     [CmdletBinding()]

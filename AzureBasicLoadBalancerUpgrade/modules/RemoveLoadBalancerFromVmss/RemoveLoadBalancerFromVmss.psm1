@@ -1,8 +1,8 @@
 
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVmssFromBasicLoadBalancer\GetVmssFromBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmssInstances/UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 function RemoveLoadBalancerFromVmss {
     [CmdletBinding()]
     param (
