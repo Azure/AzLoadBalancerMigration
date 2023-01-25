@@ -18,8 +18,8 @@ function NsgCreation {
         # Check if VMSS already has a NSG
         log -Message "[NsgCreation] Checking if VMSS Named: $($vmss.Name) has a NSG"
         if (![string]::IsNullOrEmpty($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.NetworkSecurityGroup)) {
-            log -Message "[NsgCreation] NSG detected in VMSS Named: $($vmss.Name) NetworkInterfaceConfigurations.NetworkSecurityGroup Id: $($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.NetworkSecurityGroup.Id)" -severity "Warning"
-            log -Message "[NsgCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Warning"
+            log -Message "[NsgCreation] NSG detected in VMSS Named: $($vmss.Name) NetworkInterfaceConfigurations.NetworkSecurityGroup Id: $($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.NetworkSecurityGroup.Id)" -severity "Information"
+            log -Message "[NsgCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Information"
             break
         }
 
@@ -31,8 +31,8 @@ function NsgCreation {
             foreach ($subnetId in $subnetIds) {
                 $subnet = Get-AzResource -ResourceId $subnetId
                 if (![string]::IsNullOrEmpty($subnet.Properties.NetworkSecurityGroup)) {
-                    log -Message "[NSGCreation] NSG detected in Subnet for VMSS Named: $($vmss.Name) Subnet.NetworkSecurityGroup Id: $($subnet.Properties.NetworkSecurityGroup.Id)" -severity "Warning"
-                    log -Message "[NSGCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Warning"
+                    log -Message "[NsgCreation] NSG detected in Subnet for VMSS Named: $($vmss.Name) Subnet.NetworkSecurityGroup Id: $($subnet.Properties.NetworkSecurityGroup.Id)" -severity "Information"
+                    log -Message "[NsgCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Information"
                     $found = $true
                     break
                 }
@@ -41,7 +41,7 @@ function NsgCreation {
             if ($found) { break }
         }
 
-        log -Message "[NSGCreation] NSG not detected."
+        log -Message "[NsgCreation] NSG not detected."
 
         log -Message "[NsgCreation] Creating NSG for VMSS: $vmssName"
 
