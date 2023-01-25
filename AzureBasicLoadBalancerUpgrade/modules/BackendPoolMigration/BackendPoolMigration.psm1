@@ -1,6 +1,6 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmss\UpdateVmss.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVMSS\UpdateVMSS.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
 
@@ -133,7 +133,7 @@ function BackendPoolMigration {
     _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss
 
     # Update VMSS on Azure
-    UpdateVMSS -vmss $vmss
+    UpdateVmss -vmss $vmss
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
@@ -142,7 +142,7 @@ function BackendPoolMigration {
     _RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    UpdateVMSS -vmss $vmss
+    UpdateVmss -vmss $vmss
 
     #log -Message "[BackendPoolMigration] Updating VMSS Instances $($vmss.Name)"
     #UpdateVmssInstances -vmss $vmss
