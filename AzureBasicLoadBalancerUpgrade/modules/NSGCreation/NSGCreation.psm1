@@ -31,7 +31,7 @@ function NSGCreation {
             foreach ($subnetId in $subnetIds) {
                 $subnet = Get-AzResource -ResourceId $subnetId
                 if (![string]::IsNullOrEmpty($subnet.Properties.NetworkSecurityGroup)) {
-                    log -Message "[NSGCreation] NSG detected in VMSS Subnet Named: $($vmss.Name) Subnet.NetworkSecurityGroup Id: $($subnet.Properties.NetworkSecurityGroup.Id)" -severity "Warning"
+                    log -Message "[NSGCreation] NSG detected in Subnet for VMSS Named: $($vmss.Name) Subnet.NetworkSecurityGroup Id: $($subnet.Properties.NetworkSecurityGroup.Id)" -severity "Warning"
                     log -Message "[NSGCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Warning"
                     $found = $true
                     break
