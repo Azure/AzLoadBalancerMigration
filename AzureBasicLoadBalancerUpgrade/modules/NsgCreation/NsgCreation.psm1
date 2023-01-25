@@ -22,7 +22,26 @@ function NsgCreation {
             log -Message "[NsgCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Warning"
             break
         }
-        log -Message "[NsgCreation] NSG not detected."
+
+        # check vmss subnets for attached NSG's
+        if (![string]::IsNullOrEmpty($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.Ipconfigurations.Subnet)) {
+            $subnetIds = @($vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.Ipconfigurations.Subnet.id)
+            $found = $false
+
+            foreach ($subnetId in $subnetIds) {
+                $subnet = Get-AzResource -ResourceId $subnetId
+                if (![string]::IsNullOrEmpty($subnet.Properties.NetworkSecurityGroup)) {
+                    log -Message "[NSGCreation] NSG detected in Subnet for VMSS Named: $($vmss.Name) Subnet.NetworkSecurityGroup Id: $($subnet.Properties.NetworkSecurityGroup.Id)" -severity "Warning"
+                    log -Message "[NSGCreation] NSG will not be created for VMSS Named: $($vmss.Name)" -severity "Warning"
+                    $found = $true
+                    break
+                }
+            }
+            
+            if ($found) { break }
+        }
+
+        log -Message "[NSGCreation] NSG not detected."
 
         log -Message "[NsgCreation] Creating NSG for VMSS: $vmssName"
 
@@ -70,10 +89,10 @@ function NsgCreation {
         $networkSecurityRuleConfig = $null
         $inboundNatRules = $BasicLoadBalancer.InboundNatRules
         foreach ($inboundNatRule in $inboundNatRules) {
-            if([string]::IsNullOrEmpty($inboundNatRule.FrontendPortRangeStart)){
+            if ([string]::IsNullOrEmpty($inboundNatRule.FrontendPortRangeStart)) {
                 $dstportrange = ($inboundNatRule.BackendPort).ToString()
             }
-            else{
+            else {
                 $dstportrange = (($inboundNatRule.FrontendPortRangeStart).ToString() + "-" + ($inboundNatRule.FrontendPortRangeEnd).ToString())
             }
             $networkSecurityRuleConfig = @{
