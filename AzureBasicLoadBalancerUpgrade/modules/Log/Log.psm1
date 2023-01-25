@@ -17,8 +17,9 @@ function log {
         $terminateOnError
     )
 
-    Add-Content -Path ("Start-AzBasicLoadBalancerUpgrade.log") -Value ((Get-Date -Format 'yyyy-MM-dd hh:mm:ss.ffff') + " " + "[$Severity] - " + $Message) -Force
-    $outputMessage = "[{0}]:{1}" -f $Severity,($Message -replace '\s\s+?','')
+    $timestamp = Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz'
+    Add-Content -Path ("Start-AzBasicLoadBalancerUpgrade.log") -Value ($timestamp + " " + "[$Severity] - " + $Message) -Force
+    $outputMessage = "{0} [{1}]:{2}" -f $timestamp, $Severity,($Message -replace '\s\s+?','')
     If ($global:FollowLog) {
         switch ($severity) {
             "Error" {
