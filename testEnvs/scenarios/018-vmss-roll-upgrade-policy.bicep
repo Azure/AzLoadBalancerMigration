@@ -116,7 +116,7 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   }
 }
 
-module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
+module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets_custom/deploy.bicep' = {
   name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
   params: {
