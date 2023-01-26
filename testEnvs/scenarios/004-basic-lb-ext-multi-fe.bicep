@@ -36,7 +36,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
   ]
 }
 
-module publicIP01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
   name: 'pip-01'
   params: {
     name: 'pip-01'
@@ -52,7 +52,7 @@ module publicIP01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' 
   ]
 }
 
-module publicIP02 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
+module publicIp02 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
   name: 'pip-02'
   params: {
     name: 'pip-02'
@@ -78,11 +78,11 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        publicIPAddressId: publicIP01.outputs.resourceId
+        publicIPAddressId: publicIp01.outputs.resourceId
       }
       {
         name: 'fe-02'
-        publicIPAddressId: publicIP02.outputs.resourceId
+        publicIPAddressId: publicIp02.outputs.resourceId
       }
     ]
     backendAddressPools: [

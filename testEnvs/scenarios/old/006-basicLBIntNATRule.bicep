@@ -1,8 +1,6 @@
 targetScope = 'subscription'
-param location string
-param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+var location = 'eastus'
+var resourceGroupName = 'rg-006-basicLBNATRule'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -23,117 +21,94 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     addressPrefixes: [
       '10.0.0.0/16'
     ]
-    name: 'vnet-01'
+    name: 'vnet'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
       }
     ]
   }
-  dependsOn: [
-    rg
-  ]
-}
-
-module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
-  name: 'pip-01'
-  params: {
-    name: 'pip-01'
-    location: location
-    publicIPAddressVersion: 'IPv4'
-    skuTier: 'Regional'
-    skuName: 'Basic'
-    publicIPAllocationMethod: 'Dynamic'
-  }
-  scope: resourceGroup(resourceGroupName)
-  dependsOn: [
-    rg
-  ]
+  dependsOn: [rg]
 }
 
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
-  name: 'lb-basic-01'
+  name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-basic-01'
+    name: 'lb-basic01'
     location: location
     frontendIPConfigurations: [
-      {
-        name: 'fe-01'
-        publicIPAddressId: publicIp01.outputs.resourceId
+      { 
+        name: 'fe1'
+        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
       }
     ]
     backendAddressPools: [
       {
-        name: 'be-01'
+        name: 'be1'
       }
     ]
-    inboundNatRules: []
+    inboundNatRules: [
+      {
+        
+          backendPort: 8080
+          frontendIPConfigurationName: 'fe1'
+          frontendPort: 8080
+          name: 'natrule'
+        
+      }
+    ]
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
-        backendAddressPoolName: 'be-01'
+        backendAddressPoolName: 'be1'
         backendPort: 80
-        frontendIPConfigurationName: 'fe-01'
+        frontendIPConfigurationName: 'fe1'
         frontendPort: 80
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
-        name: 'rule-01'
-        probeName: 'probe-01'
+        name: 'rule'
+        probeName: 'probe1'
         protocol: 'Tcp'
       }
     ]
     probes: [
       {
         intervalInSeconds: 5
-        name: 'probe-01'
+        name: 'probe1'
         numberOfProbes: 2
         port: '80'
         protocol: 'Tcp'
       }
     ]
   }
-  dependsOn: [
-    rg
-  ]
+  dependsOn: [rg]
 }
 
 resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroupName)
-}
-
-module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
-  name:'vmss${uniqueString(subscription().subscriptionId,resourceGroupName)}'
-  scope: resourceGroup(resourceGroupName)
-  params: {
-    name: 'vmss${uniqueString(subscription().subscriptionId,resourceGroupName)}'
-    location: location
-    storageAccountSku: 'Standard_LRS'
-    storageAccountKind: 'StorageV2'
-  }
+  name: 'kvvmss${uniqueString(subscription().id)}'
+  scope: resourceGroup('rg-vmsstestingconfig')
 }
 
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
-  name: 'vmss-01'
+  name: 'vmss'
   scope: resourceGroup(resourceGroupName)
   params: {
     location: location
     // Required parameters
     encryptionAtHost: false
     adminUsername: kv1.getSecret('adminUsername')
-    skuCapacity: 3
-    upgradePolicyMode: 'Rolling'
+    skuCapacity: 1
+    upgradePolicyMode: 'Manual'
     imageReference: {
-      offer: 'UbuntuServer'
-      publisher: 'Canonical'
-      sku: '18.04-LTS'
+      offer: 'WindowsServer'
+      publisher: 'MicrosoftWindowsServer'
+      sku: '2022-Datacenter'
       version: 'latest'
     }
-    name: 'vmss-01'
-    bootDiagnosticStorageAccountName: storageAccounts.outputs.name
+    name: 'vmss'
     osDisk: {
       createOption: 'fromImage'
       diskSizeGB: '128'
@@ -141,11 +116,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
         storageAccountType: 'Standard_LRS'
       }
     }
-    osType: 'Linux'
-    customData: loadFileAsBase64('./config/018-cloud-init.yml')
-    healthProbe: {
-      id: '${loadbalancer.outputs.resourceId}/probes/probe-01'
-    }
+    osType: 'Windows'
     skuName: 'Standard_DS1_v2'
     // Non-required parameters
     adminPassword: kv1.getSecret('adminPassword')
@@ -166,12 +137,10 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
             }
           }
         ]
-        nicSuffix: '-nic-01'
+        nicSuffix: '-nic01'
       }
     ]
   }
   dependsOn: [
-    rg
-  ]
+    rg]
 }
-
