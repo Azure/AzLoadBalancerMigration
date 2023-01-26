@@ -1,15 +1,15 @@
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmss\UpdateVmss.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVmssFromBasicLoadBalancer\GetVmssFromBasicLoadBalancer.psd1")
-Function RemoveVmssPublicIPConfig {
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
+Function RemoveVMSSPublicIPConfig {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer
     )
 
     log -Message "[RemoveVMSSPublicIPConfig] Removing Public IP Address configuration from VMSS $($vmss.Name)"
 
-    $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     $pipConfigRemoved = $false
     ForEach ($nic in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
@@ -35,7 +35,7 @@ Function RemoveVmssPublicIPConfig {
     log -Message "[RemoveVMSSPublicIPConfig] Completed removing Public IP Address configuration from VMSS $($vmss.Name). PIPs removed: '$pipConfigRemoved'"
 }
 
-Function AddVmssPublicIPConfig {
+Function AddVMSSPublicIPConfig {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
@@ -43,7 +43,7 @@ Function AddVmssPublicIPConfig {
 
     log -Message "[AddVMSSPublicIPConfig] Adding Public IP Address configuration back to VMSS $($vmss.Name) IP Configs"
 
-    $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     $pipConfigAdded = $false
     ForEach ($nic in $refVmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
@@ -73,4 +73,4 @@ Function AddVmssPublicIPConfig {
     }
 }
 
-Export-ModuleMember -Function RemoveVmssPublicIPConfig, AddVmssPublicIPConfig
+Export-ModuleMember -Function RemoveVMSSPublicIPConfig, AddVMSSPublicIPConfig

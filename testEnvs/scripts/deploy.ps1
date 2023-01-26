@@ -66,17 +66,15 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     }
     $scenarios = Get-AzResourceGroup -Name rg-0*
 
-    $scenarioCount = 1
     $jobPool = @()
     foreach($rg in $scenarios){
 
         While (($activeJobs = ($jobPool | Where-Object { $_.State -eq 'Running' }).count) -gt 10) {
-            Write-Host "Currently $activeJobs jobs running, waiting for less than 10. $scenarioCount of $($scenarios.Count) total jobs started."
+            Write-Host "Currently $activeJobs jobs running, waiting for less than 10"
             Start-Sleep -Seconds 5
         }
 
         $jobPool += Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'"))
-        $scenarioCount++
     }
 
     Write-Output ("Total Jobs Created: " + $scenarios.Count)
