@@ -1,7 +1,7 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1") 
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmssInstances/UpdateVmssInstances.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1") 
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
 function _HardCopyObject {
     [CmdletBinding()]
     param (
@@ -163,12 +163,12 @@ function InboundNatPoolsMigration {
         log 'Warning' $message
     }
 
-    $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    _UpdateAzVmss -vmss $vmss
+    _UpdateAzVMSS -vmss $vmss
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
