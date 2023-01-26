@@ -9,6 +9,7 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
   params: {
     name: resourceGroupName
     location: location
+    managedBy: ''
   }
 }
 

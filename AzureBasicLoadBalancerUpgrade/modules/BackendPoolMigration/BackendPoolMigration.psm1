@@ -1,8 +1,8 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVMSS\UpdateVMSS.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\UpdateVmssInstances\UpdateVmssInstances.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\GetVMSSFromBasicLoadBalancer\GetVMSSFromBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmss/UpdateVmss.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmssInstances/UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 
 function _HardCopyObject {
     [CmdletBinding()]
@@ -124,7 +124,7 @@ function BackendPoolMigration {
 
     log -Message "[BackendPoolMigration] Adding Standard Load Balancer back to the VMSS"
     log -Message "[BackendPoolMigration] Building VMSS object from Basic Load Balancer $($BasicLoadBalancer.Name)"
-    $vmss = GetVMSSFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Migrating Health Probe in case it exist
     _MigrateHealthProbe -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss

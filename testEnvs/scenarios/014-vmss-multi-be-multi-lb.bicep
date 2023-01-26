@@ -84,7 +84,7 @@ module loadbalancer01 '../modules/Microsoft.Network/loadBalancers_custom/deploy.
   ]
 }
 
-module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+module publicIP01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
   name: 'pip-01'
   params: {
     name: 'pip-01'
@@ -110,7 +110,7 @@ module loadbalancer02 '../modules/Microsoft.Network/loadBalancers_custom/deploy.
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        publicIPAddressId: publicIp01.outputs.resourceId
+        publicIPAddressId: publicIP01.outputs.resourceId
       }
     ]
     backendAddressPools: [

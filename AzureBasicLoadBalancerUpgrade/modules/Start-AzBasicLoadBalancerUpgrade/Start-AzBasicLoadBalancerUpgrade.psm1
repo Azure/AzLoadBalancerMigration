@@ -160,7 +160,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         }
         elseif (!$PSBoundParameters.ContainsKey("BasicLoadBalancer")) {
             $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePathLB
-            $vmss = RestoreVMSS -VMSSJsonFile $FailedMigrationRetryFilePathVMSS
+            $vmss = RestoreVmss -VMSSJsonFile $FailedMigrationRetryFilePathVMSS
         }
         log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
     }
