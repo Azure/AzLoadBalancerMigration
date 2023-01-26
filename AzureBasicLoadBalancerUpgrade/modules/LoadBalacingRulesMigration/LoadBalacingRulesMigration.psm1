@@ -1,5 +1,5 @@
 # Load Modules
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 function LoadBalacingRulesMigration {
     [CmdletBinding()]
     param (
