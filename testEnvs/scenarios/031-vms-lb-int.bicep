@@ -104,7 +104,7 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   ]
 }
 
-module vm '../modules/Microsoft.Compute/virtualMachines/deploy.bicep' = {
+module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
   params: {
