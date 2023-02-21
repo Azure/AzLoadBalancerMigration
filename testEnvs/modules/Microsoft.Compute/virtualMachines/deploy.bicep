@@ -426,7 +426,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2021-07-01' = {
       vmSize: vmSize
     }
     securityProfile: {
-      encryptionAtHost: encryptionAtHost ? encryptionAtHost : null
+      //encryptionAtHost: encryptionAtHost ? encryptionAtHost : null
       securityType: securityType
       uefiSettings: securityType == 'TrustedLaunch' ? {
         secureBootEnabled: secureBootEnabled
