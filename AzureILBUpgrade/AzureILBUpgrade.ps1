@@ -163,7 +163,7 @@ Else {
     $backupDateTime = Get-Date -Format FileDateTime
     $backupFilePath = Join-Path -Path $PSScriptRoot -ChildPath "basic_lb_backup_$backupDateTime.json"
 
-    Write-Host "Backing up basic load balancer to $backupFilePath. In case of migration failure, use this backup to either recreate the Basic LB and try again or as a reference when configuration a new Standard LB manually."
+    Write-Host "Backing up basic load balancer to $backupFilePath. In case of migration failure, use this backup to either recreate the Basic LB and try again or as a reference when configuration a new Standard LB manually. If using this option, the backend pool membership of the restored load balancer will need to be manually configured."
     Export-AzResourceGroup -ResourceGroupName $lb.ResourceGroupName -Resource $lb.Id -SkipAllParameterization -Path $backupFilePath -Force | Out-Null
 
     Write-Host "Deleting basic load balancer..."
