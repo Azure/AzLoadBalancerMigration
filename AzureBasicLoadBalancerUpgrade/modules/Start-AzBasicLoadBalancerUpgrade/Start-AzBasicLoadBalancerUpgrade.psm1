@@ -123,8 +123,10 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathLB,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathVMSS,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVm')][string] 
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] 
+        $FailedMigrationRetryFilePathLB,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] $FailedMigrationRetryFilePathVMSS,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
@@ -185,25 +187,49 @@ function Start-AzBasicLoadBalancerUpgrade {
 
     $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent)
 
-    # Migration of Frontend IP Configurations
-    switch ($scenario.ExternalOrInternal) {
-        'internal' {
-            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                InternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
-            }
-            else {
-                RestoreInternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+    switch ($scenario.BackendType) {
+        'VM' {
+            switch ($scenario.ExternalOrInternal) {
+                'internal' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        InternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreInternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                    }
+                }
+                'external' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        PublicLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreExternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                    }
+                }
             }
         }
-        'external' {
-            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                PublicLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
-            }
-            else {
-                RestoreExternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+        'VMSS' {
+            switch ($scenario.ExternalOrInternal) {
+                'internal' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        InternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreInternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+                    }
+                }
+                'external' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        PublicLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreExternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+                    }
+                }
             }
         }
     }
+
     log -Message "############################## Migration Completed ##############################"
 }
 
