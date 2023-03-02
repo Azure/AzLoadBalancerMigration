@@ -88,7 +88,7 @@ function _CreateStandardLoadBalancer {
 
 }
 
-function PublicLBMigration {
+function PublicLBMigrationVmss {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -103,6 +103,9 @@ function PublicLBMigration {
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+    # Backup VMSS Configurations
+    BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Remove Public IP Configurations from VMSS
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
@@ -141,13 +144,13 @@ function PublicLBMigration {
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating NSG for Standard Load Balancer
-    NsgCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 }
 
-function InternalLBMigration {
+function InternalLBMigrationVmss {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -162,6 +165,9 @@ function InternalLBMigration {
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+    # Backup VMSS Configurations
+    BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Remove Public IP Configurations from VMSS
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
@@ -194,17 +200,17 @@ function InternalLBMigration {
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
     #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
 
     # Creating NSG for Standard Load Balancer
-    #NsgCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
 }
 
-function RestoreExternalLBMigration {
+function RestoreExternalLBMigrationVmss {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -251,13 +257,13 @@ function RestoreExternalLBMigration {
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating NSG for Standard Load Balancer
-    NsgCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 }
 
-function RestoreInternalLBMigration {
+function RestoreInternalLBMigrationVmss {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -298,17 +304,17 @@ function RestoreInternalLBMigration {
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Migration of Backend Address Pools
-    BackendPoolMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
     #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
 
     # Creating NSG for Standard Load Balancer
-    #NsgCreation -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
 }
 
-Export-ModuleMember -Function PublicLBMigration
-Export-ModuleMember -Function InternalLBMigration
-Export-ModuleMember -Function RestoreInternalLBMigration
-Export-ModuleMember -Function RestoreExternalLBMigration
+Export-ModuleMember -Function PublicLBMigrationVmss
+Export-ModuleMember -Function InternalLBMigrationVmss
+Export-ModuleMember -Function RestoreInternalLBMigrationVmss
+Export-ModuleMember -Function RestoreExternalLBMigrationVmss

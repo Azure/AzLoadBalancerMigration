@@ -68,14 +68,14 @@ function _RestoreUpgradePolicyMode{
     log -Message "[_RestoreUpgradePolicyMode] Restoring VMSS Upgrade Policy Mode completed"
 }
 
-function _MigrateNetworkInterfaceConfigurations {
+function _MigrateNetworkInterfaceConfigurationsVmss {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
     )
 
-    log -Message "[_MigrateNetworkInterfaceConfigurations] Adding BackendAddressPool to VMSS $($vmss.Name)"
+    log -Message "[_MigrateNetworkInterfaceConfigurationsVmss] Adding BackendAddressPool to VMSS $($vmss.Name)"
     foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
         $genericListSubResource = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
         foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
@@ -91,12 +91,12 @@ function _MigrateNetworkInterfaceConfigurations {
                         try {
                             $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
                             $subResource.Id = ($StdLoadBalancer.BackendAddressPools | Where-Object { $_.Name -eq $BackendAddressPool.Name }).Id
-                            log -Message "[_MigrateNetworkInterfaceConfigurations] Adding BackendAddressPool $($subResource.Id.Split('/')[-1]) to VMSS Nic: $lbBeNicName ipConfig: $lbBeipConfigName"
+                            log -Message "[_MigrateNetworkInterfaceConfigurationsVmss] Adding BackendAddressPool $($subResource.Id.Split('/')[-1]) to VMSS Nic: $lbBeNicName ipConfig: $lbBeipConfigName"
                             $genericListSubResource.Add($subResource)
                         }
                         catch {
                             $message = @"
-                                [_MigrateNetworkInterfaceConfigurations] An error occured creating a new VMSS IP Config. To recover
+                                [_MigrateNetworkInterfaceConfigurationsVmss] An error occured creating a new VMSS IP Config. To recover
                                 address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
                                 State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@
@@ -110,27 +110,27 @@ function _MigrateNetworkInterfaceConfigurations {
             $genericListSubResource.Clear()
         }
     }
-    log -Message "[_MigrateNetworkInterfaceConfigurations] Migrate NetworkInterface Configurations completed"
+    log -Message "[_MigrateNetworkInterfaceConfigurationsVmss] Migrate NetworkInterface Configurations completed"
 }
 
-function BackendPoolMigration {
+function BackendPoolMigrationVmss {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
-    log -Message "[BackendPoolMigration] Initiating Backend Pool Migration"
+    log -Message "[BackendPoolMigrationVmss] Initiating Backend Pool Migration"
 
-    log -Message "[BackendPoolMigration] Adding Standard Load Balancer back to the VMSS"
-    log -Message "[BackendPoolMigration] Building VMSS object from Basic Load Balancer $($BasicLoadBalancer.Name)"
+    log -Message "[BackendPoolMigrationVmss] Adding Standard Load Balancer back to the VMSS"
+    log -Message "[BackendPoolMigrationVmss] Building VMSS object from Basic Load Balancer $($BasicLoadBalancer.Name)"
     $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Migrating Health Probe in case it exist
     _MigrateHealthProbe -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
     # Migrating Network Interface Configurations back to the VMSS
-    _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss
+    _MigrateNetworkInterfaceConfigurationsVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss
 
     # Update VMSS on Azure
     UpdateVmss -vmss $vmss
@@ -144,10 +144,10 @@ function BackendPoolMigration {
     # Update VMSS on Azure
     UpdateVmss -vmss $vmss
 
-    #log -Message "[BackendPoolMigration] Updating VMSS Instances $($vmss.Name)"
+    #log -Message "[BackendPoolMigrationVmss] Updating VMSS Instances $($vmss.Name)"
     #UpdateVmssInstances -vmss $vmss
 
-    #log -Message "[BackendPoolMigration] StackTrace $($StackTrace)" -Severity "Debug"
-    log -Message "[BackendPoolMigration] Backend Pool Migration Completed"
+    #log -Message "[BackendPoolMigrationVmss] StackTrace $($StackTrace)" -Severity "Debug"
+    log -Message "[BackendPoolMigrationVmss] Backend Pool Migration Completed"
 }
-Export-ModuleMember -Function BackendPoolMigration
+Export-ModuleMember -Function BackendPoolMigrationVmss

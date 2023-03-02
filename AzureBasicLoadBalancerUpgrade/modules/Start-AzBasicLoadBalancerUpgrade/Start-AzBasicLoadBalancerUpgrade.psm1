@@ -189,18 +189,18 @@ function Start-AzBasicLoadBalancerUpgrade {
     switch ($scenario.ExternalOrInternal) {
         'internal' {
             if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                InternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
             }
             else {
-                RestoreInternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+                RestoreInternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
             }
         }
         'external' {
             if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                PublicLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
             }
             else {
-                RestoreExternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+                RestoreExternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
             }
         }
     }

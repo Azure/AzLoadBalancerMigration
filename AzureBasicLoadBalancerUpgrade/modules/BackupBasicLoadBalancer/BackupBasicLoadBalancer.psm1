@@ -86,11 +86,19 @@ function BackupBasicLoadBalancer {
         $message = "[BackupBasicLoadBalancer] An error occured while exporting the basic load balancer '$($BasicLoadBalancer.Name)' to an ARM template for backup purposes. Error: $_"
         log -Severity Error -Message $message -terminateOnError
     }
+}
+
+Function BackupVmss {
+    param (
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $true)] $RecoveryBackupPath
+    )
+    log -Message "[BackupVmss] Initiating Backup of VMSS to path '$RecoveryBackupPath'"
 
     # Backup VMSS Object
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
     foreach ($vmssId in $vmssIds) {
-        $message = "[BackupBasicLoadBalancer] Attempting to create a file-based backup VMSS with id '$vmssId'"
+        $message = "[BackupVmss] Attempting to create a file-based backup VMSS with id '$vmssId'"
         log -Severity Information -Message $message
 
         try {
@@ -102,12 +110,13 @@ function BackupBasicLoadBalancer {
             [System.Text.Json.JsonSerializer]::Serialize($vmss, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet], $options) | Out-File -FilePath $outputFilePathVSS
         }
         catch {
-            $message = "[BackupBasicLoadBalancer] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
+            $message = "[BackupVmss] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
             log -Severity Error -Message $message -terminateOnError
         }
     }
-
 }
+
 Export-ModuleMember -Function BackupBasicLoadBalancer
+Export-ModuleMember -Function BackupVmss
 Export-ModuleMember -Function RestoreLoadBalancer
 Export-ModuleMember -Function RestoreVmss
