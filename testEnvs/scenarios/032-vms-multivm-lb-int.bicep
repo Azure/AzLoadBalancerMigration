@@ -108,6 +108,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
   params: {
+    name: 'vm-01'
     adminUsername: kv1.getSecret('adminUsername')
     adminPassword: kv1.getSecret('adminPassword')
     location: location
@@ -150,6 +151,7 @@ module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = 
   scope: resourceGroup(resourceGroupName)
   name: 'vm-02'
   params: {
+    name: 'vm-02'
     adminUsername: kv1.getSecret('adminUsername')
     adminPassword: kv1.getSecret('adminPassword')
     location: location

@@ -42,7 +42,7 @@
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackupBasicLoadBalancer/BackupBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/PublicFEMigration/PublicFEMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/RemoveLoadBalancerFromVmss/RemoveLoadBalancerFromVmss.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/RemoveBasicLoadBalancer/RemoveBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackendPoolMigration/BackendPoolMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/NatRulesMigration/NatRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/InboundNatPoolsMigration/InboundNatPoolsMigration.psd1")
@@ -114,7 +114,7 @@ function PublicLBMigrationVmss {
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLoadBalancerFromVmss -BasicLoadBalancer $BasicLoadBalancer
+    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VMSS'
     
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
@@ -173,7 +173,7 @@ function InternalLBMigrationVmss {
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLoadBalancerFromVmss -BasicLoadBalancer $BasicLoadBalancer
+    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VMSS'
 
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
@@ -331,7 +331,7 @@ function PublicLBMigrationVM {
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLoadBalancerFromVMs -BasicLoadBalancer $BasicLoadBalancer
+    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VM'
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -375,7 +375,7 @@ function InternalLBMigrationVM {
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveLoadBalancerFromVM -BasicLoadBalancer $BasicLoadBalancer
+    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VM'
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -508,3 +508,7 @@ Export-ModuleMember -Function PublicLBMigrationVmss
 Export-ModuleMember -Function InternalLBMigrationVmss
 Export-ModuleMember -Function RestoreInternalLBMigrationVmss
 Export-ModuleMember -Function RestoreExternalLBMigrationVmss
+Export-ModuleMember -Function PublicLBMigrationVM
+Export-ModuleMember -Function InternalLBMigrationVM
+Export-ModuleMember -Function RestoreInternalLBMigrationVM
+Export-ModuleMember -Function RestoreExternalLBMigrationVM

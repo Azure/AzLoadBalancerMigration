@@ -26,13 +26,13 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet-01'
+        name: 'subnet1'
         addressPrefix: '10.0.1.0/24'
       }
     ]
   }
-  dependsOn: [
-    rg
+  dependsOn: [ 
+    rg 
   ]
 }
 
@@ -52,6 +52,9 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
     backendAddressPools: [
       {
         name: 'be-01'
+      }
+      {
+        name: 'be-02'
       }
     ]
     inboundNatRules: []
@@ -89,21 +92,6 @@ resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
   scope: resourceGroup(keyVaultResourceGroupName)
 }
 
-module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
-  name: 'bootdiag-storage-01'
-  scope: resourceGroup(resourceGroupName)
-  params: {
-    name: 'bootdiag${uniqueString(deployment().name)}'
-    location: location
-    storageAccountSku: 'Standard_LRS'
-    storageAccountKind: 'StorageV2'
-    supportsHttpsTrafficOnly: true
-  }
-  dependsOn: [
-    rg
-  ]
-}
-
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
@@ -123,6 +111,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
         ipConfigurations: [
           {
             name: 'ipconfig1'
+            primary: true
             subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
             loadBalancerBackendAddressPools: [
               {
@@ -130,45 +119,13 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
               }
             ]
           }
-        ]
-        nicSuffix: 'nic'
-      }
-    ]
-    osDisk: {
-      createOption: 'fromImage'
-      diskSizeGB: '128'
-      managedDisk: {
-        storageAccountType: 'Standard_LRS'
-      }
-    }
-    osType: 'Windows'
-    vmSize: 'Standard_DS1_v2'
-  }
-}
-
-module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
-  scope: resourceGroup(resourceGroupName)
-  name: 'vm-02'
-  params: {
-    adminUsername: kv1.getSecret('adminUsername')
-    adminPassword: kv1.getSecret('adminPassword')
-    location: location
-    imageReference: {
-      offer: 'WindowsServer'
-      publisher: 'MicrosoftWindowsServer'
-      sku: '2022-Datacenter'
-      version: 'latest'
-    }
-    nicConfigurations: [
-      {
-        location: location
-        ipConfigurations: [
           {
-            name: 'ipconfig1'
+            name: 'ipconfig2'
+            primary: false
             subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
             loadBalancerBackendAddressPools: [
               {
-                id: loadbalancer.outputs.backendpools[0].id
+                id: loadbalancer.outputs.backendpools[1].id
               }
             ]
           }
