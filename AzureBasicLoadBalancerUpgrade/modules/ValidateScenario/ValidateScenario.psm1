@@ -85,26 +85,6 @@ Function Test-SupportedMigrationScenario {
         return
     }
 
-    If ($scenario.BackendType -eq 'VMSS') {
-        # create array of VMSSes associated with the load balancer for following checks
-        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
-        $basicLBVMSSs = @()
-        ForEach ($vmssId in $vmssIds) {
-            $basicLBVMSSs += Get-AzResource -ResourceId $vmssId | Get-AzVMSS
-        }
-
-        # Detecting if there are more than one VMSS in the backend pool, if so, exit
-        # Basic Load Balancers doesn't allow more than one VMSS as a backend pool becuase they would be under different availability sets.
-        # This is a sanity check to make sure that the script is not run on a Basic Load Balancer that has more than one VMSS in the backend pool.
-        log -Message "[Test-SupportedMigrationScenario] Checking if there are more than one VMSS in the backend pool"
-        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
-        if ($vmssIds.count -gt 1) {
-            log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has more than one VMSS in the backend pool, exiting" -Severity 'Error'
-            return
-        }
-        log -message "[Test-SupportedMigrationScenario] Basic Load Balancer has only one VMSS in the backend pool"
-    }
-
     # checking that source load balancer has sub-resource configurations
     log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
     If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0) {
@@ -125,7 +105,50 @@ Function Test-SupportedMigrationScenario {
         log -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($chkStdLB.Name)' is a Basic Load Balancer. The same name will be re-used."
     }
 
+    # detecting if source load balancer is internal or external-facing
+    log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
+    If (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)) {
+        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a private IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)', so this LB is Internal"
+        $scenario.ExternalOrInternal = 'Internal'
+    }
+    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)) {
+        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress.Id)', so this LB is External"
+
+        # Detecting if there is a frontend IPV6 configuration, if so, exit
+        log -Message "[Test-SupportedMigrationScenario] Determining if there is a frontend IPV6 configuration"
+        foreach ($frontendIP in $BasicLoadBalancer.FrontendIpConfigurations) {
+            $pip = Get-azPublicIpAddress -Name $frontendIP.PublicIpAddress.Id.split("/")[8] -ResourceGroupName $frontendIP.PublicIpAddress.Id.split("/")[4]
+            if ($pip.PublicIpAddressVersion -eq "IPv6") {
+                log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error" -terminateOnError
+                return
+            }
+        }
+        $scenario.ExternalOrInternal = 'External'
+    }
+    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix.Id)) {
+        log -ErrorAction Stop -Severity 'Error' "[Test-SupportedMigrationScenario] FrontEndIPConfiguration[0] is assigned a public IP prefix '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefixText)', which is not supported for migration!"
+        return
+    }
+
     If ($scenario.BackendType -eq 'VMSS') {
+        # create array of VMSSes associated with the load balancer for following checks
+        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
+        $basicLBVMSSs = @()
+        ForEach ($vmssId in $vmssIds) {
+            $basicLBVMSSs += Get-AzResource -ResourceId $vmssId | Get-AzVMSS
+        }
+
+        # Detecting if there are more than one VMSS in the backend pool, if so, exit
+        # Basic Load Balancers doesn't allow more than one VMSS as a backend pool becuase they would be under different availability sets.
+        # This is a sanity check to make sure that the script is not run on a Basic Load Balancer that has more than one VMSS in the backend pool.
+        log -Message "[Test-SupportedMigrationScenario] Checking if there are more than one VMSS in the backend pool"
+        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
+        if ($vmssIds.count -gt 1) {
+            log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has more than one VMSS in the backend pool, exiting" -Severity 'Error'
+            return
+        }
+        log -message "[Test-SupportedMigrationScenario] Basic Load Balancer has only one VMSS in the backend pool"
+
         # check if load balancer backend pool contains VMSSes which are part of another LBs backend pools
         log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
         ForEach ($vmss in $basicLBVMSSs) {
@@ -193,34 +216,7 @@ Function Test-SupportedMigrationScenario {
                 }
             }
         }
-    }
 
-    # detecting if source load balancer is internal or external-facing
-    log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
-    If (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)) {
-        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a private IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)', so this LB is Internal"
-        $scenario.ExternalOrInternal = 'Internal'
-    }
-    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress)) {
-        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a public IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIpAddress.Id)', so this LB is External"
-
-        # Detecting if there is a frontend IPV6 configuration, if so, exit
-        log -Message "[Test-SupportedMigrationScenario] Determining if there is a frontend IPV6 configuration"
-        foreach ($frontendIP in $BasicLoadBalancer.FrontendIpConfigurations) {
-            $pip = Get-azPublicIpAddress -Name $frontendIP.PublicIpAddress.Id.split("/")[8] -ResourceGroupName $frontendIP.PublicIpAddress.Id.split("/")[4]
-            if ($pip.PublicIpAddressVersion -eq "IPv6") {
-                log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer is using IPV6. This is not a supported scenario. PIP Name: $($pip.Name) RG: $($pip.ResourceGroupName)" -Severity "Error" -terminateOnError
-                return
-            }
-        }
-        $scenario.ExternalOrInternal = 'External'
-    }
-    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix.Id)) {
-        log -ErrorAction Stop -Severity 'Error' "[Test-SupportedMigrationScenario] FrontEndIPConfiguration[0] is assigned a public IP prefix '$($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefixText)', which is not supported for migration!"
-        return
-    }
-
-    If ($scenario.BackendType -eq 'VMSS') {
         # check if internal LB backend VMs does not have public IPs
         If ($scenario.ExternalOrInternal -eq 'Internal') {
             log -Message "[Test-SupportedMigrationScenario] Checking if internal load balancer backend VMs have public IPs..."

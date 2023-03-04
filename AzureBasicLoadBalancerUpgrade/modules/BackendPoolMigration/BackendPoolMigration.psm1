@@ -184,6 +184,7 @@ function BackendPoolMigrationVM {
     }
 
     # loop though nics and associate ipconfigs to backend pools
+    $jobs = @()
     ForEach ($nicRecord in $backendPoolNicTable.GetEnumerator()) {
 
         log -Message "[BackendPoolMigrationVM] Adding ipconfigs on NIC $($nicRecord.Name.split('/')[-1]) to backend pools"
@@ -206,8 +207,11 @@ function BackendPoolMigrationVM {
             $nicIPConfig.LoadBalancerBackendAddressPools = $backendPoolNicTable[$nicRecord.Name].ipConfigs[$nicIPConfig.Name].backendPools
         }
 
-        Set-AzNetworkInterface -NetworkInterface $nic
+        $jobs += Set-AzNetworkInterface -NetworkInterface $nic -AsJob
     }
+
+    log -Message "[BackendPoolMigrationVM] Waiting for all '$($jobs.count)' NIC migration jobs to complete"
+    $jobs | Wait-Job
 
     #log -Message "[BackendPoolMigrationVmss] StackTrace $($StackTrace)" -Severity "Debug"
     log -Message "[BackendPoolMigrationVmss] Backend Pool Migration Completed"

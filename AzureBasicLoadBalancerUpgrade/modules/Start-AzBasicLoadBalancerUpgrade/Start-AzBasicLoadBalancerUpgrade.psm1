@@ -34,7 +34,7 @@
 <#
 
 .DESCRIPTION
- This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) to a Standard SKU load balancer, preserving the existing configuration and functionality.
+ This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) or Virtual Machine(s) to a Standard SKU load balancer, preserving the existing configuration and functionality.
 
 .SYNOPSIS
 This module consists of a number of child modules which abstract the operations required to successfully migrate a Basic to a Standard load balancer.
@@ -42,7 +42,7 @@ A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore th
 
 Unsupported scenarios:
 - Basic load balancers with a VMSS backend pool member which is also a member of a backend pool on a different load balancer
-- Basic load balancers with backend pool members which are not a VMSS
+- Basic load balancers with backend pool members which are not VMs or a VMSS
 - Basic load balancers with only empty backend pools
 - Basic load balancers with IPV6 frontend IP configurations
 - Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode

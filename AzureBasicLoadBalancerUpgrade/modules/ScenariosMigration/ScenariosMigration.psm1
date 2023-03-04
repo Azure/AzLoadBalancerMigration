@@ -54,6 +54,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "/PrivateFEMigration/Private
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/AddLoadBalancerBackendAddressPool/AddLoadBalancerBackendAddressPool.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/VmssPublicIPConfigMigration/VmssPublicIPConfigMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/VMPublicIPConfigMigration/VMPublicIPConfigMigration.psd1")
 
 function _CreateStandardLoadBalancer {
     [CmdletBinding()]
@@ -333,6 +334,9 @@ function PublicLBMigrationVM {
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VM'
 
+    # Upgrade VMs Public IPs to Standard SKU
+    UpgradeVMPublicIP -BasicLoadBalancer $BasicLoadBalancer
+
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
 
@@ -376,6 +380,9 @@ function InternalLBMigrationVM {
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VM'
+
+    # Upgrade VMs Public IPs to Standard SKU
+    UpgradeVMPublicIP -BasicLoadBalancer $BasicLoadBalancer
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName

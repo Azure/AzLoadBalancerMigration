@@ -36,9 +36,25 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
   ]
 }
 
+module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+  name: 'pip-01'
+  params: {
+    name: 'pip-01'
+    location: location
+    publicIPAddressVersion: 'IPv4'
+    skuTier: 'Regional'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
+  }
+  scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
+}
+
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
-  name: 'lb-basic-01'
+  name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
     name: 'lb-basic-01'
@@ -46,7 +62,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: publicIp01.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -104,28 +120,17 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   ]
 }
 
-module availabilitySet '../modules/Microsoft.Compute/availabilitySets/deploy.bicep' = {
-  scope: resourceGroup(resourceGroupName)
-  name: 'as-01'
-  params: {
-    location: location
-    name: 'as-01'
-  }
-}
-
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
   params: {
-    name: 'vm-01'
     adminUsername: kv1.getSecret('adminUsername')
     adminPassword: kv1.getSecret('adminPassword')
     location: location
-    availabilitySetResourceId: availabilitySet.outputs.resourceId
     imageReference: {
-      offer: 'WindowsServer'
-      publisher: 'MicrosoftWindowsServer'
-      sku: '2022-Datacenter'
+      offer: 'UbuntuServer'
+      publisher: 'Canonical'
+      sku: '18.04-LTS'
       version: 'latest'
     }
     nicConfigurations: [
@@ -140,53 +145,42 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
                 id: loadbalancer.outputs.backendpools[0].id
               }
             ]
+            pipConfiguration: {
+              publicIpNameSuffix: '-pip-01'
+            }
+            skuName: 'Basic'
           }
-        ]
-        nicSuffix: 'nic'
-      }
-    ]
-    osDisk: {
-      createOption: 'fromImage'
-      diskSizeGB: '128'
-      managedDisk: {
-        storageAccountType: 'Standard_LRS'
-      }
-    }
-    osType: 'Windows'
-    vmSize: 'Standard_DS1_v2'
-  }
-}
-
-module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
-  scope: resourceGroup(resourceGroupName)
-  name: 'vm-02'
-  params: {
-    name: 'vm-02'
-    adminUsername: kv1.getSecret('adminUsername')
-    adminPassword: kv1.getSecret('adminPassword')
-    availabilitySetResourceId: availabilitySet.outputs.resourceId
-    location: location
-    imageReference: {
-      offer: 'WindowsServer'
-      publisher: 'MicrosoftWindowsServer'
-      sku: '2022-Datacenter'
-      version: 'latest'
-    }
-    nicConfigurations: [
-      {
-        location: location
-        ipConfigurations: [
           {
-            name: 'ipconfig1'
+            name: 'ipconfig2'
+            primary: false
             subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
             loadBalancerBackendAddressPools: [
               {
                 id: loadbalancer.outputs.backendpools[0].id
               }
             ]
+            pipConfiguration: {
+              publicIpNameSuffix: '-pip-02'
+            }
+            skuName: 'Basic'
           }
         ]
         nicSuffix: 'nic'
+        enableAcceleratedNetworking: false
+      }
+      {
+        nicSuffix: 'nic2'
+        enableAcceleratedNetworking: false
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            pipConfiguration: {
+              publicIpNameSuffix: '-pip-03'
+            }
+            skuName: 'Basic'
+          }
+        ]
       }
     ]
     osDisk: {
@@ -196,7 +190,7 @@ module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = 
         storageAccountType: 'Standard_LRS'
       }
     }
-    osType: 'Windows'
+    osType: 'Linux'
     vmSize: 'Standard_DS1_v2'
   }
 }
