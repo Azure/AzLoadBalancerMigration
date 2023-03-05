@@ -22,6 +22,7 @@ Function Test-SupportedMigrationScenario {
     $scenario = @{
         'ExternalOrInternal' = ''
         'BackendType'        = ''
+        'VMsHavePublicIPs'   = ''
     }
 
     # checking source load balance SKU
@@ -218,74 +219,29 @@ Function Test-SupportedMigrationScenario {
         }
 
         # check if internal LB backend VMs does not have public IPs
-        If ($scenario.ExternalOrInternal -eq 'Internal') {
-            log -Message "[Test-SupportedMigrationScenario] Checking if internal load balancer backend VMs have public IPs..."
-            ForEach ($vmss in $basicLBVMSSs) {
-                $vmssVMsHavePublicIPs = $false
-                :vmssNICs ForEach ($nicConfig in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
-                    ForEach ($ipConfig in $nicConfig.ipConfigurations) {
-                        If ($ipConfig.PublicIPAddressConfiguration) {
-                            $message = @"
-                            [Test-SupportedMigrationScenario] Internal load balancer backend VMs have public IPs and will continue to use them for outbound connectivity. VMSS: '$($vmssId)'; VMSS ipconfig: '$($ipConfig.Name)'
+
+        log -Message "[Test-SupportedMigrationScenario] Checking if internal load balancer backend VMSS VMs have public IPs..."
+        ForEach ($vmss in $basicLBVMSSs) {
+            $vmssVMsHavePublicIPs = $false
+            :vmssNICs ForEach ($nicConfig in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+                    If ($ipConfig.PublicIPAddressConfiguration) {
+                        $message = @"
+                        [Test-SupportedMigrationScenario] Internal load balancer backend VMs have public IPs and will continue to use them for outbound connectivity. VMSS: '$($vmssId)'; VMSS ipconfig: '$($ipConfig.Name)'
 "@ 
-                            log -Message $message -Severity 'Information'
-                            $vmssVMsHavePublicIPs = $true
+                        log -Message $message -Severity 'Information'
+                        $vmssVMsHavePublicIPs = $true
 
-                            break :vmssNICs
-                        }
-                    }
-                }
-
-                If (!$vmssVMsHavePublicIPs) {
-                    $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmssId)'"
-                    log -Message $message -Severity 'Warning'
-
-                    Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
-                    If (!$force.IsPresent) {
-                        while ($response -ne 'y' -and $response -ne 'n') {
-                            $response = Read-Host -Prompt "Do you want to continue? (y/n)"
-                        }
-                        If ($response -eq 'n') {
-                            $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                            log -Message $message -Severity 'Error' -terminateOnError
-                        }
-                    }
-                    Else {
-                        $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
-                        log -Message $message -Severity 'Warning'
+                        break :vmssNICs
                     }
                 }
             }
-        }
-    }
 
-    If ($scenario.BackendType -eq 'VM') {
-        # check if internal LB backend VMs does not have public IPs
-        If ($scenario.ExternalOrInternal -eq 'Internal') {
-            log -Message "[Test-SupportedMigrationScenario] Checking if internal load balancer backend VMs have public IPs..."
-            $AllVMsHavePublicIPs = $true
-            ForEach ($VM in $basicLBVMs) {
-                $VMHasPublicIP = $false
-                :vmNICs ForEach ($nicId in $VM.NetworkProfile.NetworkInterfaces.Id) {
-                    $nicConfig = Get-AzResource -Id $nicId | Get-AzNetworkInterface
-                    ForEach ($ipConfig in $nicConfig.ipConfigurations) {
-                        If ($ipConfig.PublicIPAddressConfiguration.IpConfiguration) {
-                            $VMHasPublicIP = $true
-
-                            break :vmNICs
-                        }
-                    }
-                }
-                If (!$VMHasPublicIP) {
-                    $AllVMsHavePublicIPs = $false
-                }
-            }
-
-            If (!$AllVMsHavePublicIPs) {
-                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
+            If ($vmssVMsHavePublicIPs) {
+                $message = "[Test-SupportedMigrationScenario] Load Balance VMSS instances have instance-level Public IP addresses which must be upgraded to Standard SKU along with the Load Balancer."
                 log -Message $message -Severity 'Warning'
-
-                Write-Host "In order for your VMs to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VM or assign a NAT Gateway to the VM subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+    
+                Write-Host "In order to access your VMSS instances from the Internat over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
                 If (!$force.IsPresent) {
                     while ($response -ne 'y' -and $response -ne 'n') {
                         $response = Read-Host -Prompt "Do you want to continue? (y/n)"
@@ -299,6 +255,114 @@ Function Test-SupportedMigrationScenario {
                     $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
                     log -Message $message -Severity 'Warning'
                 }
+            }
+
+            If (!$vmssVMsHavePublicIPs -and $scenario.ExternalOrInternal -eq 'Internal') {
+                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmssId)'"
+                log -Message $message -Severity 'Warning'
+
+                Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+                If (!$force.IsPresent) {
+                    while ($response -ne 'y' -and $response -ne 'n') {
+                        $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                    }
+                    If ($response -eq 'n') {
+                        $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                        log -Message $message -Severity 'Error' -terminateOnError
+                    }
+                }
+                Else {
+                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    log -Message $message -Severity 'Warning'
+                }
+            }
+            
+        }
+    }
+
+    If ($scenario.BackendType -eq 'VM') {
+        # check if internal LB backend VMs does not have public IPs
+
+        log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs have public IPs..."
+        $AnyVMsHavePublicIP = $false
+        $AllVMsHavePublicIPs = $true
+        ForEach ($VM in $basicLBVMs) {
+            $VMHasPublicIP = $false
+            :vmNICs ForEach ($nicId in $VM.NetworkProfile.NetworkInterfaces.Id) {
+                $nicConfig = Get-AzResource -Id $nicId | Get-AzNetworkInterface
+                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+                    If ($ipConfig.PublicIPAddress.Id) {
+                        $AnyVMsHavePublicIP = $true
+                        $VMHasPublicIP = $true
+
+                        break :vmNICs
+                    }
+                }
+            }
+            If (!$VMHasPublicIP) {
+                $AllVMsHavePublicIPs = $false
+            }
+        }
+
+        If ($AnyVMsHavePublicIP -and !$AllVMsHavePublicIPs -and $Scenario.ExternalOrInternal -eq 'External') {
+            $message = "[Test-SupportedMigrationScenario] Some but not all load balanced VMs have instance-level Public IP addresses and the load balancer is external. It is not supported to create an Outbound rule on a LB when any backend VM has a PIP; therefore, VMs which do not have PIPs will loose outbound internet connecticity post-migration."
+            log -Message $message -Severity 'Warning'
+
+            Write-Host "In order for all for VMs to access the internet post-migration, add PIPs to all VMs, a NAT Gateway to the subnet, or other outbound option (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)" -ForegroundColor Yellow
+            If (!$force.IsPresent) {
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Error' -terminateOnError
+                }
+            }
+            Else {
+                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                log -Message $message -Severity 'Warning'
+            }
+        }
+
+        If ($AnyVMsHavePublicIP) {
+            $scenario.VMsHavePublicIPs = $true
+
+            $message = "[Test-SupportedMigrationScenario] Load Balance VMs have instance-level Public IP addresses, all of which must be upgraded to Standard SKU along with the Load Balancer."
+            log -Message $message -Severity 'Warning'
+
+            Write-Host "In order to access your VMs from the Internat over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
+            If (!$force.IsPresent) {
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Error' -terminateOnError
+                }
+            }
+            Else {
+                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                log -Message $message -Severity 'Warning'
+            }
+        }
+
+        If (!$AllVMsHavePublicIPs -and $scenario.ExternalOrInternal -eq 'Internal') {
+            $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
+            log -Message $message -Severity 'Warning'
+
+            Write-Host "In order for your VMs to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VM or assign a NAT Gateway to the VM subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+            If (!$force.IsPresent) {
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Error' -terminateOnError
+                }
+            }
+            Else {
+                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                log -Message $message -Severity 'Warning'
             }
         }
     }

@@ -320,7 +320,8 @@ function PublicLBMigrationVM {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[PublicLBMigrationVM] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -353,7 +354,7 @@ function PublicLBMigrationVM {
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -370,7 +371,8 @@ function InternalLBMigrationVM {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[InternalLBMigrationVM] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"

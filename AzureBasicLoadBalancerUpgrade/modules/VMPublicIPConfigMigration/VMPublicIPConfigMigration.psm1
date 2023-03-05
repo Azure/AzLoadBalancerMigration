@@ -23,7 +23,23 @@ Function UpgradeVMPublicIP {
     # NOTE: the resoruce graph data will lag behind ARM by a couple minutes, so creating resource and immediately 
     #   attempting migration (as in a test) will result in not ARG results. As a workaround, set the Environment Variable $env:LBMIG_WAIT_FOR_ARG = $true
     #
+
+    $graphQuery = @"
+    Resources |
+        where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
+        project lbNicVMId = tostring(properties.virtualMachine.id) |
+        join ( Resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = id, vmNics = properties.networkProfile.networkInterfaces) on `$left.lbNicVMId == `$right.vmId |
+        join ( Resources | where type =~ 'microsoft.network/networkinterfaces' | project nicVMId = tostring(properties.virtualMachine.id), allVMNicID = id, nicIPConfigs = properties.ipConfigurations ) on `$left.vmId == `$right.nicVMId |
+        join ( Resources | where sku.name == 'Basic' |
+            where type =~ 'microsoft.network/publicipaddresses' and isnotnull(properties.ipConfiguration.id) | 
+            project pipId = id, pipAssociatedNicId = tostring(split(properties.ipConfiguration.id,'/ipConfigurations/')[0]),pipIpConfig = properties.ipConfiguration.id) on `$left.allVMNicID == `$right.pipAssociatedNicId |
+    project pipId,vmNics,nicIPConfigs,pipIpConfig,pipAssociatedNicId
+"@
+
+    log -Severity Verbose -Message "Graph Query Text: `n$graphQuery"
+
     $waitingForARG = $false
+    $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     do {        
         If (!$waitingForARG) {
             log -Message "[UpgradeVMPublicIP] Querying Resource Graph for PIPs to upgrade..."
@@ -33,24 +49,10 @@ Function UpgradeVMPublicIP {
             Start-Sleep 15
         }
 
-        $graphQuery = @"
-        Resources |
-            where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
-            project lbNicVMId = tostring(properties.virtualMachine.id) |
-            join ( Resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = id, vmNics = properties.networkProfile.networkInterfaces) on `$left.lbNicVMId == `$right.vmId |
-            join ( Resources | where type =~ 'microsoft.network/networkinterfaces' | project nicVMId = tostring(properties.virtualMachine.id), allVMNicID = id, nicIPConfigs = properties.ipConfigurations ) on `$left.vmId == `$right.nicVMId |
-            join ( Resources | where sku.name == 'Basic' |
-                where type =~ 'microsoft.network/publicipaddresses' and isnotnull(properties.ipConfiguration.id) | 
-                project pipId = id, pipAssociatedNicId = tostring(split(properties.ipConfiguration.id,'/ipConfigurations/')[0]),pipIpConfig = properties.ipConfiguration.id) on `$left.allVMNicID == `$right.pipAssociatedNicId |
-        project pipId,vmNics,nicIPConfigs,pipIpConfig,pipAssociatedNicId
-"@
-
-        Write-Verbose "Graph Query Text: `n$graphQuery"
-
         $publicIPsToUpgrade = Search-AzGraph -Query $graphQuery
 
         $waitingForARG = $true
-    } while ($publicIPsToUpgrade.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG)
+    } while ($publicIPsToUpgrade.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Minutes -lt 15)
 
     log -Message "[UpgradeVMPublicIP] Found '$($publicIPsToUpgrade.count)' Public IPs associcated with VMs in the Basic LB's backend pool to upgrade"
 
@@ -72,9 +74,9 @@ Function UpgradeVMPublicIP {
     log -Message "[UpgradeVMPublicIP] Waiting for '$($pipAllocationMethodJobs.count)' PIP allocation method change jobs to complete before starting upgrade of Public IP SKUs"
     $pipAllocationMethodJobs | Wait-Job | Foreach-Object {
         $job = $_
-        If ($job.Error) {
+        If ($job.Error -or $job.State -eq 'Failed') {
             $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
-            log -Severity Error -Message "Changing a Public IP allocation method from Dynamic to Static failed with the following errors: $($job.error). To continue, address the error then follow the script documentation on recovering from a failed migration and try again." -terminateOnError
+            log -Severity Error -Message "Changing a Public IP allocation method from Dynamic to Static failed with the following errors: $($job.error; $job | Receive-Job). To continue, address the error then follow the script documentation on recovering from a failed migration and try again." -terminateOnError
         }
     }
 
@@ -112,9 +114,9 @@ Function UpgradeVMPublicIP {
     log -Message "[UpgradeVMPublicIP] Waiting for all '$($nicDetachJobs.count)' NIC detach jobs to complete before starting upgrade of Public IP SKUs"
     $nicDetachJobs | Wait-Job | Foreach-Object {
         $job = $_
-        If ($job.Error) {
+        If ($job.Error -or $job.State -eq 'Failed') {
             $pipToIpConfigTable = $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
-            log -Severity Error -Message "Detaching PIP from an IP config failed with the following errors: $($job.error). Migration will continue--to recover, manually upgrade Public IPs and associate NICs with their Public IP Addresses after the script completes. Use the following table to match PIPs with IPconfigs: `n$pipToIpConfigTable"
+            log -Severity Error -Message "Detaching PIP from an IP config failed with the following errors: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually upgrade Public IPs and associate NICs with their Public IP Addresses after the script completes. Use the following table to match PIPs with IPconfigs: `n$pipToIpConfigTable"
         }
     }
 
@@ -130,13 +132,13 @@ Function UpgradeVMPublicIP {
     log -Message "[UpgradeVMPublicIP] Waiting for all '$($pipUpgradeSKUJobs.count)' PIP SKU upgrade jobs to complete"
     $nicDetachJobs | Wait-Job | Foreach-Object {
         $job = $_
-        If ($job.Error) {
+        If ($job.Error -or $job.State -eq 'Failed') {
             $pipToIpConfigTable = $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
-            log -Severity Error -Message "Upgrading Public IP to Standard SKU failed with the following errors: $($job.error). Migration will continue--to recover, manually upgrade Public IPs and associate NICs with their Public IP Addresses after the script completes. Use the following table to match PIPs with IPconfigs: `n$pipToIpConfigTable"
+            log -Severity Error -Message "Upgrading Public IP to Standard SKU failed with the following errors: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually upgrade Public IPs and associate NICs with their Public IP Addresses after the script completes. Use the following table to match PIPs with IPconfigs: `n$pipToIpConfigTable"
         }
     }
 
-    # reattach the PIPs to the NICs
+    # reattach the PIPs to the NICs - one job per NIC
     $nicPIPReattachJobs = @()
     ForEach ($nicRecord in $nicsWithPIPsToReattach.GetEnumerator()) {
         $nic = Get-AzResource -ResourceId $nicRecord.Name | Get-AzNetworkInterface
@@ -151,11 +153,11 @@ Function UpgradeVMPublicIP {
         $nicPIPReattachJobs += $nic | Set-AzNetworkInterface -AsJob
     }
 
-    log -Message "[UpgradeVMPublicIP] Waiting for '$($nicPIPReattachJobs.count)' to complete..."
+    log -Message "[UpgradeVMPublicIP] Waiting for '$($nicPIPReattachJobs.count)' PIP reattach to NIC jobs to complete..."
     $nicPIPReattachJobs | Wait-Job | Foreach-Object {
         $job = $_
-        If ($job.Error) {
-            log -Severity Error -Message "Reassociating upgraded Public IPs with NICs failed with the following errors: $($job.error). Migration will continue--to recover, manually associate NICs with their Public IP Addresses after the script completes."
+        If ($job.Error -or $job.State -eq 'Failed') {
+            log -Severity Error -Message "Reassociating upgraded Public IPs with NICs failed with the following errors: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually associate NICs with their Public IP Addresses after the script completes."
         }
     }
 

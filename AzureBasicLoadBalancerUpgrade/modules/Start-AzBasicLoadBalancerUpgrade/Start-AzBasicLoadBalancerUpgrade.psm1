@@ -130,6 +130,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
+        [Parameter(Mandatory = $false)][switch] $validateOnly,
         [Parameter(Mandatory = $false)][switch] $force
         )
 
@@ -185,25 +186,29 @@ function Start-AzBasicLoadBalancerUpgrade {
         $StdLoadBalancerName = $BasicLoadBalancer.Name
     }
 
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent)
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateOnly.isPresent)
+
+    if ($validateOnly) {
+        break
+    }
 
     switch ($scenario.BackendType) {
         'VM' {
             switch ($scenario.ExternalOrInternal) {
                 'internal' {
                     if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                        InternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                        InternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
                     }
                     else {
-                        RestoreInternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                        RestoreInternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -Scenario $scenario
                     }
                 }
                 'external' {
                     if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                        PublicLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
+                        PublicLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
                     }
                     else {
-                        RestoreExternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName
+                        RestoreExternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -Scenario $scenario
                     }
                 }
             }
