@@ -8,7 +8,7 @@ $requiredModules = @(
 )
 
 $installMessage = "The '{0}' PowerShell module is not installed on this system. To install the required modules for this script, run 'Install-Module -Name Az.Accounts,Az.Compute,Az.Network,Az.Resources'"
-$versionMessage = "The installed '{0}' PowerShell module version '{1}' is outdated; this script expects at least version '{2}'. To update the required modules for this script, run 'Update-Module -Name Az.Accounts,Az.Compute,Az.Network,Az.Resources'"
+$versionMessage = "The installed '{0}' PowerShell module version '{1}' is outdated; this script expects at least version '{2}'. To update the required Azure PowerShell modules for this script, run 'Update-Module -Name Az.Accounts,Az.Compute,Az.Network,Az.Resources,Az.ResourceGraph'"
 
 ForEach ($requiredModule in $requiredModules) {
     $module = Get-Module -Name $requiredModule.name -ListAvailable -Refresh

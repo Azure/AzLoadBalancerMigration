@@ -94,7 +94,7 @@ param captureDescriptionSizeLimitInBytes int = 314572800
 param captureDescriptionSkipEmptyArchives bool = false
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var enableReferencedModulesTelemetry = false
 

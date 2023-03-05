@@ -11,6 +11,9 @@ Param (
 
 $ErrorActionPreference = 'Stop'
 
+# causes resource graph queries to wait for results to be returned, since ARG lags behind ARM which breaks testing immediately after deployment
+$env:LBMIG_WAIT_FOR_ARG = $true
+
 If (!(Test-Path -Path ../scenarios)) {
     Write-Error "This script should be executed from the ./testEnvs/scripts directory"
     break

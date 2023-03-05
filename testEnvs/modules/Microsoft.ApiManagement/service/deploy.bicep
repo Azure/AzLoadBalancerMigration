@@ -9,7 +9,7 @@ param name string
 param certificates array = []
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Custom properties of the API Management service.')
 param customProperties object = {}

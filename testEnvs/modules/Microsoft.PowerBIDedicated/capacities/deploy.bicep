@@ -5,7 +5,7 @@ param name string
 param location string = resourceGroup().location
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Tags of the resource.')
 param tags object = {}

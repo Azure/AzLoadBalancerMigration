@@ -8,7 +8,7 @@ targetScope = 'managementGroup'
 param serviceShort string = 'mmgmin'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 // ============== //
 // Test Execution //

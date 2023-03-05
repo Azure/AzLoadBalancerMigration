@@ -33,7 +33,7 @@ param apiVersionDescription string = ''
 param authenticationSettings object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Description of the API. May include HTML formatting tags.')
 param apiDescription string = ''

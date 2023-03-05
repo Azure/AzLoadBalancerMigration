@@ -2,7 +2,7 @@
 param endpointName string
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Required. The name of the origin.')
 param name string

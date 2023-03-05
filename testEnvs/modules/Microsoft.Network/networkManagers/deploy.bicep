@@ -43,7 +43,7 @@ param scopeConnections array = []
 param securityAdminConfigurations array = []
 
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var enableReferencedModulesTelemetry = false
 
