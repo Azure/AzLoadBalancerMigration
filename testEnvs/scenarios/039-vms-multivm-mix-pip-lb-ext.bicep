@@ -120,13 +120,24 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   ]
 }
 
-module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
+module availabilitySet '../modules/Microsoft.Compute/availabilitySets/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'as-01'
+  params: {
+    location: location
+    name: 'as-01'
+  }
+}
+
+module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
   params: {
+    name: 'vm-01'
     adminUsername: kv1.getSecret('adminUsername')
     adminPassword: kv1.getSecret('adminPassword')
     location: location
+    availabilitySetResourceId: availabilitySet.outputs.resourceId
     imageReference: {
       offer: 'UbuntuServer'
       publisher: 'Canonical'
@@ -197,7 +208,7 @@ module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = 
   }
 }
 
-module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
+module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-02'
   params: {
@@ -205,6 +216,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
     adminUsername: kv1.getSecret('adminUsername')
     adminPassword: kv1.getSecret('adminPassword')
     location: location
+    availabilitySetResourceId: availabilitySet.outputs.resourceId
     imageReference: {
       offer: 'UbuntuServer'
       publisher: 'Canonical'
@@ -223,10 +235,6 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
                 id: loadbalancer.outputs.backendpools[0].id
               }
             ]
-            pipConfiguration: {
-              publicIpNameSuffix: '-pip-01'
-            }
-            skuName: 'Basic'
           }
           {
             name: 'ipconfig2'
@@ -237,11 +245,6 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
                 id: loadbalancer.outputs.backendpools[0].id
               }
             ]
-            pipConfiguration: {
-              publicIpNameSuffix: '-pip-02'
-            }
-            skuName: 'Basic'
-            publicIPAllocationMethod: 'Dynamic'
           }
         ]
         nicSuffix: 'nic'
@@ -254,11 +257,6 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
           {
             name: 'ipconfig1'
             subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
-            pipConfiguration: {
-              publicIpNameSuffix: '-pip-03'
-            }
-            skuName: 'Basic'
-            publicIPAllocationMethod: 'Dynamic'
           }
         ]
       }

@@ -27,12 +27,12 @@ Function UpgradeVMPublicIP {
     $graphQuery = @"
     Resources |
         where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
-        project lbNicVMId = tostring(properties.virtualMachine.id) |
-        join ( Resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = id, vmNics = properties.networkProfile.networkInterfaces) on `$left.lbNicVMId == `$right.vmId |
-        join ( Resources | where type =~ 'microsoft.network/networkinterfaces' | project nicVMId = tostring(properties.virtualMachine.id), allVMNicID = id, nicIPConfigs = properties.ipConfigurations ) on `$left.vmId == `$right.nicVMId |
-        join ( Resources | where sku.name == 'Basic' |
+        project lbNicVMId = tolower(tostring(properties.virtualMachine.id)) |
+        join ( Resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), vmNics = properties.networkProfile.networkInterfaces) on `$left.lbNicVMId == `$right.vmId |
+        join ( Resources | where type =~ 'microsoft.network/networkinterfaces' | project nicVMId = tolower(tostring(properties.virtualMachine.id)), allVMNicID = id, nicIPConfigs = properties.ipConfigurations ) on `$left.vmId == `$right.nicVMId |
+        join kind=leftouter ( Resources | 
             where type =~ 'microsoft.network/publicipaddresses' and isnotnull(properties.ipConfiguration.id) | 
-            project pipId = id, pipAssociatedNicId = tostring(split(properties.ipConfiguration.id,'/ipConfigurations/')[0]),pipIpConfig = properties.ipConfiguration.id) on `$left.allVMNicID == `$right.pipAssociatedNicId |
+            project pipId = id, pipAssociatedNicId = tolower(tostring(split(properties.ipConfiguration.id,'/ipConfigurations/')[0])),pipIpConfig = properties.ipConfiguration.id) on `$left.allVMNicID == `$right.pipAssociatedNicId |
     project pipId,vmNics,nicIPConfigs,pipIpConfig,pipAssociatedNicId
 "@
 
@@ -42,19 +42,25 @@ Function UpgradeVMPublicIP {
     $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     do {        
         If (!$waitingForARG) {
-            log -Message "[UpgradeVMPublicIP] Querying Resource Graph for PIPs to upgrade..."
+            log -Message "[UpgradeVMPublicIP] Querying Resource Graph for PIPs associated with VMs in the backend pool(s)..."
         }
         Else {
-            log -Message "[UpgradeVMPublicIP] Waiting 15 seconds before querying ARG again..."
+            log -Message "[UpgradeVMPublicIP] Waiting 15 seconds before querying ARG again (total wait time up to 15 minutes before failure)..."
             Start-Sleep 15
         }
 
-        $publicIPsToUpgrade = Search-AzGraph -Query $graphQuery
+        $VMPIPRecords = Search-AzGraph -Query $graphQuery
 
         $waitingForARG = $true
-    } while ($publicIPsToUpgrade.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Minutes -lt 15)
+    } while ($VMPIPRecords.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Minutes -lt 15)
 
-    log -Message "[UpgradeVMPublicIP] Found '$($publicIPsToUpgrade.count)' Public IPs associcated with VMs in the Basic LB's backend pool to upgrade"
+    If ($timeoutStopwatch.Elapsed.Minutes -gt 15) {
+        log -Severity Error -Message "[UpgradeVMPublicIP] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected, follow the documented migration recovery steps here: https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-virtual-machine-scale-sets#what-happens-if-my-upgrade-fails-mid-migration" -terminateOnError
+    }
+
+    $publicIPsToUpgrade = $VMPIPRecords | Where-Object {![string]::IsNullOrEmpty($_.pipId)} # filtering out null outer-join records
+
+    log -Message "[UpgradeVMPublicIP] Found '$($publicIPsToUpgrade.count)' Public IPs associcated with VMs in the Basic LB's backend pool"
 
     $pipAllocationMethodJobs = @()
     ForEach ($pipRecord in $publicIPsToUpgrade) {
@@ -72,7 +78,7 @@ Function UpgradeVMPublicIP {
     }
 
     log -Message "[UpgradeVMPublicIP] Waiting for '$($pipAllocationMethodJobs.count)' PIP allocation method change jobs to complete before starting upgrade of Public IP SKUs"
-    $pipAllocationMethodJobs | Wait-Job | Foreach-Object {
+    $pipAllocationMethodJobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
@@ -112,7 +118,7 @@ Function UpgradeVMPublicIP {
     }
 
     log -Message "[UpgradeVMPublicIP] Waiting for all '$($nicDetachJobs.count)' NIC detach jobs to complete before starting upgrade of Public IP SKUs"
-    $nicDetachJobs | Wait-Job | Foreach-Object {
+    $nicDetachJobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             $pipToIpConfigTable = $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
@@ -130,7 +136,7 @@ Function UpgradeVMPublicIP {
     }
 
     log -Message "[UpgradeVMPublicIP] Waiting for all '$($pipUpgradeSKUJobs.count)' PIP SKU upgrade jobs to complete"
-    $nicDetachJobs | Wait-Job | Foreach-Object {
+    $nicDetachJobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             $pipToIpConfigTable = $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
@@ -154,7 +160,7 @@ Function UpgradeVMPublicIP {
     }
 
     log -Message "[UpgradeVMPublicIP] Waiting for '$($nicPIPReattachJobs.count)' PIP reattach to NIC jobs to complete..."
-    $nicPIPReattachJobs | Wait-Job | Foreach-Object {
+    $nicPIPReattachJobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             log -Severity Error -Message "Reassociating upgraded Public IPs with NICs failed with the following errors: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually associate NICs with their Public IP Addresses after the script completes."

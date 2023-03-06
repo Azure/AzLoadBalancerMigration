@@ -52,7 +52,7 @@ Describe "Validate Migration Script Results" {
             }
         }
     }
-    Context 'Validate Scenario - 001-basic-lb-int-single-fe' {
+    Context 'Validate Scenario - 001-basic-lb-int-single-fe' -Tag 1 {
         BeforeAll {
             $rgName = 'rg-001-basic-lb-int-single-fe'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -86,7 +86,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context 'Validate Scenario - 002-basic-lb-int-multi-fe' {
+    Context 'Validate Scenario - 002-basic-lb-int-multi-fe' -Tag 2 {
         BeforeAll {
             $rgName = 'rg-002-basic-lb-int-multi-fe'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -125,7 +125,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context 'Validate Scenario - 003-basic-lb-ext-single-fe' {
+    Context 'Validate Scenario - 003-basic-lb-ext-single-fe' -Tag 3 {
         BeforeAll {
             $rgName = 'rg-003-basic-lb-ext-single-fe'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -168,7 +168,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '004-basic-lb-ext-multi-fe' {
+    Context '004-basic-lb-ext-multi-fe' -Tag 4 {
         BeforeAll {
             $rgName = 'rg-004-basic-lb-ext-multi-fe'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -207,7 +207,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '005-basic-lb-int-single-be' {
+    Context '005-basic-lb-int-single-be' -Tag 5 {
         BeforeAll {
             $rgName = 'rg-005-basic-lb-int-single-be'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -242,7 +242,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '006-basic-lb-int-multiple-be' {
+    Context '006-basic-lb-int-multiple-be'  -Tag 6 {
         BeforeAll {
             $rgName = 'rg-006-basic-lb-int-multi-be'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -281,7 +281,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '008-basic-lb-nat-pool' {
+    Context '008-basic-lb-nat-pool' -Tag 8 {
         BeforeAll {
             $rgName = 'rg-008-basic-lb-nat-pool'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -372,7 +372,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '009-basic-lb-ext-basic-static-pip' {
+    Context '009-basic-lb-ext-basic-static-pip' -Tag 9 {
         BeforeAll {
             $rgName = 'rg-009-basic-lb-ext-basic-static-pip'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -416,7 +416,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '012-basic-lb-ext-ipv6-fe' {
+    Context '012-basic-lb-ext-ipv6-fe' -Tag 12 {
         # migration should fail!
         BeforeAll {
             $rgName = 'rg-012-basic-lb-ext-ipv6-fe'
@@ -474,7 +474,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '013-vmss-multi-be-single-lb' {
+    Context '013-vmss-multi-be-single-lb' -Tag 13 {
         BeforeAll {
             $rgName = 'rg-013-vmss-multi-be-single-lb'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -513,7 +513,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '014-vmss-multi-be-multi-lb' {
+    Context '014-vmss-multi-be-multi-lb' -Tag 14 {
         #migration should fail!
         BeforeAll {
             $rgName = 'rg-014-vmss-multi-be-multi-lb'
@@ -565,7 +565,7 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '016-vmss-automatic-upgrade-policy' {
+    Context '016-vmss-automatic-upgrade-policy' -Tag 16 {
         BeforeAll {
             $rgName = 'rg-016-vmss-automatic-upgrade-policy'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
@@ -600,9 +600,9 @@ Describe "Validate Migration Script Results" {
         }
     }
 
-    Context '017-vmss-multi-ipconfigs-multi-be' {
+    Context '017-vmss-multi-ipconfigs-multi-be' -Tag 17 {
         BeforeAll {
-            $rgName = '017-vmss-multi-ipconfigs-multi-be'
+            $rgName = 'rg-017-vmss-multi-ipconfigs-multi-be'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vmss = $(Get-AzVmss -ResourceGroup $rg.ResourceGroupName)
             $lb = $vmss.virtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.IpConfigurations.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
@@ -648,11 +648,640 @@ Describe "Validate Migration Script Results" {
         }
 
         It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
-            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].Name | Should -Be 'be-01'
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
         }
 
         It "VMSS nic 1 ipconfig 2 should belong to backend pool 2" {
-            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].Name | Should -Be 'be-02'
+            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-02'
+        }
+    }
+
+    Context '031-vms-lb-int' -Tag 31 {
+        BeforeAll {
+            $rgName = 'rg-031-vms-lb-int'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs[0].LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "Internal Load Balancer has a Standard SU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer FrontendConfiguration has a Private Ip Address" { 
+            
+            IsPrivateAddress($lb[0].FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
+        }
+
+        It "Internal Load Balancer has 1 LoadBalancing Rule" {   
+            $lb.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer has 1 Probe" {   
+            $lb.Probes.Count | Should -Be 1
+        }
+
+        It "Internal load balancer has 1 backend pools" {
+            $lb.BackendAddressPools.Count | Should -Be 1
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+    }
+
+    Context '032-vms-multivm-lb-int' -Tag 32 {
+        BeforeAll {
+            $rgName = 'rg-032-vms-multivm-lb-int'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm1 = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName -Name 'vm-01')
+            $vm2 = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName -Name 'vm-02')
+            $vm1IPConfigs = $vm1.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $vm2IPConfigs = $vm2.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vm1IPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $vm1nic1IpConfig1 = $vm1IPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $vm2nic1IpConfig1 = $vm2IPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "Internal Load Balancer has a Standard SU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer FrontendConfiguration has a Private Ip Address" { 
+            
+            IsPrivateAddress($lb[0].FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
+        }
+
+        It "Internal Load Balancer has 1 LoadBalancing Rule" {   
+            $lb.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer has 1 Probe" {   
+            $lb.Probes.Count | Should -Be 1
+        }
+
+        It "Internal load balancer has 1 backend pools" {
+            $lb.BackendAddressPools.Count | Should -Be 1
+        }
+
+        It "VM1 has a LoadBalancer BackendAddress Pools" {   
+            $vm1IPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VM2 has a LoadBalancer BackendAddress Pools" {   
+            $vm2IPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "Vm1 nic 1 ipconfig 1 should belong to backend pool 1" {
+            $vm1nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "Vm2 nic 1 ipconfig 1 should belong to backend pool 1" {
+            $vm2nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+    }
+
+    Context '033-vms-multi-be' -Tag 33 {
+        BeforeAll {
+            $rgName = 'rg-033-vms-multi-be'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic1IpConfig2 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig2'}
+
+        }
+
+        It "Internal Load Balancer has a Standard SU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer FrontendConfiguration has a Private Ip Address" { 
+            
+            IsPrivateAddress($lb[0].FrontendIpConfigurations[0].PrivateIpAddress) | Should -Be $true
+        }
+
+        It "Internal Load Balancer has 1 LoadBalancing Rule" {   
+            $lb.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "Internal Load Balancer has 1 Probe" {   
+            $lb.Probes.Count | Should -Be 1
+        }
+
+        It "Internal load balancer has 2 backend pools" {
+            $lb.BackendAddressPools.Count | Should -Be 2
+        }
+
+        It "VM has 2 LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 2
+        }
+
+        It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "VMSS nic 1 ipconfig 2 should belong to backend pool 2" {
+            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-02'
+        }
+    }
+
+    Context '034-vms-lb-ext' -Tag 34 {
+        BeforeAll {
+            $rgName = 'rg-034-vms-lb-ext'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "External Load Balancer has a Standard SKU" {   
+            $lbExt.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "External load balancer has 1 outbound rules" {
+            $lbExt.OutboundRules.Count | Should -Be 1
+        }
+
+        It "External Load Balancer has 1 FrontendConfiguration" {   
+            $lbExt.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer FrontendConfiguration has a Public Ip Address" {
+            $lbExt.FrontendIpConfigurations[0].PrivateIpAddress | Should -Be $null
+        }
+
+        It "External Load Balancer has 1 LoadBalancing Rule" {   
+            $lbExt.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer has 1 Probe" {   
+            $lbExt.Probes.Count | Should -Be 1
+        }
+
+        It "External load balancer has 1 backend pools" {
+            $lbExt.BackendAddressPools.Count | Should -Be 1
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "Public Ip has a Static Address" {
+            $pip.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "Public Ip has a Standard SKu" {
+            $pip.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "New NSG should exist" {
+            $nsg.count | Should -Be 1
+        }
+    }
+
+    Context '035-vms-pip-lb-ext' -Tag 35 {
+        BeforeAll {
+            $rgName = 'rg-035-vms-pip-lb-ext'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.Id | Foreach-Object { Get-AzResource -ResourceId $_ | Get-AzLoadBalancer } | Select-Object -Unique
+            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $vmPip1 = Get-AzResource -ResourceId $vmIPConfigs.where({$_.name -eq 'ipconfig1'}).PublicIpAddress.id | Get-AzPublicIpAddress
+            $vmPip2 = Get-AzResource -ResourceId $vmIPConfigs.where({$_.name -eq 'ipconfig2'}).PublicIpAddress.id | Get-AzPublicIpAddress
+            $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic1IpConfig2 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig2'}
+
+        }
+
+        It "lbExt.count should be 1" {
+            $lbExt.count | Should -Be 1
+        }
+
+        It "External Load Balancer has a Standard SKU" {   
+            $lbExt.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "External Load Balancer has 1 FrontendConfiguration" {   
+            $lbExt.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer FrontendConfiguration has a Public Ip Address" {
+            $lbExt.FrontendIpConfigurations[0].PrivateIpAddress | Should -Be $null
+        }
+
+        It "External Load Balancer has 1 LoadBalancing Rule" {   
+            $lbExt.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer has 1 Probe" {   
+            $lbExt.Probes.Count | Should -Be 1
+        }
+
+        It "External load balancer has 2 backend pools" {
+            $lbExt.BackendAddressPools.Count | Should -Be 2
+        }
+
+        It "External load balancer has 0 outbound rules" {
+            $lbExt.OutboundRules.Count | Should -Be 0
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+
+        It "Public Ip has a Static Address" {
+            $pip.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+
+        It "VM Public Ip 1 has a Static Address" {
+            $vmpip1.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 1 has a Standard SKU" {
+            $vmpip1.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip 2 has a Static Address" {
+            $vmpip2.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 2 has a Standard SKU" {
+            $vmpip2.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "Public Ip has a Standard SKu" {
+            $pip.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "New NSG should exist" {
+            $nsg.count | Should -Be 1
+        }
+    }
+
+    Context '036-vms-multi-nic-pip-lb-ext' -Tag 36 {
+        BeforeAll {
+            $rgName = 'rg-036-vms-multi-nic-pip-lb-ext'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.Id | Foreach-Object { Get-AzResource -ResourceId $_ | Get-AzLoadBalancer } | Select-Object -Unique
+            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $pips = Get-AzPublicIpAddress -ResourceGroupName $rgName
+            $vmPip1 = $pips | where {$_.name -like '*-pip-01'}
+            $vmPip2 = $pips | where {$_.name -like '*-pip-02'}
+            $vmPip3 = $pips | where {$_.name -like '*-pip-03'}
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic1IpConfig2 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig2'}
+            $nic2IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic2/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "External Load Balancer has a Standard SKU" {   
+            $lbExt.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "External Load Balancer has 1 FrontendConfiguration" {   
+            $lbExt.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer FrontendConfiguration has a Public Ip Address" {
+            $lbExt.FrontendIpConfigurations[0].PrivateIpAddress | Should -Be $null
+        }
+
+        It "External Load Balancer has 1 LoadBalancing Rule" {   
+            $lbExt.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer has 1 Probe" {   
+            $lbExt.Probes.Count | Should -Be 1
+        }
+
+        It "External load balancer has 1 backend pools" {
+            $lbExt.BackendAddressPools.Count | Should -Be 1
+        }
+
+        It "External load balancer has 0 outbound rules" {
+            $lbExt.OutboundRules.Count | Should -Be 0
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 2
+        }
+
+        It "VM nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "VM nic 1 ipconfig 2 should belong to backend pool 1" {
+            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "VM nic 2 ipconfig 1 LoadBalancerBackendAddressPools count should be 0" {
+            $nic2IpConfig1.LoadBalancerBackendAddressPools.count | Should -Be 0
+        }
+
+        It "LB Public Ip Address [0] has version 'IPv4'" {  
+            $pip.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "LB Public Ip has a Static Address" {
+            $pip.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "LB Public Ip has a SKU of Standard" {
+            $pip.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip Address [1] has version 'IPv4'" {  
+            $vmpip1.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "VM Public Ip 1 has a Static Address" {
+            $vmpip1.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 1 has a Standard SKU" {
+            $vmpip1.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip Address [2] has version 'IPv4'" {  
+            $vmpip2.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "VM Public Ip 2 has a Static Address" {
+            $vmpip2.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 2 has a Standard SKU" {
+            $vmpip2.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip Address 3 has version 'IPv4'" {  
+            $vmpip3.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "VM Public Ip 3 has a Static Address" {
+            $vmpip3.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 3 has a Standard SKU" {
+            $vmpip3.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "Public Ip has a Standard SKu" {
+            $pip.Sku.Name | Should -Be 'Standard'
+        }
+    }
+
+    Context '037-vms-nsg-nic-lb-ext' -Tag 37 {
+        BeforeAll {
+            $rgName = 'rg-037-vms-nsg-nic-lb-ext'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            #$pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "Interal Load Balancer has a Standard SKU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 2
+        }
+
+        It "Only one NSG should exist (no NSG created)" {
+            $nsg.count | Should -Be 1
+        }
+    }
+    
+    Context '038-vms-nsg-subnet-lb-ext' -Tag 38 {
+        BeforeAll {
+            $rgName = 'rg-038-vms-nsg-subnet-lb-ext'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "Interal Load Balancer has a Standard SKU" {   
+            $lb.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "Public IP SKU should be Standard" {
+            $pip.Sku.name | Should -Be 'Standard'
+        }
+
+        It "Internal Load Balancer has 1 FrontendConfiguration" {   
+            $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "Only one NSG should exist (no NSG created)" {
+            $nsg.count | Should -Be 1
+        }
+    }
+
+    Context '039-vms-multivm-mix-pip-lb-ext' -Tag 39 {
+        BeforeAll {
+            $rgName = 'rg-039-vms-multivm-mix-pip-lb-ext'
+            $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
+            $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
+            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $pips = Get-AzPublicIpAddress -ResourceGroupName $rgName
+            $vm1Pip1 = $pips | where {$_.name -like '*-pip-01'}
+            $vm1Pip2 = $pips | where {$_.name -like '*-pip-02'}
+            $vm1Pip3 = $pips | where {$_.name -like '*-pip-03'}
+            $nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $nic1IpConfig2 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig2'}
+            $nic2IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*nic2/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+
+        }
+
+        It "External Load Balancer has a Standard SKU" {   
+            $lbExt.SKU.Name | Should -Be 'Standard'
+        }
+
+        It "External Load Balancer has 1 FrontendConfiguration" {   
+            $lbExt.FrontendIpConfigurations.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer FrontendConfiguration has a Public Ip Address" {
+            $lbExt.FrontendIpConfigurations[0].PrivateIpAddress | Should -Be $null
+        }
+
+        It "External Load Balancer has 1 LoadBalancing Rule" {   
+            $lbExt.LoadBalancingRules.Count | Should -BeExactly 1
+        }
+
+        It "External Load Balancer has 1 Probe" {   
+            $lbExt.Probes.Count | Should -Be 1
+        }
+
+        It "External load balancer has 1 backend pools" {
+            $lbExt.BackendAddressPools.Count | Should -Be 1
+        }
+
+        It "External load balancer has 0 outbound rules" {
+            $lbExt.OutboundRules.Count | Should -Be 0
+        }
+
+        It "VM has a LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VM nic 1 ipconfig 1 should belong to backend pool 1" {
+            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "VM nic 1 ipconfig 2 should belong to backend pool 1" {
+            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "VM nic 2 ipconfig 1 LoadBalancerBackendAddressPools count should be 0" {
+            $nic2IpConfig1.LoadBalancerBackendAddressPools.count | Should -Be 0
+        }
+
+        It "LB Public Ip Address [0] has version 'IPv4'" {  
+            $pip.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "LB Public Ip has a Static Address" {
+            $pip.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "LB Public Ip has a SKU of Standard" {
+            $pip.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip Address [1] has version 'IPv4'" {  
+            $vmpip1.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "VM Public Ip 1 has a Static Address" {
+            $vm1pip1.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 1 has a Standard SKU" {
+            $vm1pip1.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip Address [2] has version 'IPv4'" {  
+            $vm1pip2.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "VM Public Ip 2 has a Static Address" {
+            $vm1pip2.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 2 has a Standard SKU" {
+            $vm1pip2.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "VM Public Ip Address 3 has version 'IPv4'" {  
+            $vm1pip3.PublicIpAddressVersion | Should -Be 'IPv4'
+        }
+
+        It "VM Public Ip 3 has a Static Address" {
+            $vm1pip3.PublicIpAllocationMethod | Should -Be 'Static'
+        }
+
+        It "VM Public Ip 3 has a Standard SKU" {
+            $vm1pip3.Sku.Name | Should -Be 'Standard'
+        }
+
+        It "Public Ip has a Standard SKu" {
+            $pip.Sku.Name | Should -Be 'Standard'
         }
     }
 } 

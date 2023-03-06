@@ -211,7 +211,7 @@ function BackendPoolMigrationVM {
     }
 
     log -Message "[BackendPoolMigrationVM] Waiting for all '$($jobs.count)' NIC backend pool association jobs to complete"
-    $jobs | Wait-Job | Foreach-Object {
+    $jobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             log -Severity Error -Message "Associating NIC with LB Backend Pool failed with the following errors: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually associate NICs with the backend pool after the script completes. See association table: `n $($backendPoolNicTable | ConvertTo-Json -depth 10)"

@@ -131,6 +131,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
         [Parameter(Mandatory = $false)][switch] $validateOnly,
+        [Parameter(Mandatory = $false)][int32] $defaultJobWaitTimeout = (New-Timespan -Minutes 10).TotalSeconds,
         [Parameter(Mandatory = $false)][switch] $force
         )
 
@@ -138,6 +139,9 @@ function Start-AzBasicLoadBalancerUpgrade {
     If ($FollowLog.IsPresent) {
         $global:FollowLog = $true
     }
+
+    # Set global variable for default job wait timoue
+    $global:defaultJobWaitTimeout = $defaultJobWaitTimeout
 
     # validate backup path is directory
     If (!(Test-Path -Path $RecoveryBackupPath -PathType Container )) {

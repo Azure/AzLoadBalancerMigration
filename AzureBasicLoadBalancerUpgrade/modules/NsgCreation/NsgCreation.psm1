@@ -195,11 +195,11 @@ function NsgCreationVM {
         project nicId = id,ipConfigs,nicNSGId=tostring(properties.networkSecurityGroup.id) |
         where ipConfigs.id in~ ($joinedIPConfigIDs) |
         extend nicAndNSGId=strcat(nicId,';',nicNSGId) |
-        summarize nicRecords=make_set(nicAndNSGId) by subnetId = tostring(ipConfigs.properties.subnet.id) |
+        summarize nicRecords=make_set(nicAndNSGId) by subnetId = tolower(tostring(ipConfigs.properties.subnet.id)) |
         join ( Resources |
             where type =~ 'microsoft.network/virtualnetworks' |
             mv-expand subnets = properties.subnets |
-            project subnetId=tostring(subnets.id),subnetNSGId = tostring(subnets.Properties.NetworkSecurityGroup.id)) on subnetId |
+            project subnetId=tolower(tostring(subnets.id)),subnetNSGId = tostring(subnets.Properties.NetworkSecurityGroup.id)) on subnetId |
     project subnetId,nicRecords,subnetNSGId
 "@
 
@@ -219,6 +219,10 @@ function NsgCreationVM {
 
         $waitingForARG = $true
     } while ($backendNICSubnets.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Minutes -lt 15)
+
+    If ($timeoutStopwatch.Elapsed.Minutes -gt 15) {
+        log -Severity Error -Message "[NsgCreationVM] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected, follow the documented migration recovery steps here: https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-virtual-machine-scale-sets#what-happens-if-my-upgrade-fails-mid-migration" -terminateOnError
+    }
 
     log -Message "[NsgCreationVM] Found '$($backendNICSubnets.count)' subnets associcated with VMs in the Basic LB's backend pool."
     
@@ -281,7 +285,7 @@ function NsgCreationVM {
             $nicNSGUpdateJobs += $nic | Set-AzNetworkInterface -AsJob
         }
 
-        $nicNSGUpdateJobs | Wait-Job | Foreach-Object {
+        $nicNSGUpdateJobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
             $job = $_
             If ($job.Error -or $job.State -eq 'Failed') {
                 log -Severity Error -Message "Associating NIC to new NSG failed with error: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually associate NICs with the NSG '$($newNicLevelNSG.Id)' after the script completes."
