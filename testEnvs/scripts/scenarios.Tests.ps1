@@ -661,8 +661,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-031-vms-lb-int'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lb = $vmIPConfigs[0].LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $nic1IpConfig1 = $vmIPConfigs | 
                 where-object {$_.id -like '*nic/ipConfigurations*'} | 
@@ -712,7 +714,9 @@ Describe "Validate Migration Script Results" {
             $vm2 = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName -Name 'vm-02')
             $vm1IPConfigs = $vm1.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
             $vm2IPConfigs = $vm2.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lb = $vm1IPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $lb = $vm1IPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $vm1nic1IpConfig1 = $vm1IPConfigs | 
                 where-object {$_.id -like '*nic/ipConfigurations*'} | 
@@ -770,8 +774,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-033-vms-multi-be'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             # $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $nic1IpConfig1 = $vmIPConfigs | 
                 where-object {$_.id -like '*nic/ipConfigurations*'} | 
@@ -825,8 +831,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-034-vms-lb-ext'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
             $nic1IpConfig1 = $vmIPConfigs | 
@@ -889,8 +897,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-035-vms-pip-lb-ext'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.Id | Foreach-Object { Get-AzResource -ResourceId $_ | Get-AzLoadBalancer } | Select-Object -Unique
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $vmPip1 = Get-AzResource -ResourceId $vmIPConfigs.where({$_.name -eq 'ipconfig1'}).PublicIpAddress.id | Get-AzPublicIpAddress
             $vmPip2 = Get-AzResource -ResourceId $vmIPConfigs.where({$_.name -eq 'ipconfig2'}).PublicIpAddress.id | Get-AzPublicIpAddress
@@ -928,8 +938,8 @@ Describe "Validate Migration Script Results" {
             $lbExt.Probes.Count | Should -Be 1
         }
 
-        It "External load balancer has 2 backend pools" {
-            $lbExt.BackendAddressPools.Count | Should -Be 2
+        It "External load balancer has 1 backend pools" {
+            $lbExt.BackendAddressPools.Count | Should -Be 1
         }
 
         It "External load balancer has 0 outbound rules" {
@@ -937,7 +947,7 @@ Describe "Validate Migration Script Results" {
         }
 
         It "VM has a LoadBalancer BackendAddress Pools" {   
-            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+            $vmIPConfigs.LoadBalancerBackendAddressPools.id | Get-Unique | Measure-object | Select-object -expand Count | Should -BeExactly 1
         }
 
         It "VMSS nic 1 ipconfig 1 should belong to backend pool 1" {
@@ -980,8 +990,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-036-vms-multi-nic-pip-lb-ext'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.Id | Foreach-Object { Get-AzResource -ResourceId $_ | Get-AzLoadBalancer } | Select-Object -Unique
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $pips = Get-AzPublicIpAddress -ResourceGroupName $rgName
             $vmPip1 = $pips | where {$_.name -like '*-pip-01'}
@@ -1101,8 +1113,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-037-vms-nsg-nic-lb-ext'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             #$pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
             $nic1IpConfig1 = $vmIPConfigs | 
@@ -1133,8 +1147,10 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-038-vms-nsg-subnet-lb-ext'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lb = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
             $nic1IpConfig1 = $vmIPConfigs | 
@@ -1169,21 +1185,32 @@ Describe "Validate Migration Script Results" {
             $rgName = 'rg-039-vms-multivm-mix-pip-lb-ext'
             $rg = Get-AzResourceGroup -Name $rgName -ErrorAction Stop
             $vm = $(Get-AzVm -ResourceGroup $rg.ResourceGroupName)
-            $vmIPConfigs = $vm[0].NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
-            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools[0].Id.Split("/")[-3] | Foreach-Object { Get-AzLoadBalancer -ResourceGroupName $rgName -Name $_ }
+            $vmIPConfigs = $vm.NetworkProfile.NetworkInterfaces.Id | %{ Get-AzNetworkInterface -ResourceId $_ | Select -expand IpConfigurations}
+            $lbExt = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
+                Get-AzResource -ResourceId $_.lbId | 
+                Get-AzLoadBalancer -EA SilentlyContinue } 
             $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $pips = Get-AzPublicIpAddress -ResourceGroupName $rgName
             $vm1Pip1 = $pips | where {$_.name -like '*-pip-01'}
             $vm1Pip2 = $pips | where {$_.name -like '*-pip-02'}
             $vm1Pip3 = $pips | where {$_.name -like '*-pip-03'}
-            $nic1IpConfig1 = $vmIPConfigs | 
-                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+            $vm1nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*vm-01nic/ipConfigurations*'} | 
                 Where-Object {$_.name -eq 'ipconfig1'}
-            $nic1IpConfig2 = $vmIPConfigs | 
-                where-object {$_.id -like '*nic/ipConfigurations*'} | 
+            $vm1nic1IpConfig2 = $vmIPConfigs | 
+                where-object {$_.id -like '*vm-01nic/ipConfigurations*'} | 
                 Where-Object {$_.name -eq 'ipconfig2'}
-            $nic2IpConfig1 = $vmIPConfigs | 
-                where-object {$_.id -like '*nic2/ipConfigurations*'} | 
+            $vm1nic2IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*vm-01nic2/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $vm2nic1IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*vm-02nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig1'}
+            $vm2nic1IpConfig2 = $vmIPConfigs | 
+                where-object {$_.id -like '*vm-02nic/ipConfigurations*'} | 
+                Where-Object {$_.name -eq 'ipconfig2'}
+            $vm2nic2IpConfig1 = $vmIPConfigs | 
+                where-object {$_.id -like '*vm-02nic2/ipConfigurations*'} | 
                 Where-Object {$_.name -eq 'ipconfig1'}
 
         }
@@ -1217,16 +1244,25 @@ Describe "Validate Migration Script Results" {
         }
 
         It "VM has a LoadBalancer BackendAddress Pools" {   
-            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+            $vmIPConfigs.LoadBalancerBackendAddressPools.Id | Get-Unique | Measure-Object | Select -expand Count | Should -BeExactly 1
         }
 
-        It "VM nic 1 ipconfig 1 should belong to backend pool 1" {
-            $nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        It "VM-01 nic 1 ipconfig 1 should belong to backend pool 1" {
+            $vm1nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
         }
 
-        It "VM nic 1 ipconfig 2 should belong to backend pool 1" {
-            $nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        It "VM-01 nic 1 ipconfig 2 should belong to backend pool 1" {
+            $vm1nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
         }
+
+        It "VM-02 nic 1 ipconfig 1 should belong to backend pool 1" {
+            $vm2nic1IpConfig1.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
+        It "VM-02 nic 1 ipconfig 2 should belong to backend pool 1" {
+            $vm2nic1IpConfig2.LoadBalancerBackendAddressPools[0].id.split('/')[-1] | Should -Be 'be-01'
+        }
+
 
         It "VM nic 2 ipconfig 1 LoadBalancerBackendAddressPools count should be 0" {
             $nic2IpConfig1.LoadBalancerBackendAddressPools.count | Should -Be 0
@@ -1245,7 +1281,7 @@ Describe "Validate Migration Script Results" {
         }
 
         It "VM Public Ip Address [1] has version 'IPv4'" {  
-            $vmpip1.PublicIpAddressVersion | Should -Be 'IPv4'
+            $vm1pip1.PublicIpAddressVersion | Should -Be 'IPv4'
         }
 
         It "VM Public Ip 1 has a Static Address" {

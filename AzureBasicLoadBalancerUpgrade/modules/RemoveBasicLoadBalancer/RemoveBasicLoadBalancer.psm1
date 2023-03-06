@@ -62,7 +62,7 @@ function RemoveBasicLoadBalancer {
     Catch {
         $message = @"
             [RemoveBasicLoadBalancer] A failure occured when attempting to delete the basic load balancer '$($BasicLoadBalancer.Name)'. The script cannot continue as the front
-            end addresses will not be available to reassign to the new Standard load balancer. To recover
+            end addresses will not be available to reassign to the new Standard load balancer if the Basic LB has not been removed. To recover
             address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
             State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
 "@

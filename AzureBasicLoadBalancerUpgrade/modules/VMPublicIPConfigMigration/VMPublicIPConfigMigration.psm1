@@ -10,7 +10,7 @@ Function UpgradeVMPublicIP {
     # get the NIC IDs associated with the Basic Load Balancer
     $nicIDs = @() 
     foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
-        foreach ($backendIpConfiguration in ($backendAddressPool.BackendIpConfigurations | Select-Object -Unique)) {
+        foreach ($backendIpConfiguration in ($backendAddressPool.BackendIpConfigurations | Select-Object -Property Id -Unique)) {
             $nicIDs += "'$(($backendIpConfiguration.Id -split '/ipconfigurations/')[0])'"
         }
     }
@@ -29,7 +29,7 @@ Function UpgradeVMPublicIP {
         where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
         project lbNicVMId = tolower(tostring(properties.virtualMachine.id)) |
         join ( Resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), vmNics = properties.networkProfile.networkInterfaces) on `$left.lbNicVMId == `$right.vmId |
-        join ( Resources | where type =~ 'microsoft.network/networkinterfaces' | project nicVMId = tolower(tostring(properties.virtualMachine.id)), allVMNicID = id, nicIPConfigs = properties.ipConfigurations ) on `$left.vmId == `$right.nicVMId |
+        join ( Resources | where type =~ 'microsoft.network/networkinterfaces' | project nicVMId = tolower(tostring(properties.virtualMachine.id)), allVMNicID = tolower(id), nicIPConfigs = properties.ipConfigurations ) on `$left.vmId == `$right.nicVMId |
         join kind=leftouter ( Resources | 
             where type =~ 'microsoft.network/publicipaddresses' and isnotnull(properties.ipConfiguration.id) | 
             project pipId = id, pipAssociatedNicId = tolower(tostring(split(properties.ipConfiguration.id,'/ipConfigurations/')[0])),pipIpConfig = properties.ipConfiguration.id) on `$left.allVMNicID == `$right.pipAssociatedNicId |

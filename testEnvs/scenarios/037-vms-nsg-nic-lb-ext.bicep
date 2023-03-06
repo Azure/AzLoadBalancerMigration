@@ -163,7 +163,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
               publicIpNameSuffix: '-pip-01'
             }
             skuName: 'Basic'
-            networkSecurityGroupId: networkSecurityGroups.outputs.resourceId
+            networkSecurityGroupResourceId: networkSecurityGroups.outputs.resourceId
           }
           {
             name: 'ipconfig2'
