@@ -199,7 +199,7 @@ function NsgCreationVM {
         join ( Resources |
             where type =~ 'microsoft.network/virtualnetworks' |
             mv-expand subnets = properties.subnets |
-            project subnetId=tolower(tostring(subnets.id)),subnetNSGId = tostring(subnets.Properties.NetworkSecurityGroup.id)) on subnetId |
+            project subnetId=tolower(tostring(subnets.id)),subnetNSGId = tostring(subnets.properties.networkSecurityGroup.id)) on subnetId |
     project subnetId,nicRecords,subnetNSGId
 "@
 
@@ -263,9 +263,10 @@ function NsgCreationVM {
         #_AddLBNSGSecurityRules -BasicLoadBalancer $BasicLoadBalancer -nsgId $nsgId
     }
 
-    log -Message "[NsgCreationVM] Creating a new NSG with new security rules for the LB to associate to NICs missing NSGs..."
     # create new NSGs and associate with NICs
     If ($nicsNeedingNewNSG.count -gt 0) {
+        log -Message "[NsgCreationVM] Creating a new NSG with new security rules for the LB to associate to NICs missing NSGs..."
+
         $nsgName = "NSG-LBMigration-$($BasicLoadBalancer.Name)"
 
         log -Message "[NsgCreationVM] Creating a new NSG named '$nsgName' in Resource Group '$($BasicLoadBalancer.ResourceGroupName)'..."
