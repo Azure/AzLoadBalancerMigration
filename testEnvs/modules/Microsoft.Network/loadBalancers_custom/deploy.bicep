@@ -212,16 +212,16 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-08-01' = {
   }
 }
 
-module loadBalancer_backendAddressPools 'backendAddressPools/deploy.bicep' = [for (backendAddressPool, index) in backendAddressPools: {
-  name: '${uniqueString(deployment().name, location)}-loadBalancer-backendAddressPools-${index}'
-  params: {
-    loadBalancerName: loadBalancer.name
-    name: backendAddressPool.name
-    tunnelInterfaces: contains(backendAddressPool, 'tunnelInterfaces') && !empty(backendAddressPool.tunnelInterfaces) ? backendAddressPool.tunnelInterfaces : []
-    loadBalancerBackendAddresses: contains(backendAddressPool, 'loadBalancerBackendAddresses') && !empty(backendAddressPool.loadBalancerBackendAddresses) ? backendAddressPool.loadBalancerBackendAddresses : []
-    enableDefaultTelemetry: enableReferencedModulesTelemetry
-  }
-}]
+// module loadBalancer_backendAddressPools 'backendAddressPools/deploy.bicep' = [for (backendAddressPool, index) in backendAddressPools: {
+//   name: '${uniqueString(deployment().name, location)}-loadBalancer-backendAddressPools-${index}'
+//   params: {
+//     loadBalancerName: loadBalancer.name
+//     name: backendAddressPool.name
+//     tunnelInterfaces: contains(backendAddressPool, 'tunnelInterfaces') && !empty(backendAddressPool.tunnelInterfaces) ? backendAddressPool.tunnelInterfaces : []
+//     loadBalancerBackendAddresses: contains(backendAddressPool, 'loadBalancerBackendAddresses') && !empty(backendAddressPool.loadBalancerBackendAddresses) ? backendAddressPool.loadBalancerBackendAddresses : []
+//     enableDefaultTelemetry: enableReferencedModulesTelemetry
+//   }
+// }]
 
 module loadBalancer_inboundNATRules 'inboundNatRules/deploy.bicep' = [for (inboundNATRule, index) in inboundNatRules: {
   name: '${uniqueString(deployment().name, location)}-LoadBalancer-inboundNatRules-${index}'
@@ -241,7 +241,7 @@ module loadBalancer_inboundNATRules 'inboundNatRules/deploy.bicep' = [for (inbou
     enableDefaultTelemetry: enableReferencedModulesTelemetry
   }
   dependsOn: [
-    loadBalancer_backendAddressPools
+    //loadBalancer_backendAddressPools
   ]
 }]
 
