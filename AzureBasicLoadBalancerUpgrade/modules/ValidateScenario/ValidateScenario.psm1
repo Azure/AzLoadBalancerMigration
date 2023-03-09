@@ -71,8 +71,8 @@ Function Test-SupportedMigrationScenario {
 
     # checking that source load balancer has sub-resource configurations
     log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
-    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0) {
-        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no front end configurations, so there is nothing to migrate!"
+    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0 -and $BasicLoadBalancer.InboundNatRules.count -eq 0) {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no load balancing rules or NAT rules, so there is nothing to migrate!"
         return
     }
     log -Message "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
