@@ -147,32 +147,38 @@ ForEach ($inboundNATPool in $inboundNatPoolConfigs) {
 
 # add vmss model ip configs to new backend pools
 Write-Verbose "Adding new backend pools to VMSS model ipConfigs..."
-ForEach ($inboundNATPool in $inboundNatPoolConfigs) {
-    ForEach ($vmssItem in $vmsses) {
-        ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
-            ForEach ($ipConfig in $nicConfig.ipConfigurations) {
-                If ($ipconfigRecord = $ipConfigNatPoolMap | Where-Object {
-                    $_.vmssId -eq $vmssItem.vmss.id -and
-                    $_.nicName -eq $nicConfig.Name -and
-                    $_.ipConfigName -eq $ipConfig.Name
-                }) {
 
-                    $backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool]
+ForEach ($vmssItem in $vmsses) {
+    ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+        ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+            
+            # if there is an existing ipconfig to nat pool association, add the ipconfig to the new backend pool for the nat rule
+            If ($ipconfigRecord = $ipConfigNatPoolMap | Where-Object {
+                $_.vmssId -eq $vmssItem.vmss.id -and
+                $_.nicName -eq $nicConfig.Name -and
+                $_.ipConfigName -eq $ipConfig.Name
+            }) {
 
-                    ForEach ($existingBackendPool in $ipConfig.LoadBalancerBackendAddressPools) {
-                        $backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool
-                        $backendAddressPool.id = $existingBackendPool.id
+                #$backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool]
+                $backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
 
-                        $backendPoolList.Add($existingBackendPool)
-                    }
-                    $backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool
-                    $backendPoolObj.id = $natPoolToBEPMap[$ipconfigRecord.inboundNatPoolId]
+                # add existing backend pools to pool list to maintain existing membership
+                ForEach ($existingBackendPoolId in $ipConfig.LoadBalancerBackendAddressPools.id) {
+                    $backendPoolObj = new-object Microsoft.Azure.Management.Compute.Models.SubResource
+                    $backendPoolObj.id = $existingBackendPoolId
 
-                    Write-Verbose "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
-                    $ipConfig.LoadBalancerBackendAddressPools.Add($backendPoolObj)
-
-                    $vmss.updateRequired = $true
+                    $backendPoolList.Add($backendPoolObj)
                 }
+                #$backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool
+                $backendPoolObj = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
+                $backendPoolObj.id = $natPoolToBEPMap[$ipconfigRecord.inboundNatPoolId]
+
+                Write-Verbose "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
+                $backendPoolList.Add($backendPoolObj)
+
+                $ipConfig.LoadBalancerBackendAddressPools = $backendPoolList
+
+                $vmssItem.updateRequired = $true
             }
         }
     }
