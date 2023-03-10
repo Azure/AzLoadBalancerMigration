@@ -1,3 +1,26 @@
+<#
+.SYNOPSIS
+    Migrates a Standard Load Balancer's Inbound NAT Pools to Inbound NAT Rules
+.DESCRIPTION
+    This script creates a new NAT Rule for each NAT Pool, then adds a new Backend Pool with membership corresponding to the NAT Pool's original membership. 
+
+    For every NAT Pool, a new NAT Rule and backend pool will be created on the Load Balancer. Names will follow these patterns:
+        natrule_migrated_<inboundNATPool Name>
+        be_migrated_<inboundNATPool Name>
+
+    The script reassociated NAT Pool VMSSes with the new NAT Rules, requiring multiple updates to the VMSS model and instance upgrades, which may cause service disruption during the migration. 
+
+    Backend port mapping for pool members will not necessarily be the same for NAT Pools with multiple associated VMSSes. 
+.NOTES
+    
+.LINK
+    
+.EXAMPLE
+    ./MigrateNATPools.ps1 -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb
+    
+    Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules. 
+#>
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
@@ -27,8 +50,11 @@ If ($LoadBalancer.InboundNatPools.count -lt 1) {
     Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any Inbound NAT Pools to migrate"
 }
 
+# create a hard copy of NAT Pool configs for later reference
 $inboundNatPoolConfigs = $LoadBalancer.InboundNatPools | ConvertTo-Json | ConvertFrom-Json
-$vmssIds = $LoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
+
+# get add virtual machine scale sets associated with the LB NAT Pools (via NAT Pool-create NAT Rules)
+$vmssIds = $LoadBalancer.InboundNatRules.BackendIpConfiguration.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
 $vmssObjects = $vmssIds | ForEach-Object { Get-AzResource -ResourceId $_ | Get-AzVmss }
 
 # build vmss table
