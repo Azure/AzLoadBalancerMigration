@@ -7,7 +7,7 @@ param workspaceId string
 param scope string
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Optional. Describes what kind of security agent provisioning action to take. - On or Off.')
 @allowed([

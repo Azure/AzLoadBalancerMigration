@@ -8,7 +8,7 @@ param location string = resourceGroup().location
 param tags object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Optional. Indicates whether IP forwarding is enabled on this network interface.')
 param enableIPForwarding bool = false

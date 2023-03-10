@@ -68,7 +68,7 @@ param clientCertEnabled bool = false
 param networkAcls object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 var resourceLogConfiguration = [for configuration in resourceLogConfigurationsToEnable: {
   name: configuration

@@ -5,7 +5,7 @@ param name string
 param location string = resourceGroup().location
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Required. Name of the Event Grid Topic.')
 param eventGridTopicName string

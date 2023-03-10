@@ -253,7 +253,7 @@ param availabilityZones array = []
 param tags object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Required. The chosen OS type.')
 @allowed([

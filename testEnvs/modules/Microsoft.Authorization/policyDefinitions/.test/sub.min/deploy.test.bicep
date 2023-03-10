@@ -8,7 +8,7 @@ targetScope = 'subscription'
 param serviceShort string = 'apdsubmin'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 // ============== //
 // Test Execution //

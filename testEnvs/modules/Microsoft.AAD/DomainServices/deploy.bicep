@@ -132,7 +132,7 @@ param tags object = {}
 param diagnosticLogsRetentionInDays int = 365
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @allowed([
   ''

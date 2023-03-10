@@ -11,7 +11,7 @@ param location string = deployment().location
 param serviceShort string = 'pirmgmin'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 // ============ //
 // Dependencies //

@@ -39,7 +39,7 @@ param diagnosticLogCategoriesToEnable array = [
 ]
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @sys.description('Optional. Location deployment metadata.')
 param location string = deployment().location

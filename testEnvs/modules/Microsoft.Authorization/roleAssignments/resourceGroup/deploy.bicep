@@ -39,7 +39,7 @@ param conditionVersion string = '2.0'
 param principalType string = ''
 
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 var builtInRoleNames = {
   'Access Review Operator Service Role': '/providers/Microsoft.Authorization/roleDefinitions/76cc9ee4-d5d3-4a45-a930-26add3d73475'

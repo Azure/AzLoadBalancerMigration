@@ -17,7 +17,7 @@ param fqdns array
 param privateLinkResourceId string
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 resource datafactory 'Microsoft.DataFactory/factories@2018-06-01' existing = {
   name: dataFactoryName

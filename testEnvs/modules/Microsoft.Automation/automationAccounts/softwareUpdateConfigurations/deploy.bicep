@@ -178,7 +178,7 @@ param scheduleDescription string = ''
 param baseTime string = utcNow('u')
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 var updateClassificationsVar = replace(replace(replace(replace(string(updateClassifications), ',', ', '), '[', ''), ']', ''), '"', '')
 

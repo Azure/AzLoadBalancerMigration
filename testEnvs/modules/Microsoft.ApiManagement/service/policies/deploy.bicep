@@ -5,7 +5,7 @@ param apiManagementServiceName string
 param name string = 'policy'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Optional. Format of the policyContent.')
 @allowed([

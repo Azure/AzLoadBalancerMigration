@@ -29,7 +29,7 @@ param isSecuritySite bool = false
 param o365Policy object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Optional. List of all VPN site links.')
 param vpnSiteLinks array = []

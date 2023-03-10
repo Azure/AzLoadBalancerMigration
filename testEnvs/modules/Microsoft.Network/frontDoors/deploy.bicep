@@ -21,7 +21,7 @@ param roleAssignments array = []
 param tags object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Required. Backend address pool of the frontdoor resource.')
 param backendPools array

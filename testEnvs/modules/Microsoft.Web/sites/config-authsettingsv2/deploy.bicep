@@ -18,7 +18,7 @@ param kind string
 param authSettingV2Configuration object
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 // =========== //
 // Existing resources //

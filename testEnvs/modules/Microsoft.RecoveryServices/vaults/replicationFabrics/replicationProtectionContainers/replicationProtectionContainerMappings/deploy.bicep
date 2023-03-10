@@ -26,7 +26,7 @@ param policyName string = ''
 param name string = ''
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 var policyResourceId = policyId != '' ? policyId : subscriptionResourceId('Microsoft.RecoveryServices/vaults/replicationPolicies', recoveryVaultName, policyName)
 var targetProtectionContainerResourceId = targetProtectionContainerId != '' ? targetProtectionContainerId : subscriptionResourceId('Microsoft.RecoveryServices/vaults/replicationFabrics/replicationProtectionContainers', recoveryVaultName, targetContainerFabricName, targetContainerName)

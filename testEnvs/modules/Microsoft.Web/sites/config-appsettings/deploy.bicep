@@ -27,7 +27,7 @@ param setAzureWebJobsDashboard bool = contains(kind, 'functionapp') ? true : fal
 param appSettingsKeyValuePairs object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 // =========== //
 // Variables   //

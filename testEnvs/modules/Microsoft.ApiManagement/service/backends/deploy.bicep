@@ -8,7 +8,7 @@ param name string
 param credentials object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 @description('Optional. Backend Description.')
 param backendDescription string = ''

@@ -54,7 +54,7 @@ param assignmentScopeValidation string = ''
 param resourceSelectors array = []
 
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = false
+param enableDefaultTelemetry bool = true
 
 var enableReferencedModulesTelemetry = false
 
