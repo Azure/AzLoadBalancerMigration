@@ -132,7 +132,8 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $false)][switch] $FollowLog,
         [Parameter(Mandatory = $false)][switch] $validateOnly,
         [Parameter(Mandatory = $false)][int32] $defaultJobWaitTimeout = (New-Timespan -Minutes 10).TotalSeconds,
-        [Parameter(Mandatory = $false)][switch] $force
+        [Parameter(Mandatory = $false)][switch] $force,
+        [Parameter(Mandatory = $false)][switch] $Pre
         )
 
     # Set global variable to display log output in console
@@ -190,7 +191,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         $StdLoadBalancerName = $BasicLoadBalancer.Name
     }
 
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateOnly.isPresent)
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateOnly.isPresent) -Pre:$Pre.IsPresent
 
     if ($validateOnly) {
         break

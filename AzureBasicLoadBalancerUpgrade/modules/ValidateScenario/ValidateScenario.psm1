@@ -16,7 +16,12 @@ Function Test-SupportedMigrationScenario {
         # force
         [Parameter(Mandatory = $false)]
         [switch]
-        $force
+        $force,
+
+        # pre-release feature switch
+        [Parameter(Mandatory = $false)]
+        [switch]
+        $Pre
     )
 
     $scenario = @{
@@ -171,8 +176,6 @@ Function Test-SupportedMigrationScenario {
             }
         }
     
-
-
         # check if any VMSS instances have instance protection enabled
         log -Message "[Test-SupportedMigrationScenario] Checking for instances in backend pool member VMSS '$($vmssIds.split('/')[-1])' with Instance Protection configured"
         $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName ($vmssIds -split '/')[-1]
@@ -365,6 +368,10 @@ Function Test-SupportedMigrationScenario {
                 log -Message $message -Severity 'Warning'
             }
         }
+    }
+
+    If ($scenario.BackendType -eq 'VM' -and !$pre.isPresent) {
+        Write-Error "Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk."
     }
 
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
