@@ -43,8 +43,8 @@ module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' 
     location: location
     publicIPAddressVersion: 'IPv4'
     skuTier: 'Regional'
-    skuName: 'Basic'
-    publicIPAllocationMethod: 'Dynamic'
+    skuName: 'Standard'
+    publicIPAllocationMethod: 'Static'
   }
   scope: resourceGroup(resourceGroupName)
   dependsOn: [
@@ -54,10 +54,10 @@ module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' 
 
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
-  name: 'lb-basic01'
+  name: 'lb-standard01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-basic-01'
+    name: 'lb-standard-01'
     location: location
     frontendIPConfigurations: [
       {
@@ -71,7 +71,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
       }
     ]
     inboundNatRules: []
-    loadBalancerSku: 'Basic'
+    loadBalancerSku: 'Standard'
     loadBalancingRules: [
       {
         backendAddressPoolName: 'be-01'
