@@ -1,8 +1,8 @@
 targetScope = 'subscription'
+param randomGuid string = newGuid()
 param location string
 param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
