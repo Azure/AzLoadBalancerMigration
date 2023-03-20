@@ -1,4 +1,5 @@
 targetScope = 'subscription'
+param randomGuid string = newGuid()
 var location = 'eastus'
 var resourceGroupName = 'rg-006-basicLBNATRule'
 
@@ -99,7 +100,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     location: location
     // Required parameters
     encryptionAtHost: false
-    adminUsername: kv1.getSecret('adminUsername')
+    adminUsername: 'admin-vmss'
     skuCapacity: 1
     upgradePolicyMode: 'Manual'
     imageReference: {
@@ -119,7 +120,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     osType: 'Windows'
     skuName: 'Standard_DS1_v2'
     // Non-required parameters
-    adminPassword: kv1.getSecret('adminPassword')
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
     nicConfigurations: [
       {
         ipConfigurations: [
