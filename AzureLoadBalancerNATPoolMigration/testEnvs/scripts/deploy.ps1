@@ -1,6 +1,5 @@
 Param (
     [string]$Location = 'australiaeast',
-    [string]$KeyVaultResourceGroupName = 'rg-vmsstestingconfig',
     [parameter(Mandatory = $false)][string[]]$ScenarioNumber,
     [switch]$includeHighCostScenarios,
     [switch]$includeManualConfigScenarios,
@@ -105,24 +104,6 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
     return
 }
 
-# deploy keyvault
-$params = @{
-    Name                    = 'prereq-deployment'
-    TemplateFile            = './prereqs.bicep'
-    TemplateParameterObject = @{
-        Location          = $Location
-        ResourceGroupName = $keyVaultResourceGroupName
-    }
-}
-
-New-AzSubscriptionDeployment -Location $location @params
-
-$keyVaultName = (
-    Get-AzResourceGroupDeployment `
-        -Name 'keyvault-deployment' `
-        -ResourceGroupName $keyVaultResourceGroupName `
-).Outputs.name.value
-
 # deploy scenarioset-
 $jobs = @()
 
@@ -135,8 +116,6 @@ foreach ($template in $filteredTemplates) {
             TemplateParameterObject = @{
                 Location                  = $Location
                 ResourceGroupName         = $rgTemplateName
-                KeyVaultName              = $keyVaultName
-                KeyVaultResourceGroupName = $KeyVaultResourceGroupName
             }
         }
 
@@ -148,6 +127,7 @@ foreach ($template in $filteredTemplates) {
         $params = @{
             Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
             TemplateFile            = $template.FullName
+            ResourceGroupName         = $rgTemplateName
         }
         New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
@@ -159,12 +139,9 @@ foreach ($template in $filteredTemplates) {
             TemplateFile            = $template.FullName
             TemplateParameterObject = @{
                 Location                  = $Location
-                ResourceGroupName         = "rg-$($template.BaseName)"
-                KeyVaultName              = $keyVaultName
-                KeyVaultResourceGroupName = $KeyVaultResourceGroupName
             }
         }
-        New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
+        $null = New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
     }
 }
