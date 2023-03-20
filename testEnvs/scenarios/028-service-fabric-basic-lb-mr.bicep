@@ -4,8 +4,7 @@
 targetScope = 'resourceGroup'
 param location string
 param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+
 
 // @description('Remote desktop user password. Must be a strong password')
 // @secure()
@@ -125,10 +124,6 @@ var fqdnSuffix = environment().name =~ 'AzureCloud' ? 'cloudapp.azure.com' : 'cl
 
 // RESOURCES
 // used for adminuser and password test env
-resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroupName)
-}
 
 // Resource Group using modified resourcegroup module that doesnt pass managedBy as it is getting error ResourceGroupManagedByMismatch
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -403,8 +398,8 @@ module virtualMachineScaleSets0 '../modules/Microsoft.Compute/virtualMachineScal
   params: {
     name: vmNodeType0Name
     location: location
-    adminUsername: kv1.getSecret('adminUsername') //adminUserName
-    adminPassword: kv1.getSecret('adminPassword') //adminPassword
+    adminUsername: 'admin-vmss' //adminUserName
+    adminPassword: '${uniqueString(randomGuid)}rpP@340' //adminPassword
     enableAutomaticUpdates: false
     enableAutomaticOSUpgrade: true
     osType: vmOSType

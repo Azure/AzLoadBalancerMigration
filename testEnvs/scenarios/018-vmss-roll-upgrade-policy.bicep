@@ -1,8 +1,8 @@
 targetScope = 'subscription'
+param randomGuid string = newGuid()
 param location string
 param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -100,10 +100,6 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
   ]
 }
 
-resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroupName)
-}
 
 module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
   name:'vmss${uniqueString(subscription().subscriptionId,resourceGroupName)}'
@@ -123,7 +119,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     location: location
     // Required parameters
     encryptionAtHost: false
-    adminUsername: kv1.getSecret('adminUsername')
+    adminUsername: 'admin-vmss'
     skuCapacity: 3
     upgradePolicyMode: 'Rolling'
     imageReference: {
@@ -148,7 +144,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     }
     skuName: 'Standard_DS1_v2'
     // Non-required parameters
-    adminPassword: kv1.getSecret('adminPassword')
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
     nicConfigurations: [
       {
         ipConfigurations: [
