@@ -1,4 +1,5 @@
 targetScope = 'subscription'
+param randomGuid string = newGuid()
 var location = 'eastus'
 var resourceGroupName = 'rg-004-basicLBExtMultiFE'
 
@@ -130,7 +131,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     skuCapacity: 1
     upgradePolicyMode: 'Manual'
     // Required parameters
-    adminUsername: kv1.getSecret('adminUsername')
+    adminUsername: 'admin-vmss'
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
@@ -148,7 +149,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     osType: 'Windows'
     skuName: 'Standard_DS1_v2'
     // Non-required parameters
-    adminPassword: kv1.getSecret('adminPassword')
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
     nicConfigurations: [
       {
         ipConfigurations: [

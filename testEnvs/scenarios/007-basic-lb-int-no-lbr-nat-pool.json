@@ -2,12 +2,12 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "location": {
+      "type": "string"
+    },
     "randomGuid": {
       "type": "string",
       "defaultValue": "[newGuid()]"
-    },
-    "location": {
-      "type": "string"
     }
   },
   "variables": {},
@@ -320,35 +320,7 @@
                     "properties": {}
                   }
                 ],
-                "loadBalancingRules": [
-                  {
-                    "name": "rule-01",
-                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/loadBalancingRules/rule-01')]",
-                    "properties": {
-                      "frontendIPConfiguration": {
-                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-01')]"
-                      },
-                      "frontendPort": 80,
-                      "backendPort": 80,
-                      "enableFloatingIP": false,
-                      "idleTimeoutInMinutes": 4,
-                      "protocol": "Tcp",
-                      "enableTcpReset": false,
-                      "loadDistribution": "Default",
-                      "backendAddressPool": {
-                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
-                      },
-                      "backendAddressPools": [
-                        {
-                          "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
-                        }
-                      ],
-                      "probe": {
-                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/probes/probe-01')]"
-                      }
-                    }
-                  }
-                ],
+                "loadBalancingRules": [],
                 "probes": [
                   {
                     "name": "probe-01",
