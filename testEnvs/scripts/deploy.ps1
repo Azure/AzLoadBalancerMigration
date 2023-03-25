@@ -120,6 +120,7 @@ foreach ($template in $filteredTemplates) {
             TemplateFile            = $template.FullName
             TemplateParameterObject = @{
                 Location                  = $Location
+                ResourceGroupName         = $rgTemplateName
             }
         }
 

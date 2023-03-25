@@ -139,8 +139,8 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
   params: {
-    adminUsername: kv1.getSecret('adminUsername')
-    adminPassword: kv1.getSecret('adminPassword')
+    adminUsername: 'admin-vm'
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
     location: location
     imageReference: {
       offer: 'WindowsServer'

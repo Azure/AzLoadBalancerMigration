@@ -134,8 +134,8 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   name: 'vm-01'
   params: {
     name: 'vm-01'
-    adminUsername: kv1.getSecret('adminUsername')
-    adminPassword: kv1.getSecret('adminPassword')
+    adminUsername: 'admin-vm'
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
     location: location
     availabilitySetResourceId: availabilitySet.outputs.resourceId
     imageReference: {
@@ -213,8 +213,8 @@ module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = 
   name: 'vm-02'
   params: {
     name: 'vm-02'
-    adminUsername: kv1.getSecret('adminUsername')
-    adminPassword: kv1.getSecret('adminPassword')
+    adminUsername: 'admin-vm'
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
     location: location
     availabilitySetResourceId: availabilitySet.outputs.resourceId
     imageReference: {
