@@ -107,6 +107,11 @@ Function BackupVmss {
             $outputFileNameVMSS = ('VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
             $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
 
+            $options = [System.Text.Json.JsonSerializerOptions]::new()
+            $options.WriteIndented = $true
+            #$options.IgnoreReadOnlyFields = $true # This is only available in PS 7
+            $options.IgnoreReadOnlyProperties = $true
+
             [System.Text.Json.JsonSerializer]::Serialize($vmss, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet], $options) | Out-File -FilePath $outputFilePathVSS
         }
         catch {
