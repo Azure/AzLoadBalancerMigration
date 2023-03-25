@@ -1,8 +1,7 @@
 targetScope = 'subscription'
 param location string
 param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+param randomGuid string = newGuid()
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -113,11 +112,6 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
   dependsOn: [
     rg
   ]
-}
-
-resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroupName)
 }
 
 module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
