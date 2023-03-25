@@ -10,11 +10,14 @@ Param (
 
 $ErrorActionPreference = 'Stop'
 
+# causes resource graph queries to wait for results to be returned, since ARG lags behind ARM which breaks testing immediately after deployment
+$env:LBMIG_WAIT_FOR_ARG = $true
+
 If (!(Test-Path -Path ../scenarios)) {
     Write-Error "This script should be executed from the ./testEnvs/scripts directory"
     break
 }
-$allTemplates = Get-ChildItem -Path ../scenarios -File
+$allTemplates = Get-ChildItem -Path ../scenarios -File -Exclude bicepconfig.json -Recurse -Depth 0
 
 If ($ScenarioNumber) {
     $templateNumberPattern = ($scenarioNumber | ForEach-Object { $_.ToString().PadLeft(3, '0') }) -join '|'
@@ -40,10 +43,10 @@ Write-Verbose "Deploying templates: $($filteredTemplates.Name)"
 if ($Cleanup -and $null -ne $filteredTemplates) {
     $jobs = @()
 
-    $filteredTemplates |
-    Foreach-Object {
-        "Removing Resource Group rg-$($_.BaseName)"
-        $jobs += $(Remove-AzResourceGroup -Name "rg-$($_.BaseName)" -Force -AsJob)
+    $rgNamesToRemove = $filteredTemplates | ForEach-Object {  "rg-{0}{1}-{2}" -f $_.BaseName.split('-')[0],$resourceGroupSuffix,$_.BaseName.split('-',2)[1] }
+    $rgNamesToRemove | Foreach-Object {
+        "Removing Resource Group '$_'"
+        $jobs += $(Remove-AzResourceGroup -Name $_ -Force -AsJob)
     }
 
     $jobs | Wait-Job | Receive-Job
@@ -61,9 +64,11 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Force
+        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force
     }
-    $scenarios = Get-AzResourceGroup -Name rg-0*
+
+    $rgNamesToMigrate = $filteredTemplates | ForEach-Object {  "rg-{0}{1}-{2}" -f $_.BaseName.split('-')[0],$resourceGroupSuffix,$_.BaseName.split('-',2)[1] }
+    $scenarios = Get-AzResourceGroup | Where-Object {$_.ResourceGroupName -iin $rgNamesToMigrate}
 
     $jobPool = @()
     foreach($rg in $scenarios){
@@ -115,10 +120,13 @@ foreach ($template in $filteredTemplates) {
             TemplateFile            = $template.FullName
             TemplateParameterObject = @{
                 Location                  = $Location
+                ResourceGroupName         = $rgTemplateName
             }
         }
 
-        $jobs += New-AzSubscriptionDeployment -Location $location @params -AsJob
+        $job = New-AzSubscriptionDeployment -Location $location @params -AsJob
+        $job.Name = "rg-$($template.BaseName)"
+        $jobs += $job
     }
 
     elseif($template.Name -like "019*.json"){
@@ -144,5 +152,10 @@ foreach ($template in $filteredTemplates) {
     }
 }
 
-$jobs | Wait-Job
+$jobs | Wait-Job | Foreach-Object {
+    $job = $_
+    If ($job.Error -or $job.State -eq 'Failed') {
+        Write-Host -ForegroundColor Red -Object ""
+    }
+}
 

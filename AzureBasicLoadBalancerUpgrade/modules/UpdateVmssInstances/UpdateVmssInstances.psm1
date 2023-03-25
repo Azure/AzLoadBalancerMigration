@@ -24,7 +24,7 @@ function UpdateVmssInstances {
             $updateJob = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
 
             log -Message "[UpdateVmssInstances] Waiting for VMSS instance update job to complete..."
-            $updateJob | Wait-Job | Out-Null
+            $updateJob | Wait-Job -Timeout $defaultJobWaitTimeout | Out-Null
         }
         catch {
             $message = @"

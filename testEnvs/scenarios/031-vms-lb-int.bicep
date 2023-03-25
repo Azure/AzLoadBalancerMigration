@@ -141,3 +141,45 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
     vmSize: 'Standard_DS1_v2'
   }
 }
+
+module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'vm-02'
+  params: {
+    adminUsername: 'admin-vm'
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
+    location: location
+    imageReference: {
+      offer: 'WindowsServer'
+      publisher: 'MicrosoftWindowsServer'
+      sku: '2022-Datacenter'
+      version: 'latest'
+    }
+    nicConfigurations: [
+      {
+        location: location
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerBackendAddressPools: [
+              {
+                id: loadbalancer.outputs.backendpools[0].id
+              }
+            ]
+          }
+        ]
+        nicSuffix: 'nic'
+      }
+    ]
+    osDisk: {
+      createOption: 'fromImage'
+      diskSizeGB: '128'
+      managedDisk: {
+        storageAccountType: 'Standard_LRS'
+      }
+    }
+    osType: 'Windows'
+    vmSize: 'Standard_DS1_v2'
+  }
+}

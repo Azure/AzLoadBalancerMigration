@@ -112,7 +112,7 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   }
 }
 
-module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
+module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets_custom/deploy.bicep' = {
   name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
   params: {
@@ -139,9 +139,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     }
     osType: 'Linux'
     customData: loadFileAsBase64('./config/018-cloud-init.yml')
-    healthProbe: {
-      id: '${loadbalancer.outputs.resourceId}/probes/probe-01'
-    }
+    healthProbeId: '${loadbalancer.outputs.resourceId}/probes/probe-01'
     skuName: 'Standard_DS1_v2'
     // Non-required parameters
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
