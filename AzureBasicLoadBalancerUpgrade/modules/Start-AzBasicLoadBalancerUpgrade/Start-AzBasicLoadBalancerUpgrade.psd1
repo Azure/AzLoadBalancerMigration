@@ -55,7 +55,8 @@ RequiredModules = @(
     'Az.Accounts',
     'Az.Compute',
     'Az.Network',
-    'Az.Resources'
+    'Az.Resources',
+    'Az.ResourceGraph'
  )
 
 # Assemblies that must be loaded prior to importing this module

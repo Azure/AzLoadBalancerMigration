@@ -107,7 +107,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     location: location
     // Required parameters
     encryptionAtHost: false
-    adminUsername: '${uniqueString(randomGuid)}rpP@340'
+    adminUsername: 'admin-lbmig'
     skuCapacity: 1
     upgradePolicyMode: 'Manual'
     imageReference: {

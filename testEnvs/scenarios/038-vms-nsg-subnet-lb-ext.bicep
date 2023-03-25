@@ -1,8 +1,7 @@
 targetScope = 'subscription'
 param location string
 param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+param randomGuid string = newGuid()
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -11,6 +10,20 @@ module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
     name: resourceGroupName
     location: location
   }
+}
+
+// nsg
+module networkSecurityGroups '../modules/Microsoft.Network/networkSecurityGroups/deploy.bicep' = {
+  name: '${uniqueString(deployment().name)}-networkSecurityGroups'
+  scope: resourceGroup(resourceGroupName)
+  params: {
+    location: location
+    name: 'nsg-01'
+    securityRules: []
+  }
+  dependsOn: [
+    rg
+  ]
 }
 
 // vnet
@@ -28,6 +41,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
       {
         name: 'subnet-01'
         addressPrefix: '10.0.1.0/24'
+        networkSecurityGroupId: networkSecurityGroups.outputs.resourceId
       }
     ]
   }
@@ -100,28 +114,69 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
   ]
 }
 
-resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroupName)
-}
-
-module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
-  name: 'vmss-01'
+module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
+  name: 'bootdiag-storage-01'
   scope: resourceGroup(resourceGroupName)
   params: {
+    name: 'bootdiag${uniqueString(deployment().name)}'
     location: location
-    // Required parameters
-    encryptionAtHost: false
-    adminUsername: kv1.getSecret('adminUsername')
-    skuCapacity: 1
-    upgradePolicyMode: 'Manual'
+    storageAccountSku: 'Standard_LRS'
+    storageAccountKind: 'StorageV2'
+    supportsHttpsTrafficOnly: true
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
+module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'vm-01'
+  params: {
+    adminUsername: 'admin-vm'
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
+    location: location
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
       sku: '2022-Datacenter'
       version: 'latest'
     }
-    name: 'vmss-01'
+    nicConfigurations: [
+      {
+        location: location
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerBackendAddressPools: [
+              {
+                id: loadbalancer.outputs.backendpools[0].id
+              }
+            ]
+            pipConfiguration: {
+              publicIpNameSuffix: '-pip-01'
+            }
+            skuName: 'Basic'
+          }
+          {
+            name: 'ipconfig2'
+            primary: false
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerBackendAddressPools: [
+              {
+                id: loadbalancer.outputs.backendpools[0].id
+              }
+            ]
+            pipConfiguration: {
+              publicIpNameSuffix: '-pip-02'
+            }
+            skuName: 'Basic'
+          }
+        ]
+        nicSuffix: 'nic'
+      }
+    ]
     osDisk: {
       createOption: 'fromImage'
       diskSizeGB: '128'
@@ -130,87 +185,6 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
       }
     }
     osType: 'Windows'
-    skuName: 'Standard_D2_v4'
-    // Non-required parameters
-    adminPassword: kv1.getSecret('adminPassword')
-    nicConfigurations: [
-      {
-        ipConfigurations: [
-          {
-            name: 'ipconfig1'
-            properties: {
-              primary: true
-              subnet: {
-                id: virtualNetworks.outputs.subnetResourceIds[0]
-              }
-              loadBalancerBackendAddressPools: [
-                {
-                  id: loadbalancer.outputs.backendpools[0].id
-                }
-              ]
-              publicIPAddressConfiguration: {
-                name: 'pipconfig1'
-                sku: {
-                  name: 'Basic'
-                }
-              }
-            }
-          }
-          {
-            name: 'ipconfig2'
-            properties: {
-              primary: false
-              subnet: {
-                id: virtualNetworks.outputs.subnetResourceIds[0]
-              }
-              loadBalancerBackendAddressPools: [
-                {
-                  id: loadbalancer.outputs.backendpools[0].id
-                }
-              ]
-              publicIPAddressConfiguration: {
-                name: 'pipconfig2'
-                sku: {
-                  name: 'Basic'
-                }
-              }
-            }
-          }
-        ]
-        primary: true
-        enableAcceleratedNetworking: false
-        nicSuffix: '-nic-01'
-      }
-      {
-        primary: false
-        enableAcceleratedNetworking: false
-        ipConfigurations: [
-          {
-            name: 'ipconfig1'
-            properties: {
-              primary: true
-              subnet: {
-                id: virtualNetworks.outputs.subnetResourceIds[0]
-              }
-              loadBalancerBackendAddressPools: [
-                {
-                  id: loadbalancer.outputs.backendpools[0].id
-                }
-              ]
-              publicIPAddressConfiguration: {
-                name: 'pipconfig3'
-                sku: {
-                  name: 'Basic'
-                }
-              }
-            }
-          }
-        ]
-        nicSuffix: '-nic-02'
-      }
-    ]
+    vmSize: 'Standard_DS1_v2'
   }
-  dependsOn: [
-    rg
-  ]
 }
