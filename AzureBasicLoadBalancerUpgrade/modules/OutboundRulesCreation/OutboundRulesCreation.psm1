@@ -9,9 +9,9 @@ function OutboundRulesCreation {
     )
     log -Message "[OutboundRulesCreation] Initiating Outbound Rules Creation"
 
-    If ($scenario.VMsHavePublicIPs) {
+    If ($scenario.VMsHavePublicIPs -or $scenario.VMSSInstancesHavePublicIPs) {
         #InvalidOperation: OutboundRules for VMs with public IpConfigurations (instance level publicIPs) /subscriptions/.../ipConfigurations/ipconfig1 are not supported
-        log -Severity Warning -Message "[OutboundRulesCreation] Skipping OutboundRuleCreation because backend VMs have Public IPs Associated, which is not supported."
+        log -Severity Warning -Message "[OutboundRulesCreation] Skipping OutboundRuleCreation because backend VMs or VMSS Instances have instance-level Public IPs associated, which is not supported in combination with Outbound Rules. Outbound traffic will use the ILIP."
     }
     Else {
         $backendAddressPools = $StdLoadBalancer.BackendAddressPools
