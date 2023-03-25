@@ -64,7 +64,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Force
+        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force
     }
 
     $rgNamesToMigrate = $filteredTemplates | ForEach-Object {  "rg-{0}{1}-{2}" -f $_.BaseName.split('-')[0],$resourceGroupSuffix,$_.BaseName.split('-',2)[1] }

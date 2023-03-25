@@ -1151,7 +1151,7 @@ Describe "Validate Migration Script Results" {
             $lb = $vmIPConfigs.LoadBalancerBackendAddressPools.id | Select-Object -Property @{name='lbId';Expression={($_ -split '/backendAddressPools/')[0]}} -Unique | %{ 
                 Get-AzResource -ResourceId $_.lbId | 
                 Get-AzLoadBalancer -EA SilentlyContinue } 
-            $pip = $(Get-AzResource -ResourceID $lbExt.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
+            $pip = $(Get-AzResource -ResourceID $lb.FrontendIpConfigurations[0].PublicIpAddress.id -ErrorAction Stop | Get-AzPublicIpAddress)
             $nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $rgName
             $nic1IpConfig1 = $vmIPConfigs | 
                 where-object {$_.id -like '*nic/ipConfigurations*'} | 
@@ -1171,8 +1171,12 @@ Describe "Validate Migration Script Results" {
             $lb.FrontendIpConfigurations.Count | Should -BeExactly 1
         }
 
-        It "VM has a LoadBalancer BackendAddress Pools" {   
-            $vmIPConfigs.LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        It "VM IP Config [0] has 1 LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs[0].LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
+        }
+
+        It "VM IP Config [1] has 1 LoadBalancer BackendAddress Pools" {   
+            $vmIPConfigs[1].LoadBalancerBackendAddressPools.Count | Should -BeExactly 1
         }
 
         It "Only one NSG should exist (no NSG created)" {

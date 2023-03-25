@@ -371,7 +371,7 @@ Function Test-SupportedMigrationScenario {
     }
 
     If ($scenario.BackendType -eq 'VM' -and !$pre.isPresent) {
-        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk."
+        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk and please report any issues encountered at https://github.com/Azure/AzLoadBalancerMigration/issues."
         log -Message $message -Severity 'Error' -terminateOnError
     }
 
