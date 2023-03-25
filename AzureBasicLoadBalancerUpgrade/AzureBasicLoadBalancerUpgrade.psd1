@@ -27,7 +27,7 @@
     CompanyName = 'Microsoft'
 
     # Copyright statement for this module
-    Copyright = '(c) 2022 Microsoft. All rights reserved.'
+    Copyright = '(c) 2023 Microsoft. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) or VMs to a Standard SKU load balancer, preserving the existing configuration and functionality.'
