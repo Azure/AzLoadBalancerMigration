@@ -1,8 +1,8 @@
 targetScope = 'subscription'
-param randomGuid string = newGuid()
 param location string
 param resourceGroupName string
-
+param keyVaultName string
+param keyVaultResourceGroupName string
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -36,9 +36,25 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
   ]
 }
 
+module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+  name: 'pip-01'
+  params: {
+    name: 'pip-01'
+    location: location
+    publicIPAddressVersion: 'IPv4'
+    skuTier: 'Regional'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
+  }
+  scope: resourceGroup(resourceGroupName)
+  dependsOn: [
+    rg
+  ]
+}
+
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
-  name: 'lb-basic-01'
+  name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
     name: 'lb-basic-01'
@@ -46,7 +62,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
     frontendIPConfigurations: [
       {
         name: 'fe-01'
-        subnetId: virtualNetworks.outputs.subnetResourceIds[0]
+        publicIPAddressId: publicIp01.outputs.resourceId
       }
     ]
     backendAddressPools: [
@@ -84,6 +100,10 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
   ]
 }
 
+resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
+  name: keyVaultName
+  scope: resourceGroup(keyVaultResourceGroupName)
+}
 
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets/deploy.bicep' = {
   name: 'vmss-01'
@@ -92,7 +112,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     location: location
     // Required parameters
     encryptionAtHost: false
-    adminUsername: 'admin-vmss'
+    adminUsername: kv1.getSecret('adminUsername')
     skuCapacity: 1
     upgradePolicyMode: 'Manual'
     imageReference: {
@@ -112,7 +132,7 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
     osType: 'Windows'
     skuName: 'Standard_D2_v4'
     // Non-required parameters
-    adminPassword: '${uniqueString(randomGuid)}rpP@340'
+    adminPassword: kv1.getSecret('adminPassword')
     nicConfigurations: [
       {
         ipConfigurations: [
