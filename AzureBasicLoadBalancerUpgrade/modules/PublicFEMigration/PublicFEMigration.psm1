@@ -5,14 +5,14 @@ function PublicIPToStatic {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer
     )
-    log -Message "[PublicIPToStatic] Changing public IP addresses to static (if necessary)"
+    log -Message "[LBPublicIPToStatic] Changing public IP addresses to static (if necessary)"
     $basicLoadBalancerFeConfig = $BasicLoadBalancer.FrontendIpConfigurations
 
     # Change allocation method to staic and SKU to Standard
     foreach ($feConfig in $basicLoadBalancerFeConfig) {
         $pip = Get-AzPublicIpAddress -ResourceGroupName $feConfig.PublicIpAddress.Id.Split('/')[4] -Name $feConfig.PublicIpAddress.Id.Split('/')[-1]
         if ($pip.PublicIpAllocationMethod -ne "Static") {
-            log -Message "[PublicIPToStatic] '$($pip.Name)' ('$($pip.IpAddress)') was using Dynamic IP, changing to Static IP allocation method." -Severity "Warning"
+            log -Message "[LBPublicIPToStatic] '$($pip.Name)' ('$($pip.IpAddress)') was using Dynamic IP, changing to Static IP allocation method." -Severity "Warning"
             $pip.PublicIpAllocationMethod = "Static"
 
             try {
@@ -21,7 +21,7 @@ function PublicIPToStatic {
             }
             catch {
                 $message = @"
-                [PublicIPToStatic] An error occured when changing public IP '$($pip.Name)' from dyanamic to standard. To recover 
+                [LBPublicIPToStatic] An error occured when changing public IP '$($pip.Name)' from dyanamic to standard. To recover 
                 address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load 
                 Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
                 `nError message: $_
@@ -29,11 +29,11 @@ function PublicIPToStatic {
                 log 'Error' $message -terminateOnError
             }
 
-            log -Message "[PublicIPToStatic] Completed the migration of '$($pip.Name)' ('$($upgradedPip.IpAddress)') from Basic SKU and/or dynamic to static" -Severity "Information"
+            log -Message "[LBPublicIPToStatic] Completed the migration of '$($pip.Name)' ('$($upgradedPip.IpAddress)') from Basic SKU and/or dynamic to static" -Severity "Information"
         }
     }
 
-    log -Message "[PublicIPToStatic] Public Frontend Migration Completed"
+    log -Message "[LBPublicIPToStatic] Public Frontend Migration Completed"
 }
 function PublicFEMigration {
     [CmdletBinding()]
