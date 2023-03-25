@@ -28,6 +28,7 @@ Function Test-SupportedMigrationScenario {
         'ExternalOrInternal' = ''
         'BackendType'        = ''
         'VMsHavePublicIPs'   = ''
+        'VMSSInstancesHavePublicIPs' = ''
     }
 
     # checking source load balance SKU
@@ -204,6 +205,8 @@ Function Test-SupportedMigrationScenario {
                 Migrating this load balancer will require removing and reassigning Public IPs--CURRENT PUBLIC IPs WILL CHANGE.
 "@
                 log -Severity 'Warning' -Message $message
+
+                $scenario.VMSSInstancesHavePublicIPs = $true
 
                 If (!$force.IsPresent) {
                     while ($response -ne 'y' -and $response -ne 'n') {
