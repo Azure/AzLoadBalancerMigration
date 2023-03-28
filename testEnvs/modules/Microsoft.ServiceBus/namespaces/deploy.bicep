@@ -78,7 +78,7 @@ param networkRuleSets object = {}
 param tags object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. The queues to create in the service bus namespace.')
 param queues array = []

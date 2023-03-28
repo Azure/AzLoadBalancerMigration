@@ -47,7 +47,7 @@ param storageType string = 'GeoRedundant'
 param storageTypeState string = 'Locked'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Is soft delete feature state editable.')
 param isSoftDeleteFeatureStateEditable bool = true
