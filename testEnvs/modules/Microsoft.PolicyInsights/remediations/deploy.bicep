@@ -45,7 +45,7 @@ param resourceGroupName string = ''
 param location string = deployment().location
 
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var enableReferencedModulesTelemetry = false
 

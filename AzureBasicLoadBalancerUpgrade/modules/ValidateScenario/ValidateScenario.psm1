@@ -284,11 +284,34 @@ Function Test-SupportedMigrationScenario {
             }
             
         }
+
+        # check if vmss is service fabric cluster, warn about possible downtime
+        If ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.properties.type -contains 'ServiceFabricNode' -or 
+            $vmss.VirtualMachineProfile.ExtensionProfile.Extensions.properties.type -contains 'ServiceFabricLinuxNode') {
+
+            $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Service Fabric cluster based on extension profile. Based on testing, SF Clusters experienced some downtime during migration using this module. For Service Fabric clusters that require minimal / no connectivity downtime, adding a new nodetype with standard load balancer and IP resources is a better solution. See https://learn.microsoft.com/azure/service-fabric/service-fabric-upgraded-basic-loadbalancer.md"
+            log -Message $message -Severity 'Warning'
+
+            Write-Host "Do you want to proceed with the migration of your Service Fabric Cluster's Load Balancer?" -ForegroundColor Yellow
+            If (!$force.IsPresent) {
+                while ($response -ne 'y' -and $response -ne 'n') {
+                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                }
+                If ($response -eq 'n') {
+                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                    log -Message $message -Severity 'Error' -terminateOnError
+                }
+            }
+            Else {
+                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                log -Message $message -Severity 'Warning'
+            }
+        }
     }
 
     If ($scenario.BackendType -eq 'VM') {
-        # check if internal LB backend VMs does not have public IPs
 
+        # check if internal LB backend VMs does not have public IPs
         log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs have public IPs..."
         $AnyVMsHavePublicIP = $false
         $AllVMsHavePublicIPs = $true
@@ -310,6 +333,7 @@ Function Test-SupportedMigrationScenario {
             }
         }
 
+        # check if some backend VMs have ILIPs but not others
         If ($AnyVMsHavePublicIP -and !$AllVMsHavePublicIPs -and $Scenario.ExternalOrInternal -eq 'External') {
             $message = "[Test-SupportedMigrationScenario] Some but not all load balanced VMs have instance-level Public IP addresses and the load balancer is external. It is not supported to create an Outbound rule on a LB when any backend VM has a PIP; therefore, VMs which do not have PIPs will loose outbound internet connecticity post-migration."
             log -Message $message -Severity 'Warning'
@@ -330,13 +354,14 @@ Function Test-SupportedMigrationScenario {
             }
         }
 
+        # warn about requirement to allow traffic on standard sku ilips
         If ($AnyVMsHavePublicIP) {
             $scenario.VMsHavePublicIPs = $true
 
             $message = "[Test-SupportedMigrationScenario] Load Balance VMs have instance-level Public IP addresses, all of which must be upgraded to Standard SKU along with the Load Balancer."
             log -Message $message -Severity 'Warning'
 
-            Write-Host "In order to access your VMs from the Internat over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
+            Write-Host "In order to access your VMs from the Internet over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
             If (!$force.IsPresent) {
                 while ($response -ne 'y' -and $response -ne 'n') {
                     $response = Read-Host -Prompt "Do you want to continue? (y/n)"
@@ -352,6 +377,7 @@ Function Test-SupportedMigrationScenario {
             }
         }
 
+        # warn that internal LB backends will have no outbound connectivity
         If (!$AllVMsHavePublicIPs -and $scenario.ExternalOrInternal -eq 'Internal') {
             $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
             log -Message $message -Severity 'Warning'
@@ -369,6 +395,28 @@ Function Test-SupportedMigrationScenario {
             Else {
                 $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
                 log -Message $message -Severity 'Warning'
+            }
+        }
+
+        # check if load balancer backend pool contains VMs which are part of another LBs backend pools
+        log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
+        ForEach ($vm in $basicLBVMs) {
+            $loadBalancerAssociations = @()
+            ForEach ($nicId in $vm.NetworkProfile.NetworkInterfaces.id) {
+                $nic = Get-AzNetworkInterface -ResourceId $nicId
+                ForEach ($ipConfig in $nic.ipConfigurations) {
+                    ForEach ($bepMembership in $ipConfig.LoadBalancerBackendAddressPools) {
+                        $loadBalancerAssociations += $bepMembership.id.split('/')[0..8] -join '/'
+                    }
+                }
+            }
+
+            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
+                $message = @"
+                [Test-SupportedMigrationScenario] One (or more) backend address pool VM members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
+                the backend address pool on another load balancer. `nVM: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
+"@
+                log 'Error' $message -terminateOnError
             }
         }
     }

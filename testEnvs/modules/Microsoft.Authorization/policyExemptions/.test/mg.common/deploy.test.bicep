@@ -11,7 +11,7 @@ param location string = deployment().location
 param serviceShort string = 'apemgcom'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 // ============ //
 // Dependencies //

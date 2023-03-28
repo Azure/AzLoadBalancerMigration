@@ -11,7 +11,7 @@ param staticSiteName string
 param name string = uniqueString(backendResourceId)
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location
