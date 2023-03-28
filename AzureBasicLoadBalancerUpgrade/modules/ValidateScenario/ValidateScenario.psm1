@@ -25,9 +25,9 @@ Function Test-SupportedMigrationScenario {
     )
 
     $scenario = @{
-        'ExternalOrInternal' = ''
-        'BackendType'        = ''
-        'VMsHavePublicIPs'   = ''
+        'ExternalOrInternal'         = ''
+        'BackendType'                = ''
+        'VMsHavePublicIPs'           = ''
         'VMSSInstancesHavePublicIPs' = ''
     }
 
@@ -282,31 +282,32 @@ Function Test-SupportedMigrationScenario {
                     log -Message $message -Severity 'Warning'
                 }
             }
-            
-        }
+         
+            # check if vmss is service fabric cluster, warn about possible downtime
+            log -Message "[Test-SupportedMigrationScenario] Checking whether VMSS scale set '$($vmss.name)' is a Service Fabric cluster..."
+            If ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.type -contains 'ServiceFabricNode' -or 
+                $vmss.VirtualMachineProfile.ExtensionProfile.Extensions.type -contains 'ServiceFabricLinuxNode') {
 
-        # check if vmss is service fabric cluster, warn about possible downtime
-        If ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.properties.type -contains 'ServiceFabricNode' -or 
-            $vmss.VirtualMachineProfile.ExtensionProfile.Extensions.properties.type -contains 'ServiceFabricLinuxNode') {
-
-            $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Service Fabric cluster based on extension profile. Based on testing, SF Clusters experienced some downtime during migration using this module. For Service Fabric clusters that require minimal / no connectivity downtime, adding a new nodetype with standard load balancer and IP resources is a better solution. See https://learn.microsoft.com/azure/service-fabric/service-fabric-upgraded-basic-loadbalancer.md"
-            log -Message $message -Severity 'Warning'
-
-            Write-Host "Do you want to proceed with the migration of your Service Fabric Cluster's Load Balancer?" -ForegroundColor Yellow
-            If (!$force.IsPresent) {
-                while ($response -ne 'y' -and $response -ne 'n') {
-                    $response = Read-Host -Prompt "Do you want to continue? (y/n)"
-                }
-                If ($response -eq 'n') {
-                    $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                    log -Message $message -Severity 'Error' -terminateOnError
-                }
-            }
-            Else {
-                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Service Fabric cluster based on extension profile. Based on testing, SF Clusters experienced some downtime during migration using this module. For Service Fabric clusters that require minimal / no connectivity downtime, adding a new nodetype with standard load balancer and IP resources is a better solution. See https://learn.microsoft.com/azure/service-fabric/service-fabric-upgraded-basic-loadbalancer.md"
                 log -Message $message -Severity 'Warning'
+
+                Write-Host "Do you want to proceed with the migration of your Service Fabric Cluster's Load Balancer?" -ForegroundColor Yellow
+                If (!$force.IsPresent) {
+                    while ($response -ne 'y' -and $response -ne 'n') {
+                        $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+                    }
+                    If ($response -eq 'n') {
+                        $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                        log -Message $message -Severity 'Error' -terminateOnError
+                    }
+                }
+                Else {
+                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    log -Message $message -Severity 'Warning'
+                }
             }
         }
+
     }
 
     If ($scenario.BackendType -eq 'VM') {
