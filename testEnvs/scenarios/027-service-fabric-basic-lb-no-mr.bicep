@@ -1,9 +1,10 @@
 // service fabric 3 node bronze durability cluster with no management role (MR)
 // v0.1
 
-targetScope = 'resourceGroup'
+targetScope = 'subscription'
 param location string
 param resourceGroupName string
+param randomGuid string = newGuid()
 
 
 // @description('Remote desktop user password. Must be a strong password')
@@ -14,11 +15,11 @@ param resourceGroupName string
 // param adminUserName string
 
 @description('Certificate Thumbprint')
-param certificateThumbprint string
+param certificateThumbprint string = 'F28CE76CBD99AF46245942B05C9B368BAE9BF226'
 
 #disable-next-line no-hardcoded-env-urls
 @description('Refers to the location URL in your key vault where the certificate was uploaded, it is should be in the format of https://<name of the vault>.vault.azure.net:443/secrets/<exact location>')
-param certificateUrlValue string
+param certificateUrlValue string = 'https://mtbintkv01.vault.azure.net/secrets/sf/43c3671760204b429ac24fdaf95e01a3'
 
 @description('Name of your cluster - Between 3 and 23 characters. Letters and numbers only')
 param clusterName string = resourceGroupName
@@ -56,7 +57,7 @@ param publicIPName string = 'PublicIP-LB-FE'
 param reliabilityLevel string = 'Bronze'
 
 @description('Resource Id of the key vault, is should be in the format of /subscriptions/<Sub ID>/resourceGroups/<Resource group name>/providers/Microsoft.KeyVault/vaults/<vault name>')
-param sourceVaultValue string
+param sourceVaultValue string = '/subscriptions/24730882-456b-42df-a6f8-8590ca6e4e37/resourceGroups/rg-core/providers/Microsoft.KeyVault/vaults/mtbintkv01'
 
 @description('Virtual Network Subnet0 Name')
 param subnet0Name string = 'Subnet-0'
@@ -232,18 +233,7 @@ module loadbalancer0 '../modules/Microsoft.Network/loadBalancers_custom/deploy.b
       }
     ]
     inboundNatRules: []
-    inboundNatPools: [
-      {
-        name: 'LoadBalancerBEAddressNatPool'
-        backendPort: 3389
-        frontendIPConfigurationID: lbIPConfig0
-        frontendPortRangeEnd: 4500
-        frontendPortRangeStart: 3389
-        protocol: 'Tcp'
-        enableFloatingIP: false
-        idleTimeoutInMinutes: 5
-      }
-    ]
+    inboundNatPools: []
     loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
@@ -398,6 +388,7 @@ module virtualMachineScaleSets0 '../modules/Microsoft.Compute/virtualMachineScal
   params: {
     name: vmNodeType0Name
     location: location
+    encryptionAtHost: false
     adminUsername: 'admin-vmss' //adminUserName
     adminPassword: '${uniqueString(randomGuid)}rpP@340' //adminPassword
     enableAutomaticUpdates: false
@@ -424,27 +415,20 @@ module virtualMachineScaleSets0 '../modules/Microsoft.Compute/virtualMachineScal
                   id: lbPoolID0
                 }
               ]
-              loadBalancerInboundNatPools: [
-                {
-                  id: lbNatPoolID0
-                }
-              ]
               subnet: {
                 id: subnet0Ref
               }
             }
           }
         ]
-        properties: {
-          primary: true
-          enableAcceleratedNetworking: false
-        }
+        primary: true
+        enableAcceleratedNetworking: false
         nicSuffix: '${nicName}-0'
       }
     ]
     osDisk: {
       caching: 'ReadOnly'
-      diskSizeGB: null
+      diskSizeGB: '128'
       createOption: 'FromImage'
       managedDisk: {
         storageAccountType: storageAccountType

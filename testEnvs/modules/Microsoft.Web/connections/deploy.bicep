@@ -8,7 +8,7 @@ param connectionApi object = {}
 param name string
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Customized parameter values for specific connections.')
 param customParameterValues object = {}

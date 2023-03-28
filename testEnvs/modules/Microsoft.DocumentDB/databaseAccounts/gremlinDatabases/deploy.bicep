@@ -23,7 +23,7 @@ param maxThroughput int = 4000
 param throughput int = -1
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var enableReferencedModulesTelemetry = false
 
