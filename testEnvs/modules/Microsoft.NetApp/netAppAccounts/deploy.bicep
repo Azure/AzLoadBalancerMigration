@@ -41,7 +41,7 @@ param lock string = ''
 param tags object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var enableReferencedModulesTelemetry = false
 

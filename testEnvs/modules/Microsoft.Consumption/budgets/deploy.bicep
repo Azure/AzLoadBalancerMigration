@@ -50,7 +50,7 @@ param contactRoles array = []
 param actionGroups array = []
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @sys.description('Optional. Location deployment metadata.')
 param location string = deployment().location

@@ -15,7 +15,7 @@ param location string = deployment().location
 param serviceShort string = 'apismin'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 // ============ //
 // Dependencies //

@@ -16,7 +16,7 @@ param subscriptionId string = subscription().id
 param location string = deployment().location
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var enableReferencedModulesTelemetry = false
 

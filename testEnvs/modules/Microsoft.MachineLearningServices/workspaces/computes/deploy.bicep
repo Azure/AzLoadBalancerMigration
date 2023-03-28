@@ -59,7 +59,7 @@ param computeType string
 param properties object = {}
 
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 // Identity
 @sys.description('Optional. Enables system assigned managed identity on the resource. Ignored when attaching a compute resource, i.e. when you provide a resource ID.')
