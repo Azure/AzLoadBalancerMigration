@@ -307,7 +307,6 @@ Function Test-SupportedMigrationScenario {
                 }
             }
         }
-
     }
 
     If ($scenario.BackendType -eq 'VM') {
