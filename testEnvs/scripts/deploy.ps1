@@ -145,6 +145,7 @@ foreach ($template in $filteredTemplates) {
             TemplateFile            = $template.FullName
             TemplateParameterObject = @{
                 Location                  = $Location
+                ResourceGroupName         = $rgTemplateName
             }
         }
         $null = New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
