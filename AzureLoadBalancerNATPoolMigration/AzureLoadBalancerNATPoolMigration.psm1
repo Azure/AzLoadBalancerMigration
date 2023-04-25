@@ -82,7 +82,7 @@ Function Start-AzNATPoolMigration {
     }
 
     # remove each vmss model's ipconfig from the load balancer's inbound nat pool
-    Write-Verbose "Removing the NAT Pool from the VMSS model ipConfigs."
+    Write-Host "Removing the NAT Pool from the VMSS model ipConfigs."
     $ipConfigNatPoolMap = @()
     ForEach ($inboundNATPool in $LoadBalancer.InboundNatPools) {
         ForEach ($vmssItem in $vmsses) {
@@ -90,7 +90,7 @@ Function Start-AzNATPoolMigration {
                 ForEach ($ipConfig in $nicConfig.ipConfigurations) {
                     If ($ipConfig.loadBalancerInboundNatPools.id -contains $inboundNATPool.id) {
 
-                        Write-Verbose "Removing NAT Pool '$($inboundNATPool.id)' from VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)'"
+                        Write-Host "Removing NAT Pool '$($inboundNATPool.id)' from VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)'"
                         $ipConfigParams = @{vmssId = $vmssItem.vmss.id; nicName = $nicConfig.Name; ipconfigName = $ipConfig.Name; inboundNatPoolId = $inboundNatPool.id }
                         $ipConfigNatPoolMap += $ipConfigParams
                         $ipConfig.loadBalancerInboundNatPools = $ipConfig.loadBalancerInboundNatPools | Where-Object { $_.id -ne $inboundNATPool.Id }
@@ -111,7 +111,7 @@ Function Start-AzNATPoolMigration {
         $vmssModelUpdateRemoveNATPoolJobs += $job
     }
 
-    Write-Verbose "Waiting for VMSS model to update to remove the NAT Pool references..."
+    Write-Host "Waiting for VMSS model to update to remove the NAT Pool references..."
     $vmssModelUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
@@ -130,7 +130,7 @@ Function Start-AzNATPoolMigration {
         $vmssInstanceUpdateRemoveNATPoolJobs += $job
     }
 
-    Write-Verbose "Waiting for VMSS instances to update to remove the NAT Pool references..."
+    Write-Host "Waiting for VMSS instances to update to remove the NAT Pool references..."
     $vmssInstanceUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
@@ -151,7 +151,7 @@ Function Start-AzNATPoolMigration {
         # add a new backend pool for the NAT rule
         $newBackendPoolName = "be_migrated_$($inboundNATPool.Name)"
 
-        Write-Verbose "Adding new Backend Pool '$newBackendPoolName' to LB for NAT Pool '$($inboundNATPool.Name)'"
+        Write-Host "Adding new Backend Pool '$newBackendPoolName' to LB for NAT Pool '$($inboundNATPool.Name)'"
         $LoadBalancer = $LoadBalancer | Add-AzLoadBalancerBackendAddressPoolConfig -Name $newBackendPoolName
         $natPoolToBEPMap[$inboundNATPool.Id] = '{0}/backendAddressPools/{1}' -f $LoadBalancer.Id, $newBackendPoolName
 
@@ -166,7 +166,7 @@ Function Start-AzNATPoolMigration {
 
         $newNatRuleName = "natrule_migrated_$($inboundNATPool.Name)"
 
-        Write-Verbose "Adding new NAT Rule '$newNatRuleName' to LB..."
+        Write-Host "Adding new NAT Rule '$newNatRuleName' to LB..."
         $LoadBalancer = $LoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig -Name $newNatRuleName `
             -Protocol $inboundNATPool.Protocol `
             -FrontendPortRangeStart $inboundNATPool.FrontendPortRangeStart `
@@ -181,7 +181,7 @@ Function Start-AzNATPoolMigration {
     }
 
     # add vmss model ip configs to new backend pools
-    Write-Verbose "Adding new backend pools to VMSS model ipConfigs..."
+    Write-Host "Adding new backend pools to VMSS model ipConfigs..."
 
     ForEach ($vmssItem in $vmsses) {
         ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
@@ -208,7 +208,7 @@ Function Start-AzNATPoolMigration {
                     $backendPoolObj = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
                     $backendPoolObj.id = $natPoolToBEPMap[$ipconfigRecord.inboundNatPoolId]
 
-                    Write-Verbose "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
+                    Write-Host "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
                     $backendPoolList.Add($backendPoolObj)
 
                     $ipConfig.LoadBalancerBackendAddressPools = $backendPoolList
@@ -228,7 +228,7 @@ Function Start-AzNATPoolMigration {
         $vmssModelUpdateAddBackendPoolJobs += $job
     }
 
-    Write-Verbose "Waiting for VMSS model to update to include the new Backend Pools..."
+    Write-Host "Waiting for VMSS model to update to include the new Backend Pools..."
     $vmssModelUpdateAddBackendPoolJobs | Wait-Job | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
@@ -238,7 +238,7 @@ Function Start-AzNATPoolMigration {
  
 
     # update all vmss instances to include the backend pool
-    Write-Verbose "Waiting for VMSS instances to update to include the new Backend Pools..."
+    Write-Host "Waiting for VMSS instances to update to include the new Backend Pools..."
     $vmssInstanceUpdateAddBackendPoolJobs = @()
     ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
         $vmss = $vmssItem.vmss
