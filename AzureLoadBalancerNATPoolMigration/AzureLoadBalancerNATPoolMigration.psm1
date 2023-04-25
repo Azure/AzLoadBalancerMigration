@@ -56,7 +56,14 @@ Function Start-AzNATPoolMigration {
     $inboundNatPoolConfigs = $LoadBalancer.InboundNatPools | ConvertTo-Json | ConvertFrom-Json
 
     # get add virtual machine scale sets associated with the LB NAT Pools (via NAT Pool-create NAT Rules)
+    If (!$LoadBalancer.InboundNatRules) {
+        Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any Inbound NAT Rules. This is unexpected. NAT Rules are created automatically when the VMSS Network Profile is updated to include an Inbound NAT Pool and the VMSS instances are updated with the VMSS mode."
+    }
     $vmssIds = $LoadBalancer.InboundNatRules.BackendIpConfiguration.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
+    If ($vmssIds.count -lt 1) {
+        # this error should not be hit... but just in case
+        Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any VMSSes associated with its NAT Pools."
+    }
     $vmssObjects = $vmssIds | ForEach-Object { Get-AzResource -ResourceId $_ | Get-AzVmss }
 
     # build vmss table
