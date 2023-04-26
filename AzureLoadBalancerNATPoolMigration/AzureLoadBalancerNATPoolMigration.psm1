@@ -30,6 +30,23 @@ Function Start-AzNATPoolMigration {
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $LoadBalancer
     )
 
+    Function Wait-VMSSInstanceUpdate {
+        [CmdletBinding()]
+        param (
+            [Parameter()]
+            [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet]
+            $vmss
+        )
+
+        $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
+
+        If ($vmssInstances.LatestModelApplied -contains $false) {
+            Write-Host "`tWaiting for VMSS '$($vmss.Name)' to update all instances..."
+            Start-Sleep -Seconds 5
+            Wait-VMSSInstanceUpdate -vmss $vmss
+        }
+    }
+
     $ErrorActionPreference = 'Stop'
 
     # get load balanacer if not passed through pipeline
@@ -120,21 +137,31 @@ Function Start-AzNATPoolMigration {
     }
 
     # update all vmss instances
+    Write-Host "Updating VMSS instances to remove the NAT Pool references..."
     $vmssInstanceUpdateRemoveNATPoolJobs = @()
     ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
         $vmss = $vmssItem.vmss
-        $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
 
-        $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
-        $job.Name = $vmss.vmss.Name + '_instanceUpdateRemoveNATPool'
-        $vmssInstanceUpdateRemoveNATPoolJobs += $job
+        If ($vmss.UpgradePolicy.Mode -eq 'Automatic') {
+            Wait-VMSSInstanceUpdate -vmss $vmss
+        }
+        Else {
+            $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
+
+            $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
+            $job.Name = $vmss.vmss.Name + '_instanceUpdateRemoveNATPool'
+            $vmssInstanceUpdateRemoveNATPoolJobs += $job
+        }
     }
 
-    Write-Host "Waiting for VMSS instances to update to remove the NAT Pool references..."
-    $vmssInstanceUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
-        $job = $_
-        If ($job.Error -or $job.State -eq 'Failed') {
-            Write-Error "An error occured while updating the VMSS instances to remove the NAT Pools: $($job.error; $job | Receive-Job)."
+    # for manual update vmsses, wait for the instance update jobs to complete
+    If ($vmssInstanceUpdateRemoveNATPoolJobs.count -gt 0) {
+        Write-Host "`tWaiting for VMSS instances to update to remove the NAT Pool references..."
+        $vmssInstanceUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
+            $job = $_
+            If ($job.Error -or $job.State -eq 'Failed') {
+                Write-Error "An error occured while updating the VMSS instances to remove the NAT Pools: $($job.error; $job | Receive-Job)."
+            }
         }
     }
 
@@ -241,18 +268,27 @@ Function Start-AzNATPoolMigration {
     Write-Host "Waiting for VMSS instances to update to include the new Backend Pools..."
     $vmssInstanceUpdateAddBackendPoolJobs = @()
     ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
-        $vmss = $vmssItem.vmss
-        $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
 
-        $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
-        $job.Name = $vmss.vmss.Name + '_instanceUpdateAddBackendPool'
-        $vmssInstanceUpdateAddBackendPoolJobs += $job
+        If ($vmss.UpgradePolicy.Mode -eq 'Automatic') {
+            Wait-VMSSInstanceUpdate -vmss $vmss
+        }
+        Else {
+            $vmss = $vmssItem.vmss
+            $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
+
+            $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
+            $job.Name = $vmss.vmss.Name + '_instanceUpdateAddBackendPool'
+            $vmssInstanceUpdateAddBackendPoolJobs += $job
+        }
     }
 
-    $vmssInstanceUpdateAddBackendPoolJobs | Wait-Job | Foreach-Object {
-        $job = $_
-        If ($job.Error -or $job.State -eq 'Failed') {
-            Write-Error "An error occured while updating the VMSS instanaces to add the NAT Rules: $($job.error; $job | Receive-Job)."
+    # for manual update vmsses, wait for the instance update jobs to complete
+    If ($vmssInstanceUpdateAddBackendPoolJobs.count -gt 0) {
+        $vmssInstanceUpdateAddBackendPoolJobs | Wait-Job | Foreach-Object {
+            $job = $_
+            If ($job.Error -or $job.State -eq 'Failed') {
+                Write-Error "An error occured while updating the VMSS instanaces to add the NAT Rules: $($job.error; $job | Receive-Job)."
+            }
         }
     }
 }
