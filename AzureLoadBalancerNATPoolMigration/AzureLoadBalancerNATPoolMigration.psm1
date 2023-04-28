@@ -14,13 +14,23 @@ Function Start-AzNATPoolMigration {
 
     Backend port mapping for pool members will not necessarily be the same for NAT Pools with multiple associated VMSSes. 
 .NOTES
-    
+    Please report issues at: https://github.com/Azure/AzLoadBalancerMigration/issues
+
 .LINK
+    https://github.com/Azure/AzLoadBalancerMigration
     
 .EXAMPLE
-    ./MigrateNATPools.ps1 -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb
+    Import-Module AzureLoadBalancerNATPoolMigration
+    Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb
     
-    Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules. 
+    # Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules. 
+
+.EXAMPLE
+    Import-Module AzureLoadBalancerNATPoolMigration
+    $lb = Get-AzLoadBalancer | ? name -eq 'my-standard-lb-01'
+    $lb | Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb
+    
+    # Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules, passing the Load Balancer to the function through the pipeline. 
 #>
 
     [CmdletBinding()]

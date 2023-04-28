@@ -12,7 +12,7 @@
 RootModule = 'AzureLoadBalancerNATPoolMigration'
 
 # Version number of this module.
-ModuleVersion = '0.0.1'
+ModuleVersion = '0.0.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -21,7 +21,7 @@ ModuleVersion = '0.0.1'
 GUID = '29a52dea-71ed-421a-8bc0-022650197432'
 
 # Author of this module
-Author = 'Matthew Bratschun'
+Author = 'Matthew Bratschun at FastTrack for Azure'
 
 # Company or vendor of this module
 CompanyName = 'Microsoft'
