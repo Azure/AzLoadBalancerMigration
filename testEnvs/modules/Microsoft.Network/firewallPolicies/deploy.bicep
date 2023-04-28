@@ -80,7 +80,7 @@ param keyVaultSecretId string = ''
 param certificateName string = ''
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Rule collection groups.')
 param ruleCollectionGroups array = []

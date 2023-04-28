@@ -60,7 +60,7 @@ param resourceSelectors array = []
 param subscriptionId string = subscription().subscriptionId
 
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var identityVar = identity == 'SystemAssigned' ? {
   type: identity

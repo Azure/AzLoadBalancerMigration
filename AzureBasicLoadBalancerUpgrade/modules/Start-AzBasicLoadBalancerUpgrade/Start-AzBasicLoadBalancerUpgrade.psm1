@@ -34,7 +34,7 @@
 <#
 
 .DESCRIPTION
- This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) to a Standard SKU load balancer, preserving the existing configuration and functionality.
+ This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) or Virtual Machine(s) to a Standard SKU load balancer, preserving the existing configuration and functionality.
 
 .SYNOPSIS
 This module consists of a number of child modules which abstract the operations required to successfully migrate a Basic to a Standard load balancer.
@@ -42,7 +42,7 @@ A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore th
 
 Unsupported scenarios:
 - Basic load balancers with a VMSS backend pool member which is also a member of a backend pool on a different load balancer
-- Basic load balancers with backend pool members which are not a VMSS
+- Basic load balancers with backend pool members which are not VMs or a VMSS
 - Basic load balancers with only empty backend pools
 - Basic load balancers with IPV6 frontend IP configurations
 - Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode
@@ -123,18 +123,26 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathLB,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJson')][string] $FailedMigrationRetryFilePathVMSS,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVm')][string] 
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] 
+        $FailedMigrationRetryFilePathLB,
+        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] $FailedMigrationRetryFilePathVMSS,
         [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
-        [Parameter(Mandatory = $false)][switch] $force
+        [Parameter(Mandatory = $false)][switch] $validateOnly,
+        [Parameter(Mandatory = $false)][int32] $defaultJobWaitTimeout = (New-Timespan -Minutes 10).TotalSeconds,
+        [Parameter(Mandatory = $false)][switch] $force,
+        [Parameter(Mandatory = $false)][switch] $Pre
         )
 
     # Set global variable to display log output in console
     If ($FollowLog.IsPresent) {
         $global:FollowLog = $true
     }
+
+    # Set global variable for default job wait timoue
+    $global:defaultJobWaitTimeout = $defaultJobWaitTimeout
 
     # validate backup path is directory
     If (!(Test-Path -Path $RecoveryBackupPath -PathType Container )) {
@@ -145,7 +153,7 @@ function Start-AzBasicLoadBalancerUpgrade {
 
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Checking that user is signed in to Azure PowerShell"
     if (!($azContext = Get-AzContext -ErrorAction SilentlyContinue)) {
-        log 'Error' "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
+        log -Severity 'Error' -Message "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"
         return
     }
     log -Message "[Start-AzBasicLoadBalancerUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
@@ -183,27 +191,55 @@ function Start-AzBasicLoadBalancerUpgrade {
         $StdLoadBalancerName = $BasicLoadBalancer.Name
     }
 
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent)
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateOnly.isPresent) -Pre:$Pre.IsPresent
 
-    # Migration of Frontend IP Configurations
-    switch ($scenario.ExternalOrInternal) {
-        'internal' {
-            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                InternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
-            }
-            else {
-                RestoreInternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+    if ($validateOnly) {
+        break
+    }
+
+    switch ($scenario.BackendType) {
+        'VM' {
+            switch ($scenario.ExternalOrInternal) {
+                'internal' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        InternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                    }
+                    else {
+                        RestoreInternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -Scenario $scenario
+                    }
+                }
+                'external' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        PublicLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                    }
+                    else {
+                        RestoreExternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -Scenario $scenario
+                    }
+                }
             }
         }
-        'external' {
-            if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                PublicLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath
-            }
-            else {
-                RestoreExternalLBMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss
+        'VMSS' {
+            switch ($scenario.ExternalOrInternal) {
+                'internal' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        InternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                    }
+                    else {
+                        RestoreInternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss -Scenario $scenario
+                    }
+                }
+                'external' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        PublicLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                    }
+                    else {
+                        RestoreExternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss -Scenario $scenario
+                    }
+                }
             }
         }
     }
+
     log -Message "############################## Migration Completed ##############################"
 }
 

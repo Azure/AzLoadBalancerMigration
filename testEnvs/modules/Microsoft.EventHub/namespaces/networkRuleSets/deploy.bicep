@@ -25,7 +25,7 @@ param virtualNetworkRules array = []
 param ipRules array = []
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 var networkRules = [for (virtualNetworkRule, index) in virtualNetworkRules: {
   ignoreMissingVnetServiceEndpoint: contains(virtualNetworkRule, 'ignoreMissingVnetServiceEndpoint') ? virtualNetworkRule.ignoreMissingVnetServiceEndpoint : null

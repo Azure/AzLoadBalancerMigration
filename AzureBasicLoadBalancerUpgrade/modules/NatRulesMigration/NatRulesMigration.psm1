@@ -10,7 +10,7 @@ function NatRulesMigration {
     $inboundNatRules = $BasicLoadBalancer.InboundNatRules
     $inboundNatPools = $BasicLoadBalancer.InboundNatPools
     foreach ($inboundNatRule in $inboundNatRules) {
-        log -Message "[NatRulesMigration] Evaluating adding NAT Rule $($inboundNatRule.Name) to Standard Load Balancer"
+        log -Message "[NatRulesMigration] Evaluating adding NAT Rule '$($inboundNatRule.Name)' to Standard Load Balancer"
 
         try {
             $ErrorActionPreference = "Stop"

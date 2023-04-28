@@ -8,7 +8,7 @@ param staticSiteName string
 param validationMethod string = 'cname-delegation'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Location for all resources.')
 param location string = resourceGroup().location

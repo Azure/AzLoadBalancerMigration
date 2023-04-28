@@ -2,33 +2,11 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "keyVaultName": {
-      "type": "string"
-    },
-    "secretName": {
+    "randomGuid": {
       "type": "string",
-      "defaultValue": "adminPassword",
-      "metadata": {
-        "description": "The name of the secret."
-      }
-    },
-    "keyVaultResourceGroupName": {
-      "type": "string",
-      "metadata": {
-        "description": "The name of the resource group that contains the keyvault."
-      }
-    },
-    "vaultSubscription": {
-      "type": "string",
-      "defaultValue": "[subscription().subscriptionId]",
-      "metadata": {
-        "description": "The name of the subscription that contains the keyvault."
-      }
+      "defaultValue": "[newGuid()]"
     },
     "location": {
-      "type": "string"
-    },
-    "resourceGroupName": {
       "type": "string"
     }
   },
@@ -458,12 +436,7 @@
         },
         "parameters": {
           "adminPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "[resourceId(parameters('vaultSubscription'), parameters('keyVaultResourceGroupName'), 'Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]"
-              },
-              "secretName": "[parameters('secretName')]"
-            }
+              "value": "[concat(uniqueString(parameters('randomGuid')),'aKJL5')]"
           },
           "location": {
             "value": "[parameters('location')]"

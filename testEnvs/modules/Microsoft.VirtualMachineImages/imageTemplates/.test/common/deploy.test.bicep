@@ -21,7 +21,7 @@ param sigImageVersion string = utcNow('yyyy.MM.dd')
 param stagingResourceGroupName string = 'ms.virtualmachineimages.imagetemplates-${serviceShort}-staging-rg'
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 // ============ //
 // Dependencies //

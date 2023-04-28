@@ -2,7 +2,7 @@
 param apiManagementServiceName string = ''
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Required. Unique name of NamedValue. It may contain only letters, digits, period, dash, and underscore characters.')
 param displayName string

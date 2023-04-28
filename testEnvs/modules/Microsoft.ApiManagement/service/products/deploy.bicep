@@ -5,7 +5,7 @@ param apiManagementServiceName string
 param approvalRequired bool = false
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Optional. Product description. May include HTML formatting tags.')
 param productDescription string = ''

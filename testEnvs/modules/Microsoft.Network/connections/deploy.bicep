@@ -49,7 +49,7 @@ param lock string = ''
 param tags object = {}
 
 @description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
-param enableDefaultTelemetry bool = true
+param enableDefaultTelemetry bool = false
 
 @description('Required. The primary Virtual Network Gateway.')
 param virtualNetworkGateway1 object

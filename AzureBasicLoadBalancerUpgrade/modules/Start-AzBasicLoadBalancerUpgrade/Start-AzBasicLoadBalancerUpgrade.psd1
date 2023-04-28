@@ -12,7 +12,7 @@
 RootModule = 'Start-AzBasicLoadBalancerUpgrade'
 
 # Version number of this module.
-ModuleVersion = '0.1.0'
+ModuleVersion = '0.1.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -55,7 +55,8 @@ RequiredModules = @(
     'Az.Accounts',
     'Az.Compute',
     'Az.Network',
-    'Az.Resources'
+    'Az.Resources',
+    'Az.ResourceGraph'
  )
 
 # Assemblies that must be loaded prior to importing this module
