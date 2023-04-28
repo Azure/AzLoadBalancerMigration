@@ -27,7 +27,7 @@ A clear and concise description of what you expected to happen without this bug 
 
 If applicable, add screenshots to help explain your problem. Please feel free to blur/cover any sensitive information.
 
-## Additional context
+## Additional context - please include:
 
 - Version of the AzureBasicLoadBalancerUpgrade module you are running (see: `Get-Module AzureBasicLoadBalancerUpgrade` after importing the module.)
 - Version of PowerShell you are running (`$PSVersionTable`)

@@ -111,11 +111,19 @@ Function BackupVmss {
             $options.WriteIndented = $true
             #$options.IgnoreReadOnlyFields = $true # This is only available in PS 7
             $options.IgnoreReadOnlyProperties = $true
+            $options.MaxDepth = 64
 
             [System.Text.Json.JsonSerializer]::Serialize($vmss, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet], $options) | Out-File -FilePath $outputFilePathVSS
         }
         catch {
-            $message = "[BackupVmss] An error occured while exporting the VMSS '$($vmssName)' for backup purposes. Error: $_"
+            # catch issue where PowerShell Desktop cannot serialize complex objects in VM extensions
+            If ($_.Exception.Message -eq "Exception calling `"Serialize`" with `"3`" argument(s): `"The collection type 'System.Object' on 'Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSetExtension.Settings' is not supported.`"" -and
+                $PSVersionTable.PSEdition -eq 'Desktop') {
+                $message = "[BackupVmss] Exporting the VMSS '$($vmss.Name)' for backup purposes failed. This is likely due to the VMSS having an extension with a complex object type in the settings. `n`n`t **Please try again in PowerShell Core**`n`n Error: $_"
+                log -Severity Error -Message $message -terminateOnError
+            }
+
+            $message = "[BackupVmss] An error occured while exporting the VMSS '$($vmss.Name)' for backup purposes. Error: $_"
             log -Severity Error -Message $message -terminateOnError
         }
     }
