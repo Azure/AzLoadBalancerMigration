@@ -94,7 +94,8 @@ function PublicLBMigrationVmss {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[PublicLBMigration] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -136,7 +137,7 @@ function PublicLBMigrationVmss {
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -156,7 +157,8 @@ function InternalLBMigrationVmss {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[InternalLBMigration] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -204,7 +206,7 @@ function InternalLBMigrationVmss {
     BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
-    #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Creating NSG for Standard Load Balancer
     #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -216,7 +218,8 @@ function RestoreExternalLBMigrationVmss {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -249,7 +252,7 @@ function RestoreExternalLBMigrationVmss {
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -269,7 +272,8 @@ function RestoreInternalLBMigrationVmss {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -308,7 +312,7 @@ function RestoreInternalLBMigrationVmss {
     BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
-    #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Creating NSG for Standard Load Balancer
     #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -354,7 +358,7 @@ function PublicLBMigrationVM {
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario -Scenario $scenario
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -414,7 +418,8 @@ function RestoreExternalLBMigrationVM {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -447,7 +452,7 @@ function RestoreExternalLBMigrationVM {
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -467,7 +472,8 @@ function RestoreInternalLBMigrationVM {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $true)][psobject] $scenario
     )
 
     log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -506,7 +512,7 @@ function RestoreInternalLBMigrationVM {
     BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
 
     # Creating Outbound Rules for SNAT
-    #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer
+    #OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Creating NSG for Standard Load Balancer
     #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
