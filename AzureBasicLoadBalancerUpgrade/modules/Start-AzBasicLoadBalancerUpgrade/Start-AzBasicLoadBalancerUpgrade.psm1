@@ -156,6 +156,9 @@ function Start-AzBasicLoadBalancerUpgrade {
 
     log -Message "############################## Initializing Start-AzBasicLoadBalancerUpgrade ##############################"
 
+    log -Message "[Start-AzBasicLoadBalancerUpgrade] PowerShell Version: $($PSVersionTable.PSVersion.ToString())"
+    log -Message "[Start-AzBasicLoadBalancerUpgrade] AzureBasicLoadBalancerUpgrade Version: $((Get-Module -Name AzureBasicLoadBalancerUpgrade).Version.ToString())"
+
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Checking that user is signed in to Azure PowerShell"
     if (!($azContext = Get-AzContext -ErrorAction SilentlyContinue)) {
         log -Severity 'Error' -Message "Sign into Azure Powershell with 'Connect-AzAccount' before running this script!"

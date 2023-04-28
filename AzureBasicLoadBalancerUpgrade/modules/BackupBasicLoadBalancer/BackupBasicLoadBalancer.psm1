@@ -101,6 +101,8 @@ Function BackupVmss {
         $message = "[BackupVmss] Attempting to create a file-based backup VMSS with id '$vmssId'"
         log -Severity Information -Message $message
 
+        $backupDateTime = Get-Date -Format FileDateTime
+
         try {
             $ErrorActionPreference = 'Stop'
             $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
