@@ -422,8 +422,15 @@ Function Test-SupportedMigrationScenario {
         }
     }
 
+    # warn about pre-release for VM migrations
     If ($scenario.BackendType -eq 'VM' -and !$pre.isPresent) {
         $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk and please report any issues encountered at https://github.com/Azure/AzLoadBalancerMigration/issues."
+        log -Message $message -Severity 'Error' -terminateOnError
+    }
+
+    # check that Az.ResourceGraph module is installed for VM migrations
+    If ($scenario.BackendType -eq 'VM' -and !(Get-Module -Name Az.ResourceGraph -ListAvailable)) {
+        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends requires the Az.ResourceGraph module. Please install it with `Install-Module Az.ResourceGraph` and try the command again."
         log -Message $message -Severity 'Error' -terminateOnError
     }
 
