@@ -38,7 +38,18 @@ function RemoveBasicLoadBalancer {
         log -Message "[RemoveBasicLoadBalancerFromVmss] Updating VMSS $($vmss.Name)"
 
         try {
-            Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss -ErrorAction Stop > $null
+            $ErrorActionPreference = 'Stop'
+
+            $job = Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss -ErrorAction Stop -AsJob
+
+            While ($job.State -eq 'Running') {
+                Start-Sleep -Seconds 5
+                log -Message "[RemoveBasicLoadBalancerFromVmss] Waiting for Update-AzVMSS job to complete..."
+            }
+    
+            If ($job.Error -or $job.State -eq 'Failed') {
+                Write-Error $job.error
+            }
         }
         catch {
             $message = @"

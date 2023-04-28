@@ -23,7 +23,17 @@ function _UpdateAzVmss {
     log -Message "[_UpdateAzVmss] Saving VMSS $($vmss.Name)"
     try {
         $ErrorActionPreference = 'Stop'
-        Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
+
+        $job = Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss -AsJob
+
+        While ($job.State -eq 'Running') {
+            Start-Sleep -Seconds 15
+            log -Message "[_UpdateAzVmss] Waiting for Update-AzVMSS job to complete..."
+        }
+
+        If ($job.Error -or $job.State -eq 'Failed') {
+            Write-Error $job.error
+        }
     }
     catch {
         $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
@@ -152,7 +162,16 @@ function InboundNatPoolsMigration {
 
     try {
         $ErrorActionPreference = 'Stop'
-        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
+        $job = Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -AsJob
+
+        While ($job.State -eq 'Running') {
+            Start-Sleep -Seconds 15
+            log -Message "[InboundNatPoolsMigration] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
+        }
+
+        If ($job.Error -or $job.State -eq 'Failed') {
+            Write-Error $job.error
+        }
     }
     catch {
         $message = @"

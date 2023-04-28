@@ -75,7 +75,17 @@ function NatRulesMigration {
 
     try {
         $ErrorActionPreference = 'Stop'
-        Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
+
+        $UpdateLBNATRulesJob = Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -AsJob
+
+        While ($UpdateLBNATRulesJob.State -eq 'Running') {
+            Start-Sleep -Seconds 15
+            log -Message "[NatRulesMigration] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
+        }
+
+        If ($UpdateLBNATRulesJob.Error -or $UpdateLBNATRulesJob.State -eq 'Failed') {
+            Write-Error $UpdateLBNATRulesJob.Error 
+        }
     }
     catch {
         $message = @"

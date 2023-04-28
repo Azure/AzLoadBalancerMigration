@@ -52,7 +52,7 @@ Function Start-AzNATPoolMigration {
 
         If ($vmssInstances.LatestModelApplied -contains $false) {
             Write-Host "`tWaiting for VMSS '$($vmss.Name)' to update all instances..."
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds 15
             Wait-VMSSInstanceUpdate -vmss $vmss
         }
     }
