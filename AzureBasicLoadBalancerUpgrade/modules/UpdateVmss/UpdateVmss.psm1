@@ -7,7 +7,16 @@ function UpdateVmss {
     log -Message "[UpdateVmss] Updating configuration of VMSS '$($vmss.Name)'"
     try {
         $ErrorActionPreference = 'Stop'
-        Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss > $null
+        $job = Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss -AsJob
+
+        While ($job.State -eq 'Running') {
+            Start-Sleep -Seconds 15
+            log -Message "[NsgCreationVmss] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
+        }
+
+        If ($job.Error -or $job.State -eq 'Failed') {
+            Write-Error $job.error
+        }
     }
     catch {
         $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()

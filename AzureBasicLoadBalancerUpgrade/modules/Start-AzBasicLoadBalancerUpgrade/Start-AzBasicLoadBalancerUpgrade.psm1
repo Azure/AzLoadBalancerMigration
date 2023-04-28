@@ -141,6 +141,11 @@ function Start-AzBasicLoadBalancerUpgrade {
         $global:FollowLog = $true
     }
 
+    # Default to -FollowLogs if running in Cloud Shell to avoid timeouts
+    If ($env:POWERSHELL_DISTRIBUTION_CHANNEL -eq 'CloudShell') {
+        $global:FollowLog = $true
+    }
+
     # Set global variable for default job wait timoue
     $global:defaultJobWaitTimeout = $defaultJobWaitTimeout
 
