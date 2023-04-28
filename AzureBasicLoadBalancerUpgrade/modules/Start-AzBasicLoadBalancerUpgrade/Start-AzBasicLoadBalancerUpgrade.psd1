@@ -55,10 +55,8 @@ RequiredModules = @(
     'Az.Accounts',
     'Az.Compute',
     'Az.Network',
-    'Az.Resources',
-    'Az.ResourceGraph'
- )
-
+    'Az.Resources'
+)
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
 
@@ -75,7 +73,7 @@ RequiredModules = @(
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = '*'
+FunctionsToExport = 'Start-AzBasicLoadBalancerUpgrade'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = '*'
