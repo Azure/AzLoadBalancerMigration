@@ -24,11 +24,12 @@ Function Test-SupportedMigrationScenario {
         $Pre
     )
 
-    $scenario = @{
-        'ExternalOrInternal'         = ''
-        'BackendType'                = ''
-        'VMsHavePublicIPs'           = ''
-        'VMSSInstancesHavePublicIPs' = ''
+    $scenario = New-Object -TypeName psobject -Property @{
+        'ExternalOrInternal'              = ''
+        'BackendType'                     = ''
+        'VMsHavePublicIPs'                = $false
+        'VMSSInstancesHavePublicIPs'      = $false
+        'SkipOutboundRuleCreationMultiBE' = $false
     }
 
     # checking source load balance SKU
@@ -424,6 +425,31 @@ Function Test-SupportedMigrationScenario {
     If ($scenario.BackendType -eq 'VM' -and !$pre.isPresent) {
         $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk and please report any issues encountered at https://github.com/Azure/AzLoadBalancerMigration/issues."
         log -Message $message -Severity 'Error' -terminateOnError
+    }
+
+    # if the basic lb is external and has multiple backend pools, warn that the migration will not create a default outbound rule
+    If ($scenario.ExternalOrInternal -eq 'External' -and $BasicLoadBalancer.BackendAddressPools.Count -gt 1 -and 
+        (!$scenario.VMsHavePublicIPs -and !$scenario.VMSSInstancesHavePublicIPs)) {
+
+        $scenario.SkipOutboundRuleCreationMultiBE = $true
+
+        $message = "[Test-SupportedMigrationScenario] Basic Load Balancer '$($BasicLoadBalancer.Name)' has multiple backend pools and is external. The migration will not create a default outbound rule on the Standard Load Balancer. You will need to create a default outbound rule manually post-migration; until you do, your backend pool members will have no outbound internet access."
+        log -Message $message -Severity 'Warning'
+
+        Write-Host "Basic Load Balancer '$($BasicLoadBalancer.Name)' has multiple backend pools and is external. The migration will not create a default outbound rule on the Standard Load Balancer. You will need to create a default outbound rule manually post-migration." -ForegroundColor Yellow
+        If (!$force.IsPresent) {
+            while ($response -ne 'y' -and $response -ne 'n') {
+                $response = Read-Host -Prompt "Do you want to continue? (y/n)"
+            }
+            If ($response -eq 'n') {
+                $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
+        }
+        Else {
+            $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+            log -Message $message -Severity 'Warning'
+        }
     }
 
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
