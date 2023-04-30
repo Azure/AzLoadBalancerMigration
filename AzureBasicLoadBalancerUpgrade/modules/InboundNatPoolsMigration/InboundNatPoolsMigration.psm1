@@ -1,6 +1,7 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1") 
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmssInstances/UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmss/UpdateVmss.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 function _HardCopyObject {
     [CmdletBinding()]
@@ -24,16 +25,7 @@ function _UpdateAzVmss {
     try {
         $ErrorActionPreference = 'Stop'
 
-        $job = Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss -AsJob
-
-        While ($job.State -eq 'Running') {
-            Start-Sleep -Seconds 15
-            log -Message "[_UpdateAzVmss] Waiting for Update-AzVMSS job to complete..."
-        }
-
-        If ($job.Error -or $job.State -eq 'Failed') {
-            Write-Error $job.error
-        }
+        Update-Vmss -Vmss $vmss
     }
     catch {
         $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
@@ -198,7 +190,7 @@ function InboundNatPoolsMigration {
     #_RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    #UpdateVMSS -vmss $vmss
+    #Update-Vmss -vmss $vmss
     #>
 
     log -Message "[InboundNatPoolsMigration] Inbound NAT Pools Migration Completed"

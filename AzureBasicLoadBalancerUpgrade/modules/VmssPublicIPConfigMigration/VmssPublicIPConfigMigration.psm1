@@ -27,7 +27,7 @@ Function RemoveVmssPublicIPConfig {
         log -Message "[RemoveVMSSPublicIPConfig] Updating vmss '$($vmss.Name)' to apply removal of public IP address configuration"
         log -Severity Warning -Message "[RemoveVMSSPublicIPConfig] Removal of the Public IP Configs from the VMSS will result in new Public IPs being assigned post migration."
 
-        UpdateVmss -vmss $vmss
+        Update-Vmss -vmss $vmss
 
         UpdateVmssInstances -vmss $vmss
     }
@@ -67,7 +67,7 @@ Function AddVmssPublicIPConfig {
     If ($pipConfigAdded) {
         log -Message "[AddVMSSPublicIPConfig] Updating vmss '$($vmss.Name)' to apply addition of public IP address configuration"
 
-        UpdateVmss -vmss $vmss
+        Update-Vmss -vmss $vmss
 
         UpdateVmssInstances -vmss $vmss
     }

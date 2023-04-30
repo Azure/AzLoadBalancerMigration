@@ -24,7 +24,7 @@ function NatRulesMigration {
                     $inboundNatRule.FrontendPort -le $matchedNatPool[0].FrontendPortRangeEnd -and 
                     $inboundNatRule.FrontendIPConfigurationText -eq $matchedNatPool[0].FrontendIPConfigurationText) {
                     
-                    log -Severity 'Warning' -Message "[NatRulesMigration] NAT Rule '$($inboundNatRule.Name)' appears to have been dynamically created for Inbound NAT Pool '$($matchedNatPool.Name)'. This rule will not be migrated!"
+                    log -Message "[NatRulesMigration] NAT Rule '$($inboundNatRule.Name)' appears to have been dynamically created for Inbound NAT Pool '$($matchedNatPool.Name)'. This rule will not be migrated and is normal for LBs with NAT Pools."
                     
                     continue
                 }

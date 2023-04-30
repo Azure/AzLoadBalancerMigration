@@ -63,7 +63,7 @@ function BackupBasicLoadBalancer {
         $backupDateTime = Get-Date -Format FileDateTime
 
         # export serialized JSON object of Basic LB for automated recovery scenarios
-        $outputFileName = ('State_' + $BasicLoadBalancer.Name + "_" + $BasicLoadBalancer.ResourceGroupName + "_" + $backupDateTime + ".json")
+        $outputFileName = ('State_LB_' + $BasicLoadBalancer.Name + "_" + $BasicLoadBalancer.ResourceGroupName + "_" + $backupDateTime + ".json")
         $outputFilePath = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileName
 
         $options = [System.Text.Json.JsonSerializerOptions]::new()
@@ -106,7 +106,7 @@ Function BackupVmss {
         try {
             $ErrorActionPreference = 'Stop'
             $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
-            $outputFileNameVMSS = ('VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
+            $outputFileNameVMSS = ('State_VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
             $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
 
             $options = [System.Text.Json.JsonSerializerOptions]::new()

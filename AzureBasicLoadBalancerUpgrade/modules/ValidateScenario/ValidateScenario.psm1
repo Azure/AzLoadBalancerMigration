@@ -301,6 +301,10 @@ Function Test-SupportedMigrationScenario {
                         $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
                         log -Message $message -Severity 'Error' -terminateOnError
                     }
+
+                    If ($env:POWERSHELL_DISTRIBUTION_CHANNEL -eq 'CloudShell') {
+                        log -Severity Error -Message "Due to possiblity of timeouts, the -Force parameter must be specified when attempting to migrate a Service Fabric cluster LB in Azure Cloud Shell. Use at your own risk!" -terminateOnError
+                    }
                 }
                 Else {
                     $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"

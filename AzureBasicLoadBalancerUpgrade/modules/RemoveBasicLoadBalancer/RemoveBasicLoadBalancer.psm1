@@ -1,6 +1,7 @@
 
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmss/UpdateVmss.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmssInstances/UpdateVmssInstances.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 
@@ -40,16 +41,7 @@ function RemoveBasicLoadBalancer {
         try {
             $ErrorActionPreference = 'Stop'
 
-            $job = Update-AzVmss -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -VirtualMachineScaleSet $vmss -ErrorAction Stop -AsJob
-
-            While ($job.State -eq 'Running') {
-                Start-Sleep -Seconds 5
-                log -Message "[RemoveBasicLoadBalancerFromVmss] Waiting for Update-AzVMSS job to complete..."
-            }
-    
-            If ($job.Error -or $job.State -eq 'Failed') {
-                Write-Error $job.error
-            }
+            Update-Vmss -Vmss $vmss
         }
         catch {
             $message = @"
