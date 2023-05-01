@@ -60,7 +60,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         param($RGName)
         Write-Output $RGName
         $pwd
-        Import-Module ..\..\AzureBasicLoadBalancerUpgrade  -Force
+        Import-Module ../../module\AzureBasicLoadBalancerUpgrade  -Force
         $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
