@@ -8,7 +8,7 @@ This module migrates a Basic SKU Load Balancer to a Standard SKU Load Balancer. 
 
 ## Azure Load Balancer NAT Pool Migration
 
-This module migrates NAT Pools to NAT Rules on a Standard SKU Load Balancer. See [Azure Load Balancer NAT Pool Migration](AzureLoadBalancerNATPoolMigration\README.md)
+This module migrates NAT Pools to NAT Rules on a Standard SKU Load Balancer. See [Azure Load Balancer NAT Pool Migration](AzureLoadBalancerNATPoolMigration/README.md)
 
 ## Contributing
 
