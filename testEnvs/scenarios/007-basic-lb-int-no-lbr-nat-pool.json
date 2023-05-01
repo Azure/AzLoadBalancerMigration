@@ -8,6 +8,9 @@
     "randomGuid": {
       "type": "string",
       "defaultValue": "[newGuid()]"
+    },
+    "resourceGroupName": {
+      "type": "string"
     }
   },
   "variables": {},
@@ -15,7 +18,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2020-10-01",
-      "name": "rgdeployment",
+      "name": "[parameters('resourceGroupName')]",
       "properties": {
         "mode": "Incremental",
         "expressionEvaluationOptions": {
