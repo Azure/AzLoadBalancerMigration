@@ -5,7 +5,7 @@ var resourceGroupName = 'rg-009-basicLBExtBasicStaticPIP'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
-  name: resourceGroupName
+  name: '${resourceGroupName}-${location}'
   params: {
     name: resourceGroupName
     location: location

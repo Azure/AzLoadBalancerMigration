@@ -5,7 +5,7 @@ var resourceGroupName = 'rg-005-basicLBMultiBEs'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
-  name: resourceGroupName
+  name: '${resourceGroupName}-${location}'
   params: {
     name: resourceGroupName
     location: location

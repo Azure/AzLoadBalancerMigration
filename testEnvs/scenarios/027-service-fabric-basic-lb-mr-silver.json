@@ -21,7 +21,7 @@
     },
        "clusterName": {
       "type": "string",
-      "defaultValue": "clustermtb6",
+      "defaultValue": "clustermtb7",
       "metadata": {
         "description": "Name of your cluster - Between 3 and 23 characters. Letters and numbers only"
       }

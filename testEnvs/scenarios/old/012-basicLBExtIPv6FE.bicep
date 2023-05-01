@@ -5,7 +5,7 @@ var resourceGroupName = 'rg-012-basicLBExtIPv6FE'
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
-  name: resourceGroupName
+  name: '${resourceGroupName}-${location}'
   params: {
     name: resourceGroupName
     location: location

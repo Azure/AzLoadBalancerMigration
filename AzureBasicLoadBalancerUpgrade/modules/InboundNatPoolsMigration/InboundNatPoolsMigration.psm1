@@ -17,38 +17,6 @@ function _HardCopyObject {
     return , [System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]]$cgenericListSubResource
 }
 
-function _UpdateAzVmss {
-    param (
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss
-    )
-    log -Message "[_UpdateAzVmss] Saving VMSS $($vmss.Name)"
-    try {
-        $ErrorActionPreference = 'Stop'
-
-        Update-Vmss -Vmss $vmss
-    }
-    catch {
-        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
-        if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
-            $message = @"
-            [_UpdateAzVmss] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
-            Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances
-            must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS
-            Upgrade Policy manually. `nError message: $_
-"@
-            log 'Error' $message -terminateOnError
-        }
-        else {
-            $message = @"
-            [_UpdateAzVmss] An error occured when attempting to update VMSS network config new Standard
-            LB backend pool membership. To recover address the following error, and try again specifying the
-            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in
-            this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
-            log 'Error' $message -terminateOnError
-        }
-    }
-}
 function _MigrateNetworkInterfaceConfigurations {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -179,7 +147,33 @@ function InboundNatPoolsMigration {
     _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    _UpdateAzVmss -vmss $vmss
+    log -Message "[InboundNatPoolsMigration] Saving VMSS $($vmss.Name)"
+    try {
+        $ErrorActionPreference = 'Stop'
+
+        Update-Vmss -Vmss $vmss
+    }
+    catch {
+        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
+        if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
+            $message = @"
+            [InboundNatPoolsMigration] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
+            Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances
+            must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS
+            Upgrade Policy manually. `nError message: $_
+"@
+            log 'Error' $message -terminateOnError
+        }
+        else {
+            $message = @"
+            [InboundNatPoolsMigration] An error occured when attempting to update VMSS network config on the new Standard 
+            LB backend pool membership. To recover address the following error, and try again specifying the 
+            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in 
+            this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
+"@
+            log 'Error' $message -terminateOnError
+        }
+    }
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
