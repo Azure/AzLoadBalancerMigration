@@ -52,7 +52,7 @@ Function Start-AzNATPoolMigration {
 
         If ($vmssInstances.LatestModelApplied -contains $false) {
             Write-Host "`tWaiting for VMSS '$($vmss.Name)' to update all instances..."
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds 15
             Wait-VMSSInstanceUpdate -vmss $vmss
         }
     }
@@ -139,7 +139,12 @@ Function Start-AzNATPoolMigration {
     }
 
     Write-Host "Waiting for VMSS model to update to remove the NAT Pool references..."
-    $vmssModelUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
+    While ($vmssModelUpdateRemoveNATPoolJobs.State -contains 'Running') {
+        Start-Sleep -Seconds 15
+        Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
+    } 
+    
+    $vmssModelUpdateRemoveNATPoolJobs | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             Write-Error "An error occured while updating the VMSS model to remove the NAT Pools: $($job.error; $job | Receive-Job)."
@@ -266,14 +271,18 @@ Function Start-AzNATPoolMigration {
     }
 
     Write-Host "Waiting for VMSS model to update to include the new Backend Pools..."
-    $vmssModelUpdateAddBackendPoolJobs | Wait-Job | Foreach-Object {
+    While ($vmssModelUpdateAddBackendPoolJobs.State -contains 'Running') {
+        Start-Sleep -Seconds 15
+        Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
+    } 
+    
+    $vmssModelUpdateAddBackendPoolJobs | Foreach-Object {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             Write-Error "An error occured while updating the VMSS model to add the NAT Rules: $($job.error; $job | Receive-Job)."
         }
     }
  
-
     # update all vmss instances to include the backend pool
     Write-Host "Waiting for VMSS instances to update to include the new Backend Pools..."
     $vmssInstanceUpdateAddBackendPoolJobs = @()
