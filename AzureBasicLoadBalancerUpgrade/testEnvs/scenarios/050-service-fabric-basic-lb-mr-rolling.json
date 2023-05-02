@@ -94,18 +94,21 @@
     },
     "certificateThumbprint": {
       "type": "string",
+      "defaultValue": "F28CE76CBD99AF46245942B05C9B368BAE9BF226",
       "metadata": {
         "description": "Certificate Thumbprint"
       }
     },
     "sourceVaultResourceId": {
       "type": "string",
+      "defaultValue": "/subscriptions/24730882-456b-42df-a6f8-8590ca6e4e37/resourceGroups/rg-core/providers/Microsoft.KeyVault/vaults/mtbintkv01",
       "metadata": {
         "description": "Resource Id of the key vault, is should be in the format of /subscriptions/<Sub ID>/resourceGroups/<Resource group name>/providers/Microsoft.KeyVault/vaults/<vault name>"
       }
     },
     "certificateUrlValue": {
       "type": "string",
+      "defaultValue": "https://mtbintkv01.vault.azure.net/secrets/sf/43c3671760204b429ac24fdaf95e01a3",
       "metadata": {
         "description": "Refers to the location URL in your key vault where the certificate was uploaded"
       }
@@ -427,7 +430,7 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
-      "apiVersion": "2021-11-01",
+      "apiVersion": "2022-11-01",
       "name": "[variables('vmNodeType0Name')]",
       "location": "[parameters('location')]",
       "sku": {
@@ -442,7 +445,15 @@
       "properties": {
         "overprovision": "[variables('overProvision')]",
         "upgradePolicy": {
-          "mode": "Automatic"
+          "mode": "Automatic",
+          "RollingUpgradePolicy": {
+            "MaxBatchInstancePercent": 20,
+            "MaxUnhealthyInstancePercent": 20,
+            "MaxUnhealthyUpgradedInstancePercent": 20,
+            "PauseTimeBetweenBatches": "PT0S",
+            "RollbackFailedInstancesOnPolicyBreach": false,
+            "MaxSurge": false
+          }
         },
         "virtualMachineProfile": {
           "extensionProfile": {
@@ -644,7 +655,7 @@
               "startPort": "[variables('nt0applicationStartPort')]"
             },
             "clientConnectionEndpointPort": "[variables('nt0fabricTcpGatewayPort')]",
-            "durabilityLevel": "Bronze",
+            "durabilityLevel": "Silver",
             "ephemeralPorts": {
               "endPort": "[variables('nt0ephemeralEndPort')]",
               "startPort": "[variables('nt0ephemeralStartPort')]"
