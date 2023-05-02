@@ -133,7 +133,14 @@ function BackendPoolMigrationVmss {
     _MigrateNetworkInterfaceConfigurationsVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss
 
     # Update VMSS on Azure
-    Update-Vmss -vmss $vmss
+    try {
+        Update-Vmss -vmss $vmss
+    }
+    catch {
+        $message = "[BackendPoolMigrationVmss] An error occured while updating the VMSS to associate it with the standard load balancer's backend pool. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. To manually complete the migration, add the VMSS to the appropriate backend pools and check that the VMSS Upgrade Policy mode is correct. `nError message: $_"
+
+        log 'Error' $message -terminateOnError
+    }
 
     # Update Instances
     UpdateVmssInstances -vmss $vmss
@@ -142,7 +149,14 @@ function BackendPoolMigrationVmss {
     _RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
-    Update-Vmss -vmss $vmss
+    try {
+        Update-Vmss -vmss $vmss
+    }
+    catch {
+        $message = "[BackendPoolMigrationVmss] An error occured while restoring the VMSS Upgrade Policy Mode. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. To manually complete the migration, the VMSS Upgrade Policy mode matches the mode in the VMSS state file export. `nError message: $_"
+
+        log 'Error' $message -terminateOnError
+    }
 
     #log -Message "[BackendPoolMigrationVmss] Updating VMSS Instances $($vmss.Name)"
     #UpdateVmssInstances -vmss $vmss
