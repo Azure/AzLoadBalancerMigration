@@ -158,7 +158,7 @@ function NsgCreationVmss {
 
             While ($job.State -eq 'Running') {
                 Start-Sleep -Seconds 15
-                log -Message "[NsgCreationVmss] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
+                log -Message "[NsgCreationVmss] Waiting for updating VMSS job (id: '$($job.id)') to complete..."
             }
     
             If ($job.Error -or $job.State -eq 'Failed') {
