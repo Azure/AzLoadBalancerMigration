@@ -286,9 +286,9 @@ Function Test-SupportedMigrationScenario {
 
             # check is vmss is a managed service fabric cluster, which are not supported for upgrade
             log -Message "[Test-SupportedMigrationScenario] Checking whether VMSS scale set '$($vmss.name)' is a managed Service Fabric cluster..."
-            If ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.type -contains 'ServiceFabricMCNodeVmExt') {
+            If ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.type -contains 'ServiceFabricMCNode') {
 
-                $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Managed Service Fabric cluster based on extension profile (includes 'ServiceFabricMCNodeVmExt'). Managed Service Fabric clusters are not supported for upgrade."
+                $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Managed Service Fabric cluster based on extension profile (includes type 'ServiceFabricMCNode'). Managed Service Fabric clusters are not supported for upgrade."
                 log -Message $message -Severity 'Error' -terminateOnError
             }
          
