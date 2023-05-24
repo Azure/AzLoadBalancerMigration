@@ -27,6 +27,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
       {
         name: 'subnet-01'
         addressPrefix: '10.0.1.0/24'
+        networkSecurityGroupId: nsg.outputs.resourceId
       }
     ]
   }
@@ -48,6 +49,15 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   dependsOn: [
     rg
   ]
+}
+
+module nsg '../modules/Microsoft.Network/networkSecurityGroups/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'nsg-01'
+  params: {
+    name: 'nsg-01'
+    location: location
+  }
 }
 
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
@@ -76,35 +86,9 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
             }
             skuName: 'Basic'
           }
-          {
-            name: 'ipconfig2'
-            primary: false
-            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
-            loadBalancerBackendAddressPools: []
-            pipConfiguration: {
-              publicIpNameSuffix: '-pip-02'
-            }
-            skuName: 'Basic'
-            publicIPAllocationMethod: 'Dynamic'
-          }
         ]
         nicSuffix: 'nic'
         enableAcceleratedNetworking: false
-      }
-      {
-        nicSuffix: 'nic2'
-        enableAcceleratedNetworking: false
-        ipConfigurations: [
-          {
-            name: 'ipconfig1'
-            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
-            pipConfiguration: {
-              publicIpNameSuffix: '-pip-03'
-            }
-            skuName: 'Basic'
-            publicIPAllocationMethod: 'Dynamic'
-          }
-        ]
       }
     ]
     osDisk: {

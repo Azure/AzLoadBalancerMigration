@@ -1,6 +1,6 @@
 # Azure Load Balancer Upgrade and Migration Modules
 
-This repository hosts multiple modules related to migration and upgrade of Azure Load Balancers.
+This repository hosts multiple modules related to migration and upgrade of Azure Load Balancers and Public IPs.
 
 ## Azure Basic Load Balancer Upgrade
 
@@ -9,6 +9,10 @@ This module migrates a Basic SKU Load Balancer to a Standard SKU Load Balancer. 
 ## Azure Load Balancer NAT Pool Migration
 
 This module migrates NAT Pools to NAT Rules on a Standard SKU Load Balancer. See [Azure Load Balancer NAT Pool Migration](AzureLoadBalancerNATPoolMigration/README.md)
+
+## Azure VM Public IP Address Upgrade
+
+This module upgrades Public IPs attached to the specified VM from Basic SKU to Standard SKU. See [Azure VM Public IP Upgrade](AzureVMPublicIPUpgrade/README.md)
 
 ## Contributing
 

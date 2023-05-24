@@ -35,22 +35,6 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
   ]
 }
 
-module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
-  name: 'pip-01'
-  params: {
-    name: 'pip-01'
-    location: location
-    publicIPAddressVersion: 'IPv4'
-    skuTier: 'Regional'
-    skuName: 'Basic'
-    publicIPAllocationMethod: 'Dynamic'
-  }
-  scope: resourceGroup(resourceGroupName)
-  dependsOn: [
-    rg
-  ]
-}
-
 module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
   name: 'bootdiag-storage-01'
   scope: resourceGroup(resourceGroupName)
@@ -71,6 +55,7 @@ module nsg '../modules/Microsoft.Network/networkSecurityGroups/deploy.bicep' = {
   name: 'nsg-01'
   params: {
     name: 'nsg-01'
+    location: location
   }
 }
 
@@ -103,9 +88,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
         ]
         nicSuffix: 'nic'
         enableAcceleratedNetworking: false
-        networkSecurityGroup: {
-          id: nsg.outputs.resourceId
-        }
+        networkSecurityGroupResourceId: nsg.outputs.resourceId
       }
     ]
     osDisk: {

@@ -50,6 +50,15 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   ]
 }
 
+module nsg '../modules/Microsoft.Network/networkSecurityGroups/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'nsg-01'
+  params: {
+    name: 'nsg-01'
+    location: location
+  }
+}
+
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
@@ -75,6 +84,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
               publicIpNameSuffix: '-pip-01'
             }
             skuName: 'Basic'
+            networkSecurityGroup: nsg.outputs.resourceId
           }
           {
             name: 'ipconfig2'

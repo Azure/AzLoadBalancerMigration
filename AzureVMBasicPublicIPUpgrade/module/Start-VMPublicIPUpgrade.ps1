@@ -28,28 +28,43 @@
 .LINK
     
 .EXAMPLE
-    ./Start-VMPublicIPUpgrade.ps1 -VMName 'myVM' -ResourceGroupName 'myRG'
-    Upgrade a single VM, passing the VM name and resource group name as parameters. 
+    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG'
+    # Upgrade a single VM, passing the VM name and resource group name as parameters. 
 
 .EXAMPLE
-    ./Start-VMPublicIPUpgrade.ps1 -VMName 'myVM' -ResourceGroupName 'myRG' -WhatIf
-    Evaluate upgrading a single VM, without making any changes
+    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -WhatIf
+    # Evaluate upgrading a single VM, without making any changes
 
 .EXAMPLE
-    ./Start-VMPublicIPUpgrade.ps1 -VMName 'myVM' -ResourceGroupName 'myRG' -Confirm $false -SkipNSGCheck
-    Do not prompt for confirmation to start upgrade and skip check for Network Security Groups
+    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -Confirm $false -SkipNSGCheck
+    # Do not prompt for confirmation to start upgrade and skip check for Network Security Groups
 
 .EXAMPLE
-    ./Start-VMPublicIPUpgrade.ps1 -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
-    Upgrade a single VM, passing the VM resource ID as a parameter.
+    Start-VMPublicIPUpgrade -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
+    # Upgrade a single VM, passing the VM resource ID as a parameter.
 
 .EXAMPLE
-    Get-AzVM -ResourceGroupName 'myRG' | ./Start-VMPublicIPUpgrade.ps1
-    Upgrade all VMs in a resource group, piping the VM objects to the script.
+    Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade
+    # Upgrade all VMs in a resource group, piping the VM objects to the script.
 
 .EXAMPLE
-    ./Start-VMPublicIPUpgrade.ps1 -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName myVM -VMResourceGroup -rg-myrg
-    Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file.
+    Start-VMPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName myVM -VMResourceGroup -rg-myrg
+    # Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file.
+
+.EXAMPLE
+    $VMs = Get-AzVM -ResourceGroupName rg-*-prod
+    ForEach ($vm in $VMs) {
+        Start-Job -Name $vm.Name -ScriptBlock {
+            $params = @{
+                vmName = $args[0].Name
+                resourceGroupName = $args[0].ResourceGroupName
+                logFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade.log'
+                recoveryLogFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade_recovery.csv'
+            }
+            .\Start-VMPublicIPUpgrade.ps1 @params -WhatIf
+        } -ArgumentList $vm -InitializationScript {Import-Module Az.Accounts, Az.Compute, Az.Network, Az.Resources}
+    }
+    # Upgrade all VMs in Resource Groups with '-prod' in the name, using PowerShell jobs to run the script in parallel.
 #>
 
 param (
@@ -103,6 +118,7 @@ param (
     $confirm = $true,
 
     # whatif
+    [Parameter(Mandatory = $false)]
     [switch]
     $WhatIf
 )
@@ -122,10 +138,10 @@ BEGIN {
         }
     }
     
-    Add-LogEntry "Starting VM Public IP Upgrade process..."
+    Add-LogEntry "####### Starting VM Public IP Upgrade process... #######"
 
     # prompt to continue if -Confirm is $false or -WhatIf are not specified
-    If (!$WhatIf -and !$confirm) {
+    If (!$WhatIf -and $confirm) {
         While ($promptResponse -notmatch '[yYnN]') {
             $promptResponse = Read-Host "This script will upgrade all public IP addresses attached to the specified VM or VMs to Standard SKU. This will cause a brief interruption to network connectivity. Do you want to continue? (y/n)"
         }
@@ -151,11 +167,11 @@ PROCESS {
     Else { $ErrorActionPreference = 'Stop' }
 
     # get vm object, depending on parameters passed
-    If ($PSCmdlet.ParameterSetName -in 'VMName','Recovery-ByName') {
-        Add-LogEntry "Getting VM '$($VMName)' in resource group '$(resourceGroupName)'..."
+    If ($PSCmdlet.ParameterSetName -in 'VMName', 'Recovery-ByName') {
+        Add-LogEntry "Getting VM '$($VMName)' in resource group '$($resourceGroupName)'..."
         $VM = Get-AzVM -Name $vmName -ResourceGroupName $resourceGroupName
     }
-    ElseIf ($PSCmdlet.ParameterSetName -in 'VMResourceId','Recovery-ById') {
+    ElseIf ($PSCmdlet.ParameterSetName -in 'VMResourceId', 'Recovery-ById') {
         Add-LogEntry "Getting VM with resource ID '$($vmResourceId)'..."
         $VM = Get-AzResource -ResourceId $vmResourceId | Get-AzVM
     }
@@ -163,7 +179,7 @@ PROCESS {
     Add-LogEntry "Processing VM '$($VM.Name)'..."
     # validate scenario
 
-    If ($PSCmdlet.ParameterSetName -notin 'Recovery-ByName','Recovery-ById') {
+    If ($PSCmdlet.ParameterSetName -notin 'Recovery-ByName', 'Recovery-ById') {
         # confirm VM has public IPs attached, build dictionary of public IPs and ip configurations
         Add-LogEntry "Checking that VM '$($VM.Name)' has public IP addresses attached..."
 
@@ -213,55 +229,69 @@ PROCESS {
         
         ## build table of subnets associated with VM NICs
         $VMNICSubnets = @{}
-        $VMNICs | ForEach-Object { 
-            $subnet = Get-AzResource -ResourceId ($_.IpConfigurations.Subnet.id) | Get-AzVirtualNetworkSubnetConfig 
-            $VMNICSubnets[$subnet.id] = $subnet
+        ForEach ($nic in $vmNICs) {
+            ForEach ($subnetId in $nic.IpConfigurations.Subnet.id) {
+                $subnet = Get-AzResource -ResourceId $subnetId | Get-AzVirtualNetworkSubnetConfig
+                $VMNICSubnets[$subnet.id] = $subnet
+            }
         }
 
         ## check that each NIC or all subnets have NSGs associated
+        $nicsMissingNSGs = 0
+        $ipConfigNSGReport = @()
         ForEach ($vmNIC in $vmNICs) {
             $ipconfigSubnetsWithoutNSGs = 0
             $ipconfigSubnetNSGs = @()
             ForEach ($ipconfig in $vmNIC.IpConfigurations) {
                 If ($VMNICSubnets[$ipconfig.Subnet.id].NetworkSecurityGroup) {
                     $ipconfigSubnetNSGs += @{
-                        ipConfigId = $ipconfig.id 
-                        $subnetId  = $ipconfig.Subnet.Id
-                        $hasNSG    = $true
-                        $nsgID     = $VMNICSubnets[$ipconfig.Subnet.id].NetworkSecurityGroup.id
+                        ipConfigId   = $ipconfig.id 
+                        subnetId     = $ipconfig.Subnet.Id
+                        subnetHasNSG = $true
+                        subnetNSGID  = $VMNICSubnets[$ipconfig.Subnet.id].NetworkSecurityGroup.id
+                        nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
+                        nicNSGId     = $vmNIC.NetworkSecurityGroup.id
                     }
                 }
                 Else {
                     $ipconfigSubnetsWithoutNSGs++
                     $ipconfigSubnetNSGs += @{
-                        ipConfigId = $ipconfig.id 
-                        $subnetId  = $ipconfig.Subnet.Id
-                        $hasNSG    = $false
-                        $nsgID     = ''
+                        ipConfigId   = $ipconfig.id 
+                        subnetId     = $ipconfig.Subnet.Id
+                        subnetHasNSG = $false
+                        subnetNSGId  = ''
+                        nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
+                        nicNSGId     = $vmNIC.NetworkSecurityGroup.id
                     }
                 }
             }
 
             If ($ipconfigSubnetsWithoutNSGs -gt 0 -and !$vmNIC.NetworkSecurityGroup) {
-                Add-LogEntry "VM '$($VM.Name)' NIC '$($vmNIC.Name)' has associated Public IP Addresses, but IP Configurations where neither the NIC or Subnet have an associated Network Security Group. Standard SKU Public IPs are secure by default, meaning no inbound traffic is allowed unless an NSG explicitly permits it, whereas a Basic SKU Public IP allows all traffic by default. See: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku." WARNING
-                Add-LogEntry "IP Configuration/Subnet NSG Mapping: $($ipconfigSubnetNSGs | ConvertTo-Json -Depth 3)"
-                
-                While ($promptResponse -notmatch '[yYnN]' -and !$skipNSGCheck) {
-                    $promptResponse = Read-Host "Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n)"
-                }
-                
-                If ($promptResponse -match '[nN]') {
-                    Add-LogEntry "Exiting script at NSG check..." -severity WARNING
-                    Exit
-                }
-                ElseIf ($skipNSGCheck) {
-                    Add-LogEntry "Skipping NSG check because -SkipNSGCheck was specified" WARNING
-                }
-                Else {
-                    Add-LogEntry "Continuing with script..."
-                }
+                $ipCOnfigNSGReport += $ipconfigSubnetNSGs
+                $nicsMissingNSGs++
             }
         }
+
+        If ($nicsMissingNSGs -gt 0) {
+            Add-LogEntry "VM '$($VM.Name)' has associated Public IP Addresses, but IP Configurations where neither the NIC nor Subnet have an associated Network Security Group. Standard SKU Public IPs are secure by default, meaning no inbound traffic is allowed unless an NSG explicitly permits it, whereas a Basic SKU Public IP allows all traffic by default. See: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku." WARNING
+            Add-LogEntry "IP Configs Missing NGSs Report: $($ipConfigNSGReport | ConvertTo-Json -Depth 3)" WARNING
+            
+            While ($promptResponse -notmatch '[yYnN]' -and !$skipNSGCheck) {
+                $promptResponse = Read-Host "Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n)"
+            }
+            
+            If ($promptResponse -match '[nN]') {
+                Add-LogEntry "Skipping this VM at NSG check..." -severity WARNING
+                return
+            }
+            ElseIf ($skipNSGCheck) {
+                Add-LogEntry "Skipping NSG check because -SkipNSGCheck was specified" WARNING
+            }
+            Else {
+                Add-LogEntry "Continuing with script..."
+            }
+        }
+        
     }
     Else {
         ### Failed Migration Recovery ###
@@ -277,13 +307,11 @@ PROCESS {
         $vmNICs = @()
         $vmNICsById = @{}
         $recoveryInfo.ipConfigId | 
-        ForEach-Object { ($_ -split '/ipConfigurations/')[0] } | 
-            Select-Object -Unique | 
-            ForEach-Object { $_ | Get-AzNetworkInterface } |
-                ForEach-Object { 
-                    $vmNICs += $_ 
-                    $vmNICsById[$_.id] = $_
-                }
+            ForEach-Object { ($_ -split '/ipConfigurations/')[0] } | Select-Object -Unique | ForEach-Object { $_ | Get-AzNetworkInterface } |
+            ForEach-Object { 
+                $vmNICs += $_ 
+                $vmNICsById[$_.id] = $_
+            }
 
         $publicIPIPConfigAssociations = @()
         ForEach ($recoveryItem in $recoveryInfo) {
@@ -381,19 +409,11 @@ PROCESS {
                 Add-LogEntry "WhatIf: Updating NIC with: `$nic | Set-AzNetworkIntereface"
             }
         }
-
-        Add-LogEntry "Applying updates to the NIC '$($nic.Name)'..."
-        If (!$WhatIf) {
-            $nic | Set-AzNetworkInterface | Out-Null
-        }
-        Else {
-            Add-LogEntry "WhatIf: Updating NIC with: `$nic | Set-AzNetworkIntereface"
-        }
     }
 
     Add-LogEntry "Upgrade of VM '$($VM.Name)' complete.'"
 }
 
 END {
-    Add-LogEntry "Upgrade process complete."
+    Add-LogEntry "####### Upgrade process complete. #######"
 }
