@@ -11,6 +11,10 @@ Function Start-VMPublicIPUpgrade {
         Because the Public IP allocation is set to 'Static' before detaching from the VM, the IP address will not change during the upgrade process,
         even in the event of a script failure.
 
+        Because Standard SKU Public IPs require an associated Network Security Group, the script will prompt to proceed if a VM is processed where
+        both the NIC and subnet do not have an NSG associated with them. If the script is run with the '-ignoreMissingNSG' parameter, the script will
+        not prompt and will continue with the upgrade process; if -skipVMMissingNSG is specified, the script will skip upgrading that VM.
+
         Recovering from a failure:
         The script exports the Public IP address and IP configuration associations to a CSV file before beginning the upgrade process. In the event
         of a failure during the upgrade, this file can be used to retry the migration and attach public IPs with the appropriate IP configuration.
@@ -186,7 +190,7 @@ Function Start-VMPublicIPUpgrade {
             $VM = Get-AzResource -ResourceId $vmResourceId | Get-AzVM
         }
 
-        Add-LogEntry "Processing VM '$($VM.Name)'..."
+        Add-LogEntry "Processing VM '$($VM.Name)', id: $($VM.Id)..."
         # validate scenario
 
         If ($PSCmdlet.ParameterSetName -notin 'Recovery-ByName', 'Recovery-ById') {
@@ -301,7 +305,7 @@ Function Start-VMPublicIPUpgrade {
                     return
                 }
                 ElseIf ($ignoreMissingNSG) {
-                    Add-LogEntry "Skipping NSG check because -SkipNSGCheck was specified" WARNING
+                    Add-LogEntry "Skipping NSG check because -ignoreMissingNSG was specified" WARNING
                 }
                 Else {
                     Add-LogEntry "Continuing with script..."
