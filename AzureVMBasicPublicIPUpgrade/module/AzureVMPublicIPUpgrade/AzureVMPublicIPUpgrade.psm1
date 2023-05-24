@@ -1,74 +1,74 @@
 
 Function Start-VMPublicIPUpgrade {
     <#
-.SYNOPSIS
-    Upgrades all public IP addresses attached to a VM to Standard SKU.
-.DESCRIPTION
-    This script upgrades the Public IP Addresses attached to VM to Standard SKU. In order to perform the upgrade, the Public IP Address
-    allocation method is set to static before being disassociated from the VM. Once disassociated, the Public IP SKU is upgraded to Standard,
-    then the IP is reassociated with the VM. 
+    .SYNOPSIS
+        Upgrades all public IP addresses attached to a VM to Standard SKU.
+    .DESCRIPTION
+        This script upgrades the Public IP Addresses attached to VM to Standard SKU. In order to perform the upgrade, the Public IP Address
+        allocation method is set to static before being disassociated from the VM. Once disassociated, the Public IP SKU is upgraded to Standard,
+        then the IP is reassociated with the VM. 
 
-    Because the Public IP allocation is set to 'Static' before detaching from the VM, the IP address will not change during the upgrade process,
-    even in the event of a script failure.
+        Because the Public IP allocation is set to 'Static' before detaching from the VM, the IP address will not change during the upgrade process,
+        even in the event of a script failure.
 
-    Recovering from a failure:
-    The script exports the Public IP address and IP configuration associations to a CSV file before beginning the upgrade process. In the event
-    of a failure during the upgrade, this file can be used to retry the migration and attach public IPs with the appropriate IP configuration.
-    To initate a recovery, follow these steps:
-        1. Review the log 'PublicIPUpgrade.log' file to determine which VM was in process during the failure
-        2. Determine if the script failed due to a configuration issue that needs to be addressed before retrying the migration. If so, address the error. 
-        2. Get the name and resource group or full ID of the VM to recover (e.g. '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM')
-        3. Execute the script with the following syntax:
+        Recovering from a failure:
+        The script exports the Public IP address and IP configuration associations to a CSV file before beginning the upgrade process. In the event
+        of a failure during the upgrade, this file can be used to retry the migration and attach public IPs with the appropriate IP configuration.
+        To initate a recovery, follow these steps:
+            1. Review the log 'PublicIPUpgrade.log' file to determine which VM was in process during the failure
+            2. Determine if the script failed due to a configuration issue that needs to be addressed before retrying the migration. If so, address the error. 
+            2. Get the name and resource group or full ID of the VM to recover (e.g. '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM')
+            3. Execute the script with the following syntax:
 
-           ./Start-VMPublicIPUpgrade.ps1 -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
-        
-        4. The script will attempt to re-execute each step the migration. 
-.NOTES
-    PREREQUISITES:
-     - VMs must not be associated with a Load Balancer to use this script.
-     - VM NICs or associated subnets should have an NSG associated with them. If the VM NIC or subnet does not have an NSG associated with it, the script will prompt.
-.LINK
-    https://github.com/Azure/AzLoadBalancerMigration
+            ./Start-VMPublicIPUpgrade.ps1 -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
+            
+            4. The script will attempt to re-execute each step the migration. 
+    .NOTES
+        PREREQUISITES:
+        - VMs must not be associated with a Load Balancer to use this script.
+        - VM NICs or associated subnets should have an NSG associated with them. If the VM NIC or subnet does not have an NSG associated with it, the script will prompt.
+    .LINK
+        https://github.com/Azure/AzLoadBalancerMigration
 
-    Please report issues at https://github.com/Azure/AzLoadBalancerMigration/issues
-.EXAMPLE
-    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG'
-    # Upgrade a single VM, passing the VM name and resource group name as parameters. 
+        Please report issues at https://github.com/Azure/AzLoadBalancerMigration/issues
+    .EXAMPLE
+        Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG'
+        # Upgrade a single VM, passing the VM name and resource group name as parameters. 
 
-.EXAMPLE
-    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -WhatIf
-    # Evaluate upgrading a single VM, without making any changes
+    .EXAMPLE
+        Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -WhatIf
+        # Evaluate upgrading a single VM, without making any changes
 
-.EXAMPLE
-    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -Confirm $false -SkipNSGCheck
-    # Do not prompt for confirmation to start upgrade and skip check for Network Security Groups
+    .EXAMPLE
+        Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -Confirm $false -SkipNSGCheck
+        # Do not prompt for confirmation to start upgrade and skip check for Network Security Groups
 
-.EXAMPLE
-    Start-VMPublicIPUpgrade -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
-    # Upgrade a single VM, passing the VM resource ID as a parameter.
+    .EXAMPLE
+        Start-VMPublicIPUpgrade -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
+        # Upgrade a single VM, passing the VM resource ID as a parameter.
 
-.EXAMPLE
-    Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade
-    # Upgrade all VMs in a resource group, piping the VM objects to the script.
+    .EXAMPLE
+        Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade
+        # Upgrade all VMs in a resource group, piping the VM objects to the script.
 
-.EXAMPLE
-    Start-VMPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName myVM -VMResourceGroup -rg-myrg
-    # Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file.
+    .EXAMPLE
+        Start-VMPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName myVM -VMResourceGroup -rg-myrg
+        # Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file.
 
-.EXAMPLE
-    $VMs = Get-AzVM -ResourceGroupName rg-*-prod
-    ForEach ($vm in $VMs) {
-        Start-Job -Name $vm.Name -ScriptBlock {
-            $params = @{
-                vmName = $args[0].Name
-                resourceGroupName = $args[0].ResourceGroupName
-                logFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade.log'
-                recoveryLogFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade_recovery.csv'
-            }
-            .\Start-VMPublicIPUpgrade.ps1 @params -WhatIf
-        } -ArgumentList $vm -InitializationScript {Import-Module Az.Accounts, Az.Compute, Az.Network, Az.Resources}
-    }
-    # Upgrade all VMs in Resource Groups with '-prod' in the name, using PowerShell jobs to run the script in parallel.
+    .EXAMPLE
+        $VMs = Get-AzVM -ResourceGroupName rg-*-prod
+        ForEach ($vm in $VMs) {
+            Start-Job -Name $vm.Name -ScriptBlock {
+                $params = @{
+                    vmName = $args[0].Name
+                    resourceGroupName = $args[0].ResourceGroupName
+                    logFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade.log'
+                    recoveryLogFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade_recovery.csv'
+                }
+                .\Start-VMPublicIPUpgrade.ps1 @params -WhatIf
+            } -ArgumentList $vm -InitializationScript {Import-Module Az.Accounts, Az.Compute, Az.Network, Az.Resources}
+        }
+        # Upgrade all VMs in Resource Groups with '-prod' in the name, using PowerShell jobs to run the script in parallel.
 #>
 
     param (
@@ -111,12 +111,17 @@ Function Start-VMPublicIPUpgrade {
         [string]
         $logFilePath = "PublicIPUpgrade.log",
 
-        # skip check for NSG association - Basic Public IPs allow inbound traffic without an NSG, but Standard Public IPs require an NSG. Migrating without an NSG will break inbound traffic flows!    
+        # skip check for NSG association, migrate anyway - Basic Public IPs allow inbound traffic without an NSG, but Standard Public IPs require an NSG. Migrating without an NSG will break inbound traffic flows!    
         [Parameter(Mandatory = $false)]
         [switch]
-        $skipNSGCheck,
+        $ignoreMissingNSG,
 
-        # prompt for confirmation
+        # skip VMs missing NSGs - if a VM is missing an NSG, skip migrating it
+        [Parameter(Mandatory = $false)]
+        [switch]
+        $skipVMMissingNSG,
+
+        # prompt for confirmation to migrate IPs
         [Parameter(Mandatory = $false)]
         [boolean]
         $confirm = $true,
@@ -287,15 +292,15 @@ Function Start-VMPublicIPUpgrade {
                 Add-LogEntry "VM '$($VM.Name)' has associated Public IP Addresses, but IP Configurations where neither the NIC nor Subnet have an associated Network Security Group. Standard SKU Public IPs are secure by default, meaning no inbound traffic is allowed unless an NSG explicitly permits it, whereas a Basic SKU Public IP allows all traffic by default. See: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku." WARNING
                 Add-LogEntry "IP Configs Missing NGSs Report: $($ipConfigNSGReport | ConvertTo-Json -Depth 3)" WARNING
             
-                While ($promptResponse -notmatch '[yYnN]' -and !$skipNSGCheck) {
+                While ($promptResponse -notmatch '[yYnN]' -and !$ignoreMissingNSG -and !$skipVMMissingNSG) {
                     $promptResponse = Read-Host "Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n)"
                 }
             
-                If ($promptResponse -match '[nN]') {
-                    Add-LogEntry "Skipping this VM at NSG check..." -severity WARNING
+                If ($promptResponse -match '[nN]' -or $skipVMMissingNSG) {
+                    Add-LogEntry "Skipping migrating this VM due to missing NSG..." -severity WARNING
                     return
                 }
-                ElseIf ($skipNSGCheck) {
+                ElseIf ($ignoreMissingNSG) {
                     Add-LogEntry "Skipping NSG check because -SkipNSGCheck was specified" WARNING
                 }
                 Else {
