@@ -61,7 +61,7 @@ Function Start-VMPublicIPUpgrade {
                     logFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade.log'
                     recoveryLogFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade_recovery.csv'
                 }
-                .\Start-VMPublicIPUpgrade.ps1 @params -WhatIf
+                Start-VMPublicIPUpgrade.ps1 @params -WhatIf
             } -ArgumentList $vm -InitializationScript {Import-Module Az.Accounts, Az.Compute, Az.Network, Az.Resources}
         }
         # Upgrade all VMs in Resource Groups with '-prod' in the name, using PowerShell jobs to run the script in parallel.
