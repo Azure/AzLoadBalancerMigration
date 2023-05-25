@@ -35,28 +35,22 @@ PS C:\> Install-Module -Name AzureVMBasicPublicIPUpgrade -Scope CurrentUser -Rep
 
 1. Run the upgrade command, following the examples below.
 
-**EXAMPLE: Upgrade a single VM, passing the VM name and resource group name as parameters**
+**EXAMPLE: Upgrade a single VM, passing the VM name and resource group name as parameters.**
 
 ```powershell
     Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG'
 ```
 
-**EXAMPLE: Evaluate upgrading a single VM, without making any changes**
+**EXAMPLE: Evaluate upgrading a single VM, without making any changes.**
 
 ```powershell
     Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -WhatIf
 ```
 
-**EXAMPLE: Do not prompt for confirmation to start upgrade and skip check for Network Security Groups**
+**EXAMPLE: Upgrade All VMs, skipping those missing Network Security Groups.**
 
 ```powershell
-    Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -Confirm $false -SkipNSGCheck
-```
-
-**EXAMPLE: Upgrade a single VM, passing the VM resource ID as a parameter**
-
-```powershell
-    Start-VMPublicIPUpgrade -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
+        Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade -skipVMMissingNSG
 ```
 
 **EXAMPLE: Upgrade all VMs in a resource group, piping the VM objects to the script.**

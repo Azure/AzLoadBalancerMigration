@@ -44,16 +44,8 @@ Function Start-VMPublicIPUpgrade {
         # Evaluate upgrading a single VM, without making any changes
 
     .EXAMPLE
-        Start-VMPublicIPUpgrade -VMName 'myVM' -ResourceGroupName 'myRG' -Confirm $false -SkipNSGCheck
-        # Do not prompt for confirmation to start upgrade and skip check for Network Security Groups
-
-    .EXAMPLE
-        Start-VMPublicIPUpgrade -VMResourceId '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM'
-        # Upgrade a single VM, passing the VM resource ID as a parameter.
-
-    .EXAMPLE
-        Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade
-        # Upgrade all VMs in a resource group, piping the VM objects to the script.
+        Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade -skipVMMissingNSG
+        # Attempt upgrade of every VM the user has access to. VMs without Public IPs, which are already upgraded, or which do not have NSGs will be skipped. 
 
     .EXAMPLE
         Start-VMPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName myVM -VMResourceGroup -rg-myrg
@@ -151,7 +143,11 @@ Function Start-VMPublicIPUpgrade {
                 'ERROR' { "[{0}][{1}] {2}" -f $timestamp, $severity, $message | Tee-Object -FilePath $logFilePath -Append | Write-Error }
             }
         }
-    
+
+        # set error action preference 
+        If ($WhatIf) { $ErrorActionPreference = 'Continue' }
+        Else { $ErrorActionPreference = 'Stop' }
+        
         Add-LogEntry "####### Starting VM Public IP Upgrade process... #######"
 
         # prompt to continue if -Confirm is $false or -WhatIf are not specified
@@ -176,10 +172,6 @@ Function Start-VMPublicIPUpgrade {
     }
 
     PROCESS {
-        # set error action preference 
-        If ($WhatIf) { $ErrorActionPreference = 'Continue' }
-        Else { $ErrorActionPreference = 'Stop' }
-
         # get vm object, depending on parameters passed
         If ($PSCmdlet.ParameterSetName -in 'VMName', 'Recovery-ByName') {
             Add-LogEntry "Getting VM '$($VMName)' in resource group '$($resourceGroupName)'..."
