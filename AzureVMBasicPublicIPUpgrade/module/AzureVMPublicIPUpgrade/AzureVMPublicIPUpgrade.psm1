@@ -158,7 +158,7 @@ Function Start-VMPublicIPUpgrade {
         
             If ($promptResponse -match '[nN]') {
                 Add-LogEntry "Exiting script..." -severity WARNING
-                Exit
+                return
             }
             Else {
                 Add-LogEntry "Continuing with script..."
@@ -375,10 +375,22 @@ Function Start-VMPublicIPUpgrade {
                 ForEach ($ipConfig in $nic.IpConfigurations | Where-Object { $_.PublicIPAddress }) {
                     Add-LogEntry "Confirming that Public IP allocation is 'static' before disassociating..."
                     If ((Get-AzResource -ResourceId $ipConfig.PublicIpAddress.Id | Get-AzPublicIpAddress).PublicIpAllocationMethod -ne 'Static') {
-                        Write-Error "Public IP address '$($ipConfig.PublicIpAddress.Id)' is not set to static allocation! Script will exit to ensure that the VM's public IP addresses are not lost."
+                        If (!$WhatIf) {
+                            Write-Error "Public IP address '$($ipConfig.PublicIpAddress.Id)' is not set to static allocation! Script will exit to ensure that the VM's public IP addresses are not lost."
+                            return
+                        }
+                        Else {
+                            Add-LogEntry "WhatIf: Public IP address '$($ipConfig.PublicIpAddress.Id)' not changed from 'Dynamic' in WhatIf mode."
+                        }
                     }
-                    Add-LogEntry "Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.Name)', NIC '$($nic.Name)'..."
-                    Set-AzNetworkInterfaceIpConfig -NetworkInterface $nic -Name $ipConfig.Name -PublicIpAddress $null | Out-Null
+
+                    If (!$WhatIf) {
+                        Add-LogEntry "Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.Name)', NIC '$($nic.Name)'..."
+                        Set-AzNetworkInterfaceIpConfig -NetworkInterface $nic -Name $ipConfig.Name -PublicIpAddress $null | Out-Null
+                    }
+                    Else {
+                        Add-LogEntry "WhatIf: Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.Name)', NIC '$($nic.Name)'..."
+                    }
                 }
 
                 Add-LogEntry "Applying updates to the NIC '$($nic.Name)'..."

@@ -95,7 +95,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
               publicIpNameSuffix: '-pip-02'
             }
             skuName: 'Basic'
-            publicIPAllocationMethod: 'Dynamic'
+            publicIPAllocationMethod: 'Static'
           }
         ]
         nicSuffix: 'nic'
