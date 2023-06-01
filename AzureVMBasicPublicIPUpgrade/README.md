@@ -15,12 +15,12 @@ The module logs all upgrade activity to a file named `PublicIPUpgrade.log`, crea
 - **VMs with NICs associated to a Load Balancer**: because the Load Balancer and Public IP SKUs associated with a VM must match, it is not possible to upgrade the instance-level Public IP addresses associated with a VM when the VM's NICs are also associated with a Load Balancer, either though Backend Pool or NAT Pool membership. Use [Upgrade a basic load balancer used with Virtual Machine Scale Sets](../AzureBasicLoadBalancerUpgrade/README.md) to upgrade both the Load Balancer and Public IPs as the same time.
 - **VMs without a Network Security Group**: VMs with IPs to be upgraded must have a Network Security Group (NSG) associated with either the subnet of each IP configuration with a Public IP, or with the NIC directly. This is because Standard SKU Public IPs are "secure by default", meaning that any traffic to the Public IP must be explicitly allowed at an NSG to reach the VM. Basic SKU Public IPs allow any traffic by default. Upgrading Public IP SKUs without an NSG will result in inbound internet traffic to the Public IP previously allowed with the Basic SKU being blocked post-migration. See: [Public IP SKUs](https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku)
 
-## Install the 'AzureVMBasicPublicIPUpgrade' module
+## Install the 'AzureVMPublicIPUpgrade' module
 
-Install the module from [PowerShell gallery](https://www.powershellgallery.com/packages/AzureVMBasicPublicIPUpgrade)
+Install the module from [PowerShell gallery](https://www.powershellgallery.com/packages/AzureVMPublicIPUpgrade)
 
 ```powershell
-PS C:\> Install-Module -Name AzureVMBasicPublicIPUpgrade -Scope CurrentUser -Repository PSGallery -Force
+PS C:\> Install-Module -Name AzureVMPublicIPUpgrade -Scope CurrentUser -Repository PSGallery -Force
 ```
 
 ## Use the module
