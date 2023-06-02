@@ -25,13 +25,16 @@ PS C:\> Install-Module -Name AzureVMPublicIPUpgrade -Scope CurrentUser -Reposito
 
 ## Use the module
 
+**Prerequisites:**
+The Azure Powershell module must be installed. See [Install the latest Az PowerShell module](/powershell/azure/install-az-ps).
+
 1. Use `Connect-AzAccount` to connect to the required Azure AD tenant and Azure subscription
 
     ```powershell
     PS C:\> Connect-AzAccount -Tenant <TenantId> -Subscription <SubscriptionId>
     ```
 
-1. Determine the VMs with Public IPs you want to upgrade. You can either specify VMs individually or pass multiple VMs to the module through the pipeline. 
+1. Find the VMs with Public IPs you want to upgrade. You can either specify VMs individually or pass multiple VMs to the module through the pipeline.
 
 1. Run the upgrade command, following the examples below.
 
@@ -50,7 +53,7 @@ PS C:\> Install-Module -Name AzureVMPublicIPUpgrade -Scope CurrentUser -Reposito
 **EXAMPLE: Upgrade All VMs, skipping those missing Network Security Groups.**
 
 ```powershell
-        Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade -skipVMMissingNSG
+    Get-AzVM -ResourceGroupName 'myRG' | Start-VMPublicIPUpgrade -skipVMMissingNSG
 ```
 
 **EXAMPLE: Upgrade all VMs in a resource group, piping the VM objects to the script.**
