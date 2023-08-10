@@ -442,8 +442,45 @@ Function Test-SupportedMigrationScenario {
 
     # check that Az.ResourceGraph module is installed for VM migrations
     If ($scenario.BackendType -eq 'VM' -and !(Get-Module -Name Az.ResourceGraph -ListAvailable)) {
-        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends requires the Az.ResourceGraph module. Please install it with `Install-Module Az.ResourceGraph` and try the command again."
-        log -Message $message -Severity 'Error' -terminateOnError
+        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends requires the Az.ResourceGraph module, but the module was not found."
+        log -Message $message -Severity 'Warning'
+
+        If (!$force.IsPresent) {
+            Write-Host "Migrating Load Balancers with VM backends requires the Az.ResourceGraph module, but the module was not found to be installed." -ForegroundColor Yellow
+            while ($response -ine 'y' -and $response -ine 'n') {
+                $response = Read-Host -Prompt "Do you want the script to install the Az.ResourceGraph module for the current user? (y/n)"
+            }
+            If ($response -ieq 'n') {
+                $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
+        }
+
+        If ($response -ieq 'y' -or $force.IsPresent) {
+
+            Write-Host "Installing the Az.ResourceGraph module in the CurrentUser scope..."
+
+            $message = "[Test-SupportedMigrationScenario] Installing the Az.ResourceGraph module in the CurrentUser scope..."
+            log -Message $message -Severity 'Info'
+            
+            try {
+                $ErrorActionPreference = 'Stop'
+                Install-Module -Name Az.ResourceGraph -Scope CurrentUser -Force
+            }
+            catch {
+                $message = "[Test-SupportedMigrationScenario] Failed to install the Az.ResourceGraph module. Please install manually and re-run the script."
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
+
+            Write-Host "Installing the Az.ResourceGraph module completed successfully."
+
+            $message = "[Test-SupportedMigrationScenario] Installing the Az.ResourceGraph module completed successfully."
+            log -Message $message -Severity 'Info'
+        }
+    }
+    Else {
+        $message = "[Test-SupportedMigrationScenario] The Az.ResourceGraph module is already installed..."
+        log -Message $message -Severity 'Info' -terminateOnError
     }
 
     # if the basic lb is external and has multiple backend pools, warn that the migration will not create a default outbound rule
