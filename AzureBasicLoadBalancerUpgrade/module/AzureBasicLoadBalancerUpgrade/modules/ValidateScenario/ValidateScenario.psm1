@@ -210,6 +210,7 @@ Function Test-SupportedMigrationScenario {
                 $scenario.VMSSInstancesHavePublicIPs = $true
 
                 If (!$force.IsPresent) {
+                    $response = $null
                     while ($response -ne 'y' -and $response -ne 'n') {
                         $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                     }
@@ -236,7 +237,7 @@ Function Test-SupportedMigrationScenario {
                         $message = @"
                         [Test-SupportedMigrationScenario] Internal load balancer backend VMs have public IPs and will continue to use them for outbound connectivity. VMSS: '$($vmssId)'; VMSS ipconfig: '$($ipConfig.Name)'
 "@ 
-                        log -Message $message -Severity 'Information'
+                        log -Message $message
                         $vmssVMsHavePublicIPs = $true
 
                         break :vmssNICs
@@ -250,6 +251,7 @@ Function Test-SupportedMigrationScenario {
     
                 Write-Host "In order to access your VMSS instances from the Internat over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
                 If (!$force.IsPresent) {
+                    $response = $null
                     while ($response -ne 'y' -and $response -ne 'n') {
                         $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                     }
@@ -270,6 +272,7 @@ Function Test-SupportedMigrationScenario {
 
                 Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
                 If (!$force.IsPresent) {
+                    $response = $null
                     while ($response -ne 'y' -and $response -ne 'n') {
                         $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                     }
@@ -302,6 +305,7 @@ Function Test-SupportedMigrationScenario {
 
                 Write-Host "Do you want to proceed with the migration of your Service Fabric Cluster's Load Balancer?" -ForegroundColor Yellow
                 If (!$force.IsPresent) {
+                    $response = $null
                     while ($response -ne 'y' -and $response -ne 'n') {
                         $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                     }
@@ -353,6 +357,7 @@ Function Test-SupportedMigrationScenario {
 
             Write-Host "In order for all for VMs to access the internet post-migration, add PIPs to all VMs, a NAT Gateway to the subnet, or other outbound option (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)" -ForegroundColor Yellow
             If (!$force.IsPresent) {
+                $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
                     $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                 }
@@ -376,6 +381,7 @@ Function Test-SupportedMigrationScenario {
 
             Write-Host "In order to access your VMs from the Internet over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
             If (!$force.IsPresent) {
+                $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
                     $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                 }
@@ -397,6 +403,7 @@ Function Test-SupportedMigrationScenario {
 
             Write-Host "In order for your VMs to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VM or assign a NAT Gateway to the VM subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
             If (!$force.IsPresent) {
+                $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
                     $response = Read-Host -Prompt "Do you want to continue? (y/n)"
                 }
@@ -447,6 +454,7 @@ Function Test-SupportedMigrationScenario {
 
         If (!$force.IsPresent) {
             Write-Host "Migrating Load Balancers with VM backends requires the Az.ResourceGraph module, but the module was not found to be installed." -ForegroundColor Yellow
+            $response = $null
             while ($response -ine 'y' -and $response -ine 'n') {
                 $response = Read-Host -Prompt "Do you want the script to install the Az.ResourceGraph module for the current user? (y/n)"
             }
@@ -461,7 +469,7 @@ Function Test-SupportedMigrationScenario {
             Write-Host "Installing the Az.ResourceGraph module in the CurrentUser scope..."
 
             $message = "[Test-SupportedMigrationScenario] Installing the Az.ResourceGraph module in the CurrentUser scope..."
-            log -Message $message -Severity 'Info'
+            log -Message $message
             
             try {
                 $ErrorActionPreference = 'Stop'
@@ -475,12 +483,12 @@ Function Test-SupportedMigrationScenario {
             Write-Host "Installing the Az.ResourceGraph module completed successfully."
 
             $message = "[Test-SupportedMigrationScenario] Installing the Az.ResourceGraph module completed successfully."
-            log -Message $message -Severity 'Info'
+            log -Message $message
         }
     }
     Else {
         $message = "[Test-SupportedMigrationScenario] The Az.ResourceGraph module is already installed..."
-        log -Message $message -Severity 'Info' -terminateOnError
+        log -Message $message -terminateOnError
     }
 
     # if the basic lb is external and has multiple backend pools, warn that the migration will not create a default outbound rule
@@ -494,6 +502,7 @@ Function Test-SupportedMigrationScenario {
 
         Write-Host "Basic Load Balancer '$($BasicLoadBalancer.Name)' has multiple backend pools and is external. The migration will not create a default outbound rule on the Standard Load Balancer. You will need to create a default outbound rule manually post-migration." -ForegroundColor Yellow
         If (!$force.IsPresent) {
+            $response = $null
             while ($response -ne 'y' -and $response -ne 'n') {
                 $response = Read-Host -Prompt "Do you want to continue? (y/n)"
             }
