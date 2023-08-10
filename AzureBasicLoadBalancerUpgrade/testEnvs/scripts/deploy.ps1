@@ -5,7 +5,7 @@ Param (
     [switch]$includeManualConfigScenarios,
     [switch]$Cleanup, # removes all test environments (in parallel)
     [switch]$RunMigration, # executes the migration module against all test environments (in parallel),
-    [parameter(Mandatory = $false)][string[]]$resourceGroupSuffix = @()
+    [parameter(Mandatory = $false)][string[]]$resourceGroupSuffix = @('')
 )
 
 $ErrorActionPreference = 'Stop'
