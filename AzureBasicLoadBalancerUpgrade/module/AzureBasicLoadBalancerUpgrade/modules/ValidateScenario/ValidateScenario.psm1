@@ -95,7 +95,7 @@ Function Test-SupportedMigrationScenario {
 
     # checking that source load balancer has sub-resource configurations
     log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
-    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0 -and $BasicLoadBalancer.InboundNatRules -eq 0) {
+    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0 -and $BasicLoadBalancer.InboundNatRules.Count -eq 0) {
         log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no load balancing rules or NAT Rules, so there is nothing to migrate!"
         return
     }
