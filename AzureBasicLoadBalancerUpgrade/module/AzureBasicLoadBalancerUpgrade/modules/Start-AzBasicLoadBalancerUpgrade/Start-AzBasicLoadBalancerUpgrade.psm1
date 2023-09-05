@@ -78,8 +78,13 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -BasicLoadBalancer $basicLB
 PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
 
 .EXAMPLE
-# Retry a failed migration
+# Retry a failed VMSS migration
 PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
+
+.EXAMPLE
+# Retry a failed VM migration
+PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
+
 
 .EXAMPLE
 # display logs in the console as the command executes
