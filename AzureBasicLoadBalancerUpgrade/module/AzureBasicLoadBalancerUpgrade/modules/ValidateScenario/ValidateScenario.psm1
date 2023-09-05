@@ -95,8 +95,8 @@ Function Test-SupportedMigrationScenario {
 
     # checking that source load balancer has sub-resource configurations
     log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
-    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0 -and $BasicLoadBalancer.InboundNatPools.count -eq 0) {
-        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no load balancing rules or NAT Pools, so there is nothing to migrate!"
+    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0 -and $BasicLoadBalancer.InboundNatRules -eq 0) {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no load balancing rules or NAT Rules, so there is nothing to migrate!"
         return
     }
     log -Message "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
@@ -246,10 +246,10 @@ Function Test-SupportedMigrationScenario {
             }
 
             If ($vmssVMsHavePublicIPs) {
-                $message = "[Test-SupportedMigrationScenario] Load Balance VMSS instances have instance-level Public IP addresses which must be upgraded to Standard SKU along with the Load Balancer."
+                $message = "[Test-SupportedMigrationScenario] Backend VMSS instances have instance-level Public IP addresses which must be upgraded to Standard SKU along with the Load Balancer."
                 log -Message $message -Severity 'Warning'
     
-                Write-Host "In order to access your VMSS instances from the Internat over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicity allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
+                Write-Host "In order to access your VMSS instances from the Internet over a Standard SKU instance-level Public IP address, the associated NIC or NIC's subnet must have an attached Network Security Group (NSG) which explicitly allows desired traffic, which is not a requirement for Basic SKU Public IPs. See 'Security' at https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses#sku" -ForegroundColor Yellow
                 If (!$force.IsPresent) {
                     $response = $null
                     while ($response -ne 'y' -and $response -ne 'n') {
@@ -300,7 +300,7 @@ Function Test-SupportedMigrationScenario {
             If ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.type -contains 'ServiceFabricNode' -or 
                 $vmss.VirtualMachineProfile.ExtensionProfile.Extensions.type -contains 'ServiceFabricLinuxNode') {
 
-                $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Service Fabric cluster based on extension profile. SF Clusters experienced potentically significant downtime during migration using this PowerShell module. In testing, a 5-node Bronze cluster was unavailable for about 30 minutes and a 5-node Silver cluster was unavailabile for about 45 minutes. Shutting down the cluster VMSS prior to initiating migration will result in a more consistent experience of about 5 minutes to complete the LB migration. For Service Fabric clusters that require minimal / no connectivity downtime, adding a new nodetype with standard load balancer and IP resources is a better solution."
+                $message = "[Test-SupportedMigrationScenario] VMSS appears to be a Service Fabric cluster based on extension profile. SF Clusters experienced potentially significant downtime during migration using this PowerShell module. In testing, a 5-node Bronze cluster was unavailable for about 30 minutes and a 5-node Silver cluster was unavailable for about 45 minutes. Shutting down the cluster VMSS prior to initiating migration will result in a more consistent experience of about 5 minutes to complete the LB migration. For Service Fabric clusters that require minimal / no connectivity downtime, adding a new node type with standard load balancer and IP resources is a better solution."
                 log -Message $message -Severity 'Warning'
 
                 Write-Host "Do you want to proceed with the migration of your Service Fabric Cluster's Load Balancer?" -ForegroundColor Yellow
@@ -488,7 +488,7 @@ Function Test-SupportedMigrationScenario {
     }
     Else {
         $message = "[Test-SupportedMigrationScenario] The Az.ResourceGraph module is already installed..."
-        log -Message $message -terminateOnError
+        log -Message $message
     }
 
     # if the basic lb is external and has multiple backend pools, warn that the migration will not create a default outbound rule
