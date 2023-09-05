@@ -88,10 +88,16 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName <load balancer resou
 PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName <load balancer resource group name> -BasicLoadBalancerName <existing basic load balancer name> -StandardLoadBalancerName <new standard load balancer name> -RecoveryBackupPath C:\BasicLBRecovery
 ```
 
-### Example: retry a failed upgrade (due to error or script termination) by providing the Basic load balancer and VMSS backup state file
+### Example: retry a failed VMSS backend scenario upgrade (due to error or script termination) by providing the Basic load balancer and VMSS backup state file
 
 ```powerhsell
 PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
+```
+
+### Example: retry a failed VM backend scenario upgrade (due to error or script termination) by providing the Basic load balancer
+
+```powerhsell
+PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
 ```
 
 ## Common Questions
@@ -151,12 +157,12 @@ The script migrates the following from the Basic load balancer to the Standard l
 
 ### What happens if my upgrade fails mid-migration?
 
-The module is designed to accommodate failures, either due to unhandled errors or unexpected script termination. The failure design is a 'fail forward' approach, where instead of attempting to move back to the Basic load balancer, you should correct the issue causing the failure (see the error output or log file), and retry the migration again, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters. For public load balancers, because the Public IP Address SKU has been updated to Standard, moving the same IP back to a Basic load balancer will not be possible. The basic failure recovery procedure is:
+The module is designed to accommodate failures, either due to unhandled errors or unexpected script termination. The failure design is a 'fail forward' approach, where instead of attempting to move back to the Basic load balancer, you should correct the issue causing the failure (see the error output or log file), and retry the migration again. For VMSS backends, specify the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters; for VM backends, only specify the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath>` parameter`. For public load balancers, because the Public IP Address SKU has been updated to Standard, moving the same IP back to a Basic load balancer will not be possible. The basic failure recovery procedure is:
 
   1. Address the cause of the migration failure. Check the log file `Start-AzBasicLoadBalancerUpgrade.log` for details
   1. [Remove the new Standard load balancer](https://learn.microsoft.com/azure/load-balancer/update-load-balancer-with-vm-scale-set) (if created). Depending on which stage of the migration failed, you may have to remove the Standard load balancer reference from the VMSS network interfaces (IP configurations) and health probes in order to remove the Standard load balancer and try again.
   1. Locate the basic load balancer state backup file. This will either be in the directory where the script was executed, or at the path specified with the `-RecoveryBackupPath` parameter during the failed execution. The file will be named: `State_<basicLBName>_<basicLBRGName>_<timestamp>.json`
-  1. Rerun the migration script, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath> -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` parameters instead of -BasicLoadBalancerName or passing the Basic load balancer over the pipeline
+  1. Rerun the migration script, specifying the `-FailedMigrationRetryFilePathLB <BasicLoadBalancerbackupFilePath>` parameter and ` -FailedMigrationRetryFilePathVMSS <VMSSBackupFile>` for VMSS backends instead of -BasicLoadBalancerName or passing the Basic load balancer over the pipeline
 
 ## Next Steps
 
