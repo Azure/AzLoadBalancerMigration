@@ -159,7 +159,7 @@ function Start-AzBasicLoadBalancerUpgrade {
     }
     log -Message "[Start-AzBasicLoadBalancerUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
 
-    # validate completed migration
+    ### validate a completed migration ###
     if ($validateCompletedMigration) {
         log -Message "[Start-AzBasicLoadBalancerUpgrade] Validating completed migration using basic LB state file '$basicLoadBalancerStatePath' and standard load balancer name '$StandardLoadBalancerName'"
 
@@ -171,6 +171,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         return
     }
 
+    ### initiate a new or recovery migration ###
     # Load Azure Resources
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Loading Azure Resources"
 
@@ -267,6 +268,8 @@ function Start-AzBasicLoadBalancerUpgrade {
     }
 
     log -Message "############################## Migration Completed ##############################"
+
+    $global:FollowLog = $null
 }
 
 Export-ModuleMember -Function Start-AzBasicLoadBalancerUpgrade
