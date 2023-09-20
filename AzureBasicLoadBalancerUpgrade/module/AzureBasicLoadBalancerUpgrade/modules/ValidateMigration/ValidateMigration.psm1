@@ -204,6 +204,7 @@ Function ValidateMigration {
     }
 
     # validate backend members have NSGs which allow the same ports as the load balancing rules
+    If ($scenario.ExternalOrInternal -eq 'External') {
     switch ($scenario.BackendType) {
         'VM' {
             $nicsNeedingNewNSG, $nsgIDsToUpdate = _GetVMNSG -BasicLoadBalancer $BasicLoadBalancer -skipLogging
@@ -221,19 +222,22 @@ Function ValidateMigration {
             $vmssIDs = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique  
 
             ForEach ($vmssId in $vmssIds) {
-                $vmssHasNSG = _GetVMSSNSG -VMSSId $vmssId -skipLogging
+                $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
+
+                $vmssHasNSG = _GetVMSSNSG -vmss $vmss -skipLogging
 
                 If (!$vmssHasNSG) {
-                    log -Message "[ValidateMigration] VMSS '$($vmssId)' does not have an NSG" -Severity Error
-                    $validationResult.failedValidations += "VMSS '$($vmssId)' does not have an NSG"
+                    log -Message "[ValidateMigration] VMSS '$($vmss.Name)' does not have an NSG" -Severity Error
+                    $validationResult.failedValidations += "VMSS '$($vmss.Name)' does not have an NSG"
                 }
                 Else {
-                    log -Message "[ValidateMigration] VMSS '$($vmssId)' has an NSG" -Severity Information
-                    $validationResult.passedValidations += "VMSS '$($vmssId)' has an NSG"
+                    log -Message "[ValidateMigration] VMSS '$($vmss.Name)' has an NSG" -Severity Information
+                    $validationResult.passedValidations += "VMSS '$($vmss.Name)' has an NSG"
                 }
             }
         }
     }
+}
 
     # return object with validation status - useful for testing and scale migrations
     If ($OutputMigrationValiationObj) {

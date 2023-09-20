@@ -78,6 +78,9 @@ Location of a Basic load balancer backup file (used when retrying a failed migra
 .PARAMETER FailedMigrationRetryFilePathVMSS
 Location of a VMSS backup file (used when retrying a failed migration or manual configuration comparison)
 
+.PARAMETER outputMigrationValiationObj
+Switch parameter to output the migration validation object to the console - useful for large scale and pipeline migrations
+
 .PARAMETER StandardLoadBalancerName
 Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
 

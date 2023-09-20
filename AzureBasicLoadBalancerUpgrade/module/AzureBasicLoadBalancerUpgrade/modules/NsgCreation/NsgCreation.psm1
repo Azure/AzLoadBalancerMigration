@@ -86,8 +86,8 @@ function _AddLBNSGSecurityRules {
 function _GetVMSSNSG {
     param(
         [Parameter(Mandatory = $true)]
-        [string] 
-        $vmssId,
+        [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] 
+        $vmss,
 
         # skip logging - - used in validation
         [Parameter(Mandatory = $false)]
@@ -98,8 +98,6 @@ function _GetVMSSNSG {
     If ($skipLogging) {
         function log {}
     }
-
-    $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
 
     $vmssHasNSG = $false
 
@@ -244,7 +242,9 @@ function NsgCreationVmss {
 
         log -Message "[NSGCreationVmss] Checking if VMSS $($vmss.Name) has a NSG"
 
-        $vmssHasNSG = _GetVMSSNSG -vmssId $vmssId
+        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
+
+        $vmssHasNSG = _GetVMSSNSG -vmss $vmss
         
         If (!$vmssHasNSG) {
             log -Message "[NsgCreationVmss] NSG not detected."
