@@ -358,7 +358,7 @@ function PublicLBMigrationVM {
     LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
-    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario -Scenario $scenario
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
 
     # Migration of NAT Rules
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
