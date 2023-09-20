@@ -95,7 +95,8 @@ function PublicLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[PublicLBMigration] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -150,6 +151,9 @@ function PublicLBMigrationVmss {
 
     # Migration of Backend Address Pools
     BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function InternalLBMigrationVmss {
@@ -158,7 +162,8 @@ function InternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[InternalLBMigration] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -211,6 +216,8 @@ function InternalLBMigrationVmss {
     # Creating NSG for Standard Load Balancer
     #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function RestoreExternalLBMigrationVmss {
@@ -219,7 +226,8 @@ function RestoreExternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -265,6 +273,9 @@ function RestoreExternalLBMigrationVmss {
 
     # Migration of Backend Address Pools
     BackendPoolMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function RestoreInternalLBMigrationVmss {
@@ -273,7 +284,8 @@ function RestoreInternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -317,6 +329,8 @@ function RestoreInternalLBMigrationVmss {
     # Creating NSG for Standard Load Balancer
     #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function PublicLBMigrationVM {
@@ -325,7 +339,8 @@ function PublicLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[PublicLBMigrationVM] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -368,6 +383,9 @@ function PublicLBMigrationVM {
 
     # Migration of Backend Address Pools
     BackendPoolMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function InternalLBMigrationVM {
@@ -376,7 +394,8 @@ function InternalLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[InternalLBMigrationVM] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -410,7 +429,9 @@ function InternalLBMigrationVM {
 
     # Migration of Backend Address Pools
     BackendPoolMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
-
+    
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function RestoreExternalLBMigrationVM {
@@ -418,7 +439,8 @@ function RestoreExternalLBMigrationVM {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
@@ -452,6 +474,9 @@ function RestoreExternalLBMigrationVM {
 
     # Migration of Backend Address Pools
     BackendPoolMigrationVm -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 function RestoreInternalLBMigrationVM {
@@ -459,7 +484,8 @@ function RestoreInternalLBMigrationVM {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $true)][psobject] $scenario
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
     log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
@@ -491,6 +517,8 @@ function RestoreInternalLBMigrationVM {
     # Creating NSG for Standard Load Balancer
     #NsgCreationVmss -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
 Export-ModuleMember -Function PublicLBMigrationVmss
