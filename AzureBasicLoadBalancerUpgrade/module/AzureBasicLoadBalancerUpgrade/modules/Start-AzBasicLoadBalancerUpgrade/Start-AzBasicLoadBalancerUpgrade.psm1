@@ -1,36 +1,3 @@
-
-<#PSScriptInfo
-
-.VERSION 1.0
-
-.GUID 188d53d9-5a4a-468a-859d-d448655567b1
-
-.AUTHOR FTA
-
-.COMPANYNAME
-
-.COPYRIGHT
-
-.TAGS
-
-.LICENSEURI
-
-.PROJECTURI
-
-.ICONURI
-
-.EXTERNALMODULEDEPENDENCIES
-
-.REQUIREDSCRIPTS
-
-.EXTERNALSCRIPTDEPENDENCIES
-
-.RELEASENOTES
-
-.PRIVATEDATA
-
-#>
-
 <#
 
 .DESCRIPTION
@@ -85,10 +52,13 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\Reco
 # Retry a failed VM migration
 PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
 
-
 .EXAMPLE
 # display logs in the console as the command executes
 PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
+
+.EXAMPLE
+# validate a completed migration using the exported Basic Load Balancer state file. Add -StandardLoadBalancerName to validate against a Standard Load Balancer with a different name than the Basic Load Balancer
+PS C:\> Start-AzBasicLoadBalancerUpgrade -validateCompletedMigration -basicLoadBalancerStatePath C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
 
 .PARAMETER ResourceGroupName
 Resource group containing the Basic Load Balancer to migrate. The new Standard load balancer will be created in this resource group.
@@ -99,11 +69,17 @@ Name of the existing Basic Load Balancer to migrate
 .PARAMETER BasicLoadBalancer
 Load Balancer object to migrate passed as pipeline input or parameter
 
+.PARAMETER basicLoadBalancerStatePath
+Use in combination with -validateCompletedMigration to validate a completed migration
+
 .PARAMETER FailedMigrationRetryFilePathLB
 Location of a Basic load balancer backup file (used when retrying a failed migration or manual configuration comparison)
 
 .PARAMETER FailedMigrationRetryFilePathVMSS
 Location of a VMSS backup file (used when retrying a failed migration or manual configuration comparison)
+
+.PARAMETER outputMigrationValiationObj
+Switch parameter to output the migration validation object to the console - useful for large scale and pipeline migrations
 
 .PARAMETER StandardLoadBalancerName
 Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
@@ -114,12 +90,19 @@ Location of the Recovery backup files
 .PARAMETER FollowLog
 Switch parameter to enable the display of logs in the console
 
+.PARAMETER validateScenarioOnly
+Only perform the validation portion of the migration, then exit the script without making changes
+
+.PARAMETER validateCompletedMigration
+Using the exported Basic Load Balancer state file, validate the migration was completed successfully
+
 #>
 
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ScenariosMigration\ScenariosMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateScenario\ValidateScenario.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent)+"\ValidateMigration\ValidateMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent)+"\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 
 function Start-AzBasicLoadBalancerUpgrade {
@@ -132,10 +115,18 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] 
         $FailedMigrationRetryFilePathLB,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] $FailedMigrationRetryFilePathVMSS,
-        [Parameter(Mandatory = $false)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][string]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByObject')][string]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVm')][string] 
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][string] 
+        $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
-        [Parameter(Mandatory = $false)][switch] $validateOnly,
+        [Parameter(Mandatory = $false)][switch] $validateScenarioOnly,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][switch] $validateCompletedMigration,
+        [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][string] $basicLoadBalancerStatePath,
+        [Parameter(Mandatory = $false)][switch] $outputMigrationValiationObj,
         [Parameter(Mandatory = $false)][int32] $defaultJobWaitTimeout = (New-Timespan -Minutes 10).TotalSeconds,
         [Parameter(Mandatory = $false)][switch] $force,
         [Parameter(Mandatory = $false)][switch] $Pre
@@ -171,6 +162,19 @@ function Start-AzBasicLoadBalancerUpgrade {
     }
     log -Message "[Start-AzBasicLoadBalancerUpgrade] User is signed in to Azure with account '$($azContext.Account.Id)', subscription '$($azContext.Subscription.Name)' selected"
 
+    ### validate a completed migration ###
+    if ($validateCompletedMigration) {
+        log -Message "[Start-AzBasicLoadBalancerUpgrade] Validating completed migration using basic LB state file '$basicLoadBalancerStatePath' and standard load balancer name '$StandardLoadBalancerName'"
+
+        # import basic LB from file
+        $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $basicLoadBalancerStatePath
+
+        ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName -OutputMigrationValiationObj:$($OutputMigrationValiationObj.IsPresent)
+
+        return
+    }
+
+    ### initiate a new or recovery migration ###
     # Load Azure Resources
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Loading Azure Resources"
 
@@ -190,7 +194,7 @@ function Start-AzBasicLoadBalancerUpgrade {
             #recovery VM migration from backup state file
             $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePathLB
         }
-        log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
+        log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer '$($BasicLoadBalancer.Name)' in Resource Group '$($basicLoadBalancer.ResourceGroupName)' loaded"
     }
     catch {
         $message = @"
@@ -211,29 +215,35 @@ function Start-AzBasicLoadBalancerUpgrade {
         $StdLoadBalancerName = $BasicLoadBalancer.Name
     }
 
-    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateOnly.isPresent) -Pre:$Pre.IsPresent
+    $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateScenarioOnly.isPresent) -Pre:$Pre.IsPresent
 
-    if ($validateOnly) {
+    if ($validateScenarioOnly) {
         break
     }
 
+    $standardScenarioParams = @{
+        BasicLoadBalancer = $BasicLoadBalancer
+        StandardLoadBalancerName = $StdLoadBalancerName
+        Scenario = $scenario
+        outputMigrationValiationObj = $outputMigrationValiationObj.IsPresent
+    }
     switch ($scenario.BackendType) {
         'VM' {
             switch ($scenario.ExternalOrInternal) {
                 'internal' {
                     if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                        InternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                        InternalLBMigrationVM @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
                     }
                     else {
-                        RestoreInternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -Scenario $scenario
+                        RestoreInternalLBMigrationVM @standardScenarioParams
                     }
                 }
                 'external' {
                     if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                        PublicLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                        PublicLBMigrationVM @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
                     }
                     else {
-                        RestoreExternalLBMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -Scenario $scenario
+                        RestoreExternalLBMigrationVM @standardScenarioParams
                     }
                 }
             }
@@ -242,18 +252,18 @@ function Start-AzBasicLoadBalancerUpgrade {
             switch ($scenario.ExternalOrInternal) {
                 'internal' {
                     if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                        InternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                        InternalLBMigrationVmss @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
                     }
                     else {
-                        RestoreInternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss -Scenario $scenario
+                        RestoreInternalLBMigrationVmss @standardScenarioParams -vmss $vmss
                     }
                 }
                 'external' {
                     if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                        PublicLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -RecoveryBackupPath $RecoveryBackupPath -Scenario $scenario
+                        PublicLBMigrationVmss @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
                     }
                     else {
-                        RestoreExternalLBMigrationVmss -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancerName -vmss $vmss -Scenario $scenario
+                        RestoreExternalLBMigrationVmss @standardScenarioParams -vmss $vmss
                     }
                 }
             }
@@ -261,6 +271,8 @@ function Start-AzBasicLoadBalancerUpgrade {
     }
 
     log -Message "############################## Migration Completed ##############################"
+
+    $global:FollowLog = $null
 }
 
 Export-ModuleMember -Function Start-AzBasicLoadBalancerUpgrade
