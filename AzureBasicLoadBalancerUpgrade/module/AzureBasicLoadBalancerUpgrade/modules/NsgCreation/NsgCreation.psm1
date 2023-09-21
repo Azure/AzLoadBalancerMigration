@@ -10,7 +10,7 @@ function _AddLBNSGSecurityRules {
         [Parameter(Mandatory = $True, ParameterSetName = 'byNSGObject')][Microsoft.Azure.Commands.Network.Models.PSNetworkSecurityGroup] $nsg
     )
 
-    log -Message "[_AddLBNSGSecurityRules] Adding NSG security rules to NSG '$($nsgId)($nsg.Name)' to ensure Load Balancer traffic is allowed..."
+    log -Message "[_AddLBNSGSecurityRules] Adding NSG security rules to NSG '$($nsgId)$($nsg.Name)' to ensure Load Balancer traffic is allowed..."
     
     If (!$nsg) {
         $nsg = Get-AzResource -ResourceId $nsgId | Get-AzNetworkSecurityGroup
@@ -239,32 +239,31 @@ function NsgCreationVmss {
     $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique    
     
     foreach ($vmssId in $vmssIds) {
+        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
 
         log -Message "[NSGCreationVmss] Checking if VMSS $($vmss.Name) has a NSG"
-
-        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
 
         $vmssHasNSG = _GetVMSSNSG -vmss $vmss
         
         If (!$vmssHasNSG) {
             log -Message "[NsgCreationVmss] NSG not detected."
 
-            log -Message "[NsgCreationVmss] Creating NSG for VMSS: $vmssName"
+            log -Message "[NsgCreationVmss] Creating NSG for VMSS: '$($vmss.Name)'"
 
             try {
                 $ErrorActionPreference = 'Stop'
-                $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmss.ResourceGroupName -Name ("NSG-" + $vmss.Name) -Location $vmss.Location -Force
+                $nsg = New-AzNetworkSecurityGroup -ResourceGroupName $vmss.ResourceGroupName -Name ("nsg-" + $vmss.Name) -Location $vmss.Location -Force
             }
             catch {
                 $message = @"
-            [NsgCreationVmss] An error occured while creating NSG '$("NSG-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL
+            [NsgCreationVmss] An error occured while creating NSG '$("nsg-"+$vmss.Name)'. TRAFFIC FROM LOAD BALANCER TO BACKEND POOL MEMBERS WILL
             BE BLOCKED UNTIL AN NSG WITH AN ALLOW RULE IS CREATED! To recover, manually create an NSG which allows traffic to the
             backend ports on the VM/VMSS and associate it with the VM, VMSS, or subnet. Error: $_
 "@
                 log 'Error' $message -terminateOnError
             }
 
-            log -Message "[NsgCreationVmss] NSG Named: $("NSG-"+$vmss.Name) created."
+            log -Message "[NsgCreationVmss] NSG Named: $("nsg-"+$vmss.Name) created."
 
             _AddLBNSGSecurityRules -BasicLoadBalancer $BasicLoadBalancer -nsg $nsg
 
@@ -332,7 +331,7 @@ function NsgCreationVM {
     If ($nicsNeedingNewNSG.count -gt 0) {
         log -Message "[NsgCreationVM] Creating a new NSG with new security rules for the LB to associate to NICs missing NSGs..."
 
-        $nsgName = "NSG-LBMigration-$($BasicLoadBalancer.Name)"
+        $nsgName = "nsg-lbmigration-$($BasicLoadBalancer.Name)"
 
         log -Message "[NsgCreationVM] Creating a new NSG named '$nsgName' in Resource Group '$($BasicLoadBalancer.ResourceGroupName)'..."
         $newNicLevelNSG = New-AzNetworkSecurityGroup -Name $nsgName -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Location $BasicLoadBalancer.Location

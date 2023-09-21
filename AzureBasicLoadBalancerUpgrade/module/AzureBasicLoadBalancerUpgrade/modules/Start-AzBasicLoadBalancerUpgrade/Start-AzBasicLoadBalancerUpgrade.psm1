@@ -194,7 +194,7 @@ function Start-AzBasicLoadBalancerUpgrade {
             #recovery VM migration from backup state file
             $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $FailedMigrationRetryFilePathLB
         }
-        log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer $($BasicLoadBalancer.Name) loaded"
+        log -Message "[Start-AzBasicLoadBalancerUpgrade] Basic Load Balancer '$($BasicLoadBalancer.Name)' in Resource Group '$($basicLoadBalancer.ResourceGroupName)' loaded"
     }
     catch {
         $message = @"

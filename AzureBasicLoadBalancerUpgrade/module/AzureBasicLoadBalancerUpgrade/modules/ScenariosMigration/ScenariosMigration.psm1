@@ -100,7 +100,7 @@ function PublicLBMigrationVmss {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[PublicLBMigration] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+    log -Message "[PublicLBMigration] Public Load Balancer with VMSS backend found. Initiating Public Load Balancer Migration"
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
@@ -167,7 +167,7 @@ function InternalLBMigrationVmss {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[InternalLBMigration] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
+    log -Message "[InternalLBMigration] Internal Load Balancer with VMSS backend detected. Initiating Internal Load Balancer Migration"
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
@@ -231,7 +231,7 @@ function RestoreExternalLBMigrationVmss {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+    log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer with VMSS backend detected. Initiating Public Load Balancer Migration"
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = $vmss
@@ -289,7 +289,7 @@ function RestoreInternalLBMigrationVmss {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
+    log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer with VMSS backend detected. Initiating Internal Load Balancer Migration"
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = $vmss
@@ -344,7 +344,7 @@ function PublicLBMigrationVM {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[PublicLBMigrationVM] Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+    log -Message "[PublicLBMigrationVM] Public Load Balancer with VM backend detected. Initiating Public Load Balancer Migration"
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
@@ -399,7 +399,7 @@ function InternalLBMigrationVM {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[InternalLBMigrationVM] Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
+    log -Message "[InternalLBMigrationVM] Internal Load Balancer with VM backend detected. Initiating Internal Load Balancer Migration"
 
     # Backup Basic Load Balancer Configurations
     BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
@@ -444,7 +444,7 @@ function RestoreExternalLBMigrationVM {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer Detected. Initiating Public Load Balancer Migration"
+    log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer with VM backend detected. Initiating Public Load Balancer Migration"
 
     # Migrate public IP addresses on Basic LB to static (if dynamic)
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
@@ -489,7 +489,7 @@ function RestoreInternalLBMigrationVM {
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
-    log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer Detected. Initiating Internal Load Balancer Migration"
+    log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer with VM backend detected. Initiating Internal Load Balancer Migration"
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName

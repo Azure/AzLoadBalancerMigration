@@ -47,6 +47,10 @@ function _GetScenarioBackendType {
             log -Message "[Test-SupportedMigrationScenario] All backend pools members are virtualMachineScaleSets!"
             $backendType = 'VMSS'
         }
+        ElseIf ([string]::IsNullOrEmpty($backendPoolMemberTypes[0])) {
+            log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty, which is not supported for migration" -Severity 'Error'
+            return
+        }
         Else {
             log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendPoolMemberTypes -join ',')'" -Severity 'Error'
             return
@@ -541,6 +545,7 @@ Function Test-SupportedMigrationScenario {
         }
     }
 
+    log -Message "[Test-SupportedMigrationScenario] Detected migration scenario: $($scenario | ConvertTo-Json -Depth 10 -Compress)"
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
     return $scenario
 }

@@ -14,9 +14,9 @@ Function ValidateMigration {
 
     $validationResult = @{
         "migrationSuccessful" = $false
-        "failedValidations" = @()
-        "passedValidations" = @()
-        "warnValidations" = @()
+        "failedValidations"   = @()
+        "passedValidations"   = @()
+        "warnValidations"     = @()
     }
 
     $scenario = New-Object -TypeName psobject -Property @{
@@ -177,18 +177,18 @@ Function ValidateMigration {
         $differentMembership = Compare-Object $matchedStdPool.BackendIpConfigurations $basicBackendAddressPool.BackendIpConfigurations -Property Id
 
         If ($differentMembership) {
-           ForEach ($membership in $differentMembership) {
-            switch ($membership.sideIndicator) {
-                '<=' {
-                    log -Message "[ValidateMigration] Standard Load Balancer pool '$($matchedStdPool.name)' has extra member '$($membership.Id)'" -Severity Error
-                    $validationResult.failedValidations += "Standard Load Balancer pool '$($matchedStdPool.name)' is missing Basic Load Balancer backend pool membership '$($membership.Id)'"
-                }
-                '=>' {
-                    log -Message "[ValidateMigration] Standard Load Balancer pool '$($matchedStdPool.name)' is missing member '$($membership.Id)'" -Severity Error
-                    $validationResult.failedValidations += "Standard Load Balancer pool '$($matchedStdPool.name)' is missing Basic Load Balancer backend pool membership '$($membership.Id)'"
+            ForEach ($membership in $differentMembership) {
+                switch ($membership.sideIndicator) {
+                    '<=' {
+                        log -Message "[ValidateMigration] Standard Load Balancer pool '$($matchedStdPool.name)' has extra member '$($membership.Id)'" -Severity Error
+                        $validationResult.failedValidations += "Standard Load Balancer pool '$($matchedStdPool.name)' is missing Basic Load Balancer backend pool membership '$($membership.Id)'"
+                    }
+                    '=>' {
+                        log -Message "[ValidateMigration] Standard Load Balancer pool '$($matchedStdPool.name)' is missing member '$($membership.Id)'" -Severity Error
+                        $validationResult.failedValidations += "Standard Load Balancer pool '$($matchedStdPool.name)' is missing Basic Load Balancer backend pool membership '$($membership.Id)'"
+                    }
                 }
             }
-           }
         }
         Else {
             log -Message "[ValidateMigration] Standard Load Balancer pool '$($matchedStdPool.name)' has the same membership as Basic Load Balancer pool '$($basicBackendAddressPool.name)'" -Severity Information
@@ -205,39 +205,43 @@ Function ValidateMigration {
 
     # validate backend members have NSGs which allow the same ports as the load balancing rules
     If ($scenario.ExternalOrInternal -eq 'External') {
-    switch ($scenario.BackendType) {
-        'VM' {
-            $nicsNeedingNewNSG, $nsgIDsToUpdate = _GetVMNSG -BasicLoadBalancer $BasicLoadBalancer -skipLogging
+        switch ($scenario.BackendType) {
+            'VM' {
+                $nicsNeedingNewNSG, $nsgIDsToUpdate = _GetVMNSG -BasicLoadBalancer $BasicLoadBalancer -skipLogging
 
-            If ($nicsNeedingNewNSG.count -gt 0) {
-                log -Message "[ValidateMigration] The following VM NICs need new NSGs: $($nicsNeedingNewNSG)" -Severity Error
-                $validationResult.failedValidations += "The following VM NICs need new NSGs: $($nicsNeedingNewNSG)"
-            }
-            Else {
-                log -Message "[ValidateMigration] All VM NICs have NSGs" -Severity Information
-                $validationResult.passedValidations += "All VM NICs have NSGs"
-            }
-        }
-        'VMSS' {
-            $vmssIDs = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique  
-
-            ForEach ($vmssId in $vmssIds) {
-                $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
-
-                $vmssHasNSG = _GetVMSSNSG -vmss $vmss -skipLogging
-
-                If (!$vmssHasNSG) {
-                    log -Message "[ValidateMigration] VMSS '$($vmss.Name)' does not have an NSG" -Severity Error
-                    $validationResult.failedValidations += "VMSS '$($vmss.Name)' does not have an NSG"
+                If ($nicsNeedingNewNSG.count -gt 0) {
+                    log -Message "[ValidateMigration] The following VM NICs need new NSGs: $($nicsNeedingNewNSG)" -Severity Error
+                    $validationResult.failedValidations += "The following VM NICs need new NSGs: $($nicsNeedingNewNSG)"
                 }
                 Else {
-                    log -Message "[ValidateMigration] VMSS '$($vmss.Name)' has an NSG" -Severity Information
-                    $validationResult.passedValidations += "VMSS '$($vmss.Name)' has an NSG"
+                    log -Message "[ValidateMigration] All VM NICs have NSGs" -Severity Information
+                    $validationResult.passedValidations += "All VM NICs have NSGs"
+                }
+            }
+            'VMSS' {
+                $vmssIDs = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique  
+
+                ForEach ($vmssId in $vmssIds) {
+                    $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
+
+                    $vmssHasNSG = _GetVMSSNSG -vmss $vmss -skipLogging
+
+                    If (!$vmssHasNSG) {
+                        log -Message "[ValidateMigration] VMSS '$($vmss.Name)' does not have an NSG" -Severity Error
+                        $validationResult.failedValidations += "VMSS '$($vmss.Name)' does not have an NSG"
+                    }
+                    Else {
+                        log -Message "[ValidateMigration] VMSS '$($vmss.Name)' has an NSG" -Severity Information
+                        $validationResult.passedValidations += "VMSS '$($vmss.Name)' has an NSG"
+                    }
                 }
             }
         }
     }
-}
+    Else {
+        log -Message "[ValidateMigration] Skipping NSG validation for internal load balancer" -Severity Information
+        $validationResult.passedValidations += "Skipped NSG validation for internal load balancer"
+    }
 
     # return object with validation status - useful for testing and scale migrations
     If ($OutputMigrationValiationObj) {
