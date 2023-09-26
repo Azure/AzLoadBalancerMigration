@@ -71,6 +71,7 @@ function _CreateStandardLoadBalancer {
         Name              = $StdLoadBalancerName
         SKU               = "Standard"
         location          = $BasicLoadBalancer.Location
+        Tag               = $BasicLoadBalancer.Tag
     }
     try {
         $ErrorActionPreference = 'Stop'

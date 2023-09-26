@@ -29,6 +29,13 @@ function RemoveBasicLoadBalancer {
             $vmss.UpgradePolicy.Mode = "Manual"
         }
 
+        log -Message "[RemoveBasicLoadBalancerFromVmss] Checking Automatic OS Upgrade policy of VMSS $($vmss.Name)"
+        if ($vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade -eq $true) {
+            log -Message "[RemoveBasicLoadBalancerFromVmss] Automatic OS Upgrade policy of VMSS $($vmss.Name) is enabled"
+            log -Message "[RemoveBasicLoadBalancerFromVmss] Disabling Automatic OS Upgrade policy of VMSS $($vmss.Name)--will be reset to 'true' following the LB upgrade."
+            $vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade = $false
+        }
+
         log -Message "[RemoveBasicLoadBalancerFromVmss] Cleaning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
         foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
             foreach ($ipConfiguration in $networkInterfaceConfiguration.IpConfigurations) {
