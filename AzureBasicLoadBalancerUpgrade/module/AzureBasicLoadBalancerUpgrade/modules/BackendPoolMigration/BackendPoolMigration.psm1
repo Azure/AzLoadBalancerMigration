@@ -68,6 +68,24 @@ function _RestoreUpgradePolicyMode{
     log -Message "[_RestoreUpgradePolicyMode] Restoring VMSS Upgrade Policy Mode completed"
 }
 
+function _RestoreAutomaticOSUpgradePolicy {
+    param (
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
+    )
+
+    log -Message "[_RestoreAutomaticOSUpgradePolicy] Restoring VMSS Upgrade Policy Mode"
+    if ($vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade -ne $refVmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade) {
+        log -Message "[_RestoreAutomaticOSUpgradePolicy] Restoring VMSS Upgrade Policy Mode to '$($refVmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade)'"
+        $vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade = $refVmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade
+    }
+    else {
+        log -Message "[_RestoreAutomaticOSUpgradePolicy] VMSS Upgrade Policy Mode not changed"
+    }
+
+    log -Message "[_RestoreAutomaticOSUpgradePolicy] Restoring VMSS Upgrade Policy Mode completed"
+}
+
 function _MigrateNetworkInterfaceConfigurationsVmss {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
@@ -147,6 +165,9 @@ function BackendPoolMigrationVmss {
 
     # Restore VMSS Upgrade Policy Mode
     _RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
+
+    # Restore Automatic OS Upgrade Policy
+    _RestoreAutomaticOSUpgradePolicy -vmss $vmss -refVmss $refVmss
 
     # Update VMSS on Azure
     try {
