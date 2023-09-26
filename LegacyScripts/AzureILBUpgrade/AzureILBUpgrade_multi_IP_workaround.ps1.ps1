@@ -1,36 +1,35 @@
 
 <#PSScriptInfo
-
-.VERSION 5.0.2
-
+ 
+.VERSION 5.1
+ 
 .GUID 836ca1ab-93b7-49a3-b1d1-b257601da1dd
-
-.AUTHOR Microsoft
-
-.COMPANYNAME Microsoft
-
-.COPYRIGHT Microsoft 2023
-
-.TAGS
-
+ 
+.AUTHOR Microsoft Corporation
+ 
+.COMPANYNAME Microsoft Corporation
+ 
+.COPYRIGHT Microsoft Corporation. All rights reserved.
+ 
+.TAGS Azure, Az, LoadBalancer, AzNetworking
+ 
 .LICENSEURI
-
-.PROJECTURI https://github.com/Azure/AzLoadBalancerMigration/tree/main/LegacyScripts/AzureILBUpgrade
-
+ 
+.PROJECTURI
+ 
 .ICONURI
-
-.EXTERNALMODULEDEPENDENCIES 
-
+ 
+.EXTERNALMODULEDEPENDENCIES
+ 
 .REQUIREDSCRIPTS
-
+ 
 .EXTERNALSCRIPTDEPENDENCIES
-
+ 
 .RELEASENOTES
-
-Removing unused variable
-
+ 
+ 
 .PRIVATEDATA
-
+ 
 #>
 
 <#
@@ -46,6 +45,8 @@ Name of Basic Internal Load Balancer you want to upgrade.
 Location where you want to place new Standard Internal Load Balancer in. For example, "centralus"
 .PARAMETER newLBName
 Name of the newly created Standard Internal Load Balancer.
+.PARAMETER deleteBasicLB
+Switch to delete Basic Internal Load Balancer prior to creating Standard Internal Load Balancer. Use this option if you do not have enough IPs in your subnet for both Basic and Standard Internal Load Balancers.
     
 .EXAMPLE
 ./AzureILBUpgrade.ps1 -rgName "test_InternalUpgrade_rg" -oldLBName "LBForInternal" -newlocation "centralus" -newLbName "LBForUpgrade"
@@ -61,11 +62,15 @@ Note - all paramemters are required in order to successfully create a Standard I
 Param(
 [Parameter(Mandatory = $True)][string] $rgName,
 [Parameter(Mandatory = $True)][string] $oldLBName,
+[parameter(Mandatory = $false)][switch] $deleteBasicLB,
 #Parameters for new Standard Load Balancer
 [Parameter(Mandatory = $True)][string] $newlocation,
 [Parameter(Mandatory = $True)][string] $newLBName
 )
 
+$ErrorActionPreference = "Stop"
+
+Write-Host "Starting upgrade of the basic load balancer '$oldLBName' to a standard load balancer '$newLBName' in resource group '$rgName'."
 
 #getting current loadbalancer
 $lb = Get-AzLoadBalancer -ResourceGroupName $rgName -Name $oldLbName
@@ -83,10 +88,18 @@ $ipRange = ($backendSubnet.AddressPrefix).split("/")[0]
 $newlbFrontendConfigs = $lb.FrontendIpConfigurations
 $feProcessed = 1
 
+# check that the number of front ends is 5 or less; more than 5 is not supported with the Test-AzPrivateIPAddressAvailability 
+# process below and must delete the basic LB instead of reassigning the IPs
+If ($newlbFrontendConfigs.Count -gt 5 -and !$deleteBasicLB.IsPresent)
+{
+    Write-Error "The number of front ends on basic load balancer '$($lb.Name)' is greater than 5. In order to proceed with the migration the basic SKU load balancer will need to be deleted to ensure its frontend IP addresses are available for the new standard SKU load balancer. Re-run the script, adding the -deleteBasicLB switch parameter." -ErrorAction Stop
+}
+
 [int]$startIp = [int]$ipRange.Split(".")[3] + 1
 $startIPTest = $ipRange.Split(".")[0] + "." + $ipRange.Split(".")[1] + "." + $ipRange.Split(".")[2] + "." + $startIp
 
 $availableIPS = (Test-AzPrivateIPAddressAvailability -VirtualNetwork $vnet -IPAddress $startIPTest).AvailableIPAddresses
+$lastAvailableIp = $availableIPS[$availableIPS.count-1]
 #initial bit in array to check for available ips
 $i = 0
 
@@ -96,7 +109,7 @@ $frontEndArray=@()
 #2. Front Ends
 foreach ($frontEndConfig in $newlbFrontendConfigs)
 {
-    Get-AzLoadBalancerFrontendIpConfig -Name ($frontEndConfig).Name -LoadBalancer $lb
+    #Get-AzLoadBalancerFrontendIpConfig -Name ($frontEndConfig).Name -LoadBalancer $lb
     $newFrontEndConfigName = $frontEndConfig.Name
     $newSubnetId = $frontEndConfig.subnet.Id
     $ip = $frontEndConfig.PrivateIpAddress
@@ -132,17 +145,30 @@ $rulesNat = (Get-Variable -Include nat* | Where-Object {$_.Name -ne "natRule"})
 
 ##updating private ip address to new values
 ##adding a loop
-$y = 1
-for ($z = 0; $z -lt $newlbFrontendConfigs.count; $z++)
-{
-    $ip = $availableIPS[$availableIPS.count-$y]
 
-    $lb | Set-AzLoadBalancerFrontendIpConfig -name $newlbFrontendConfigs[$z].Name -PrivateIpAddress $ip -subnet $newlbFrontendConfigs[$z].subnet
+If (!$deleteBasicLB.isPresent) {
+    $y = 1
+    for ($z = 0; $z -lt $newlbFrontendConfigs.count; $z++)
+    {
+        $ip = $availableIPS[$availableIPS.count-$y]
 
-    $y++
+        $lb | Set-AzLoadBalancerFrontendIpConfig -name $newlbFrontendConfigs[$z].Name -PrivateIpAddress $ip -subnet $newlbFrontendConfigs[$z].subnet | Out-Null
+
+        $y++
+    }
+
+    $lb | Set-AzLoadBalancer | Out-Null
 }
+Else {
+    $backupDateTime = Get-Date -Format FileDateTime
+    $backupFilePath = Join-Path -Path $PSScriptRoot -ChildPath "basic_lb_backup_$backupDateTime.json"
 
-$lb | Set-AzLoadBalancer
+    Write-Host "Backing up basic load balancer to $backupFilePath. In case of migration failure, use this backup to either recreate the Basic LB and try again or as a reference when configuration a new Standard LB manually. If using this option, the backend pool membership of the restored load balancer will need to be manually configured."
+    Export-AzResourceGroup -ResourceGroupName $lb.ResourceGroupName -Resource $lb.Id -SkipAllParameterization -Path $backupFilePath -Force | Out-Null
+
+    Write-Host "Deleting basic load balancer..."
+    $lb | Remove-AzLoadBalancer -Force
+}
 
 # ##update BASIC loadbalancer to reflect newly assigned IP values
 # $lb | Set-AzLoadBalancer -FrontendIpConfiguration $newlbFrontendConfigs
@@ -163,8 +189,8 @@ foreach ($probe in $newProbes)
     $probeInterval = $probe.intervalinseconds
     $probeRequestPath = $probe.requestPath
     $probeNumbers = $probe.numberofprobes
-    $newlb | Add-AzLoadBalancerProbeConfig -Name $probeName -RequestPath $probeRequestPath -Protocol $probeProtocol -Port $probePort -IntervalInSeconds $probeInterval -ProbeCount $probeNumbers 
-    $newlb | Set-AzLoadBalancer
+    $newlb | Add-AzLoadBalancerProbeConfig -Name $probeName -RequestPath $probeRequestPath -Protocol $probeProtocol -Port $probePort -IntervalInSeconds $probeInterval -ProbeCount $probeNumbers | Out-Null
+    $newlb | Set-AzLoadBalancer | Out-Null
 }
 
 #6. Backend configuration
@@ -174,7 +200,7 @@ $newlb = (Get-AzLoadBalancer -ResourceGroupName $rgName -Name $newLbName)
 foreach ($newBackendPool in $newBackendPools)
 {
     $existingBackendPoolConfig = Get-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name ($newBackendPool).Name
-    $newlb | Add-AzLoadBalancerBackendAddressPoolConfig -Name ($existingBackendPoolConfig).Name | Set-AzLoadBalancer
+    $newlb | Add-AzLoadBalancerBackendAddressPoolConfig -Name ($existingBackendPoolConfig).Name | Set-AzLoadBalancer | Out-Null
     $newlb = (Get-AzLoadBalancer -ResourceGroupName $rgName -Name $newLbName)
     #$newBackendPoolConfig
     $nics = (($lb.BackendAddressPools) | Where-Object {$_.Name -eq ($newBackendPool).name}).backendipconfigurations
@@ -184,7 +210,7 @@ foreach ($newBackendPool in $newBackendPools)
         $nicToAdd = Get-AzNetworkInterface -name ($nic.id).Split("/")[8] -ResourceGroupName $nicRG
         #write-host "Reconfiguring $nicToAdd.Name"
         $nicToAdd.IpConfigurations[0].LoadBalancerBackendAddressPools = $null
-        Set-AzNetworkInterface -NetworkInterface $nicToAdd
+        Set-AzNetworkInterface -NetworkInterface $nicToAdd | Out-Null
         $backendArray += ($newBackendPool).Name +"," + ($nicToAdd).id
     }
 }
@@ -199,7 +225,7 @@ foreach ($backendItem in $backendArray)
     $nicToAssociate = Get-AzNetworkInterface -name (($backendItem.Split(",")[1]).split("/")[8]) -resourcegroupname $nicRG
     #$nicToAssociate
     $nicToAssociate.IpConfigurations[0].LoadBalancerBackendAddressPools = $lbBackend
-    Set-AzNetworkInterface -NetworkInterface $nicToAssociate
+    Set-AzNetworkInterface -NetworkInterface $nicToAssociate | Out-Null
 }
 
 #8. create load balancer rule config
@@ -215,13 +241,13 @@ foreach ($newLbRuleConfig in $newLbRuleConfigs)
     $lbFrontEndNameConfig = ((Get-Variable -Include frontEndIpConfig* | Where-Object {$_.Value.name -eq $lbFrontEndName})).value
     if ($floatingIPTest.equals($true))
     {
-        $newlb | Add-AzLoadBalancerRuleConfig -Name ($newLbRuleConfig).Name -FrontendIPConfiguration $lbFrontEndNameConfig -BackendAddressPool $backendPool -Probe (Get-AzLoadBalancerProbeConfig -LoadBalancer $newlb -Name (($newLbRuleConfig.Probe.id).split("/")[10])) -Protocol ($newLbRuleConfig).protocol -FrontendPort ($newLbRuleConfig).FrontendPort -BackendPort ($newLbRuleConfig).BackendPort -IdleTimeoutInMinutes ($newLbRuleConfig).IdleTimeoutInMinutes -EnableFloatingIP -LoadDistribution $loadDistribution -DisableOutboundSNAT
+        $newlb | Add-AzLoadBalancerRuleConfig -Name ($newLbRuleConfig).Name -FrontendIPConfiguration $lbFrontEndNameConfig -BackendAddressPool $backendPool -Probe (Get-AzLoadBalancerProbeConfig -LoadBalancer $newlb -Name (($newLbRuleConfig.Probe.id).split("/")[10])) -Protocol ($newLbRuleConfig).protocol -FrontendPort ($newLbRuleConfig).FrontendPort -BackendPort ($newLbRuleConfig).BackendPort -IdleTimeoutInMinutes ($newLbRuleConfig).IdleTimeoutInMinutes -EnableFloatingIP -LoadDistribution $loadDistribution -DisableOutboundSNAT | Out-Null
     }
     else
     {
-        $newlb | Add-AzLoadBalancerRuleConfig -Name ($newLbRuleConfig).Name -FrontendIPConfiguration $lbFrontEndNameConfig -BackendAddressPool $backendPool -Probe (Get-AzLoadBalancerProbeConfig -LoadBalancer $newlb -Name (($newLbRuleConfig.Probe.id).split("/")[10])) -Protocol ($newLbRuleConfig).protocol -FrontendPort ($newLbRuleConfig).FrontendPort -BackendPort ($newLbRuleConfig).BackendPort -IdleTimeoutInMinutes ($newLbRuleConfig).IdleTimeoutInMinutes -LoadDistribution $loadDistribution -DisableOutboundSNAT
+        $newlb | Add-AzLoadBalancerRuleConfig -Name ($newLbRuleConfig).Name -FrontendIPConfiguration $lbFrontEndNameConfig -BackendAddressPool $backendPool -Probe (Get-AzLoadBalancerProbeConfig -LoadBalancer $newlb -Name (($newLbRuleConfig.Probe.id).split("/")[10])) -Protocol ($newLbRuleConfig).protocol -FrontendPort ($newLbRuleConfig).FrontendPort -BackendPort ($newLbRuleConfig).BackendPort -IdleTimeoutInMinutes ($newLbRuleConfig).IdleTimeoutInMinutes -LoadDistribution $loadDistribution -DisableOutboundSNAT | Out-Null
     }
-    $newlb | set-AzLoadBalancer
+    $newlb | set-AzLoadBalancer | Out-Null
 
 
     foreach ($backendIpConfig in $backendPool.BackendIpConfigurations)
@@ -230,6 +256,6 @@ foreach ($newLbRuleConfig in $newLbRuleConfigs)
         $nicToAssociate = Get-AzNetworkInterface -name (($backendIpConfig.id).split("/")[8]) -ResourceGroupName $nicRG
         #$nicToAssociate
         $nicToAssociate.IpConfigurations[0].LoadBalancerBackendAddressPools = $lbBackend
-        Set-AzNetworkInterface -NetworkInterface $nicToAssociate
+        Set-AzNetworkInterface -NetworkInterface $nicToAssociate | Out-Null
     }
 }
