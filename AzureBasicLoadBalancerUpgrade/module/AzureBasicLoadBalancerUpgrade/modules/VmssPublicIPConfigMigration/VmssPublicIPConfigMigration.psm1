@@ -49,13 +49,13 @@ Function AddVmssPublicIPConfig {
     ForEach ($nic in $refVmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
         Foreach ($ipConfig in $nic.IpConfigurations) {
             If ($null -ne $ipConfig.PublicIpAddressConfiguration) {
-                log -Message "[AddVMSSPublicIPConfig] Adding public IP address configuration '$($ipConfig.PublicIpAddressConfiguration.Name)' on IPConfig '$($ipConfig.Name)' on NIC '$($nic.Name)' pf VMSS '$($vmss.Name)'"
+                log -Message "[AddVMSSPublicIPConfig] Adding public IP address '$($ipConfig.PublicIpAddressConfiguration.Name)' on IPConfig '$($ipConfig.Name)' on NIC '$($nic.Name)' of VMSS '$($vmss.Name)'"
                 
                 $vmssNic = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | Where-Object {$_.Name -eq $nic.Name}
                 $vmssIpConfig = $vmssNic.IpConfigurations | Where-Object {$_.Name -eq $ipConfig.Name}
 
                 log -Message "[AddVMSSPublicIPConfig] Changing Public IP Address configuration SKU to Standard"
-                $ipConfig.PublicIpAddressConfiguration.Sku.Name = "Standard"
+                $ipConfig.PublicIpAddressConfiguration.Sku = [Microsoft.Azure.Management.Compute.Models.PublicIPAddressSku]::new('Standard')
 
                 $vmssIpConfig.PublicIpAddressConfiguration = $ipConfig.PublicIpAddressConfiguration
 
