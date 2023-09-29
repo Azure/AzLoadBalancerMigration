@@ -10,7 +10,6 @@ A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore th
 Unsupported scenarios:
 - Basic load balancers with a VMSS backend pool member which is also a member of a backend pool on a different load balancer
 - Basic load balancers with backend pool members which are not VMs or a VMSS
-- Basic load balancers with only empty backend pools
 - Basic load balancers with IPV6 frontend IP configurations
 - Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode
 - Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
@@ -264,6 +263,26 @@ function Start-AzBasicLoadBalancerUpgrade {
                     }
                     else {
                         RestoreExternalLBMigrationVmss @standardScenarioParams -vmss $vmss
+                    }
+                }
+            }
+        }
+        'Empty' {
+            switch ($scenario.ExternalOrInternal) {
+                'internal' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        InternalLBMigrationEmpty @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreInternalLBMigrationEmpty @standardScenarioParams
+                    }
+                }
+                'external' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        PublicLBMigrationEmpty @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreExternalLBMigrationEmpty @standardScenarioParams
                     }
                 }
             }
