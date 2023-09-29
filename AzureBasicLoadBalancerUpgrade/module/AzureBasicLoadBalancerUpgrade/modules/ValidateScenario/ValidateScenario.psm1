@@ -48,8 +48,8 @@ function _GetScenarioBackendType {
             $backendType = 'VMSS'
         }
         ElseIf ([string]::IsNullOrEmpty($backendPoolMemberTypes[0])) {
-            log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty, which is not supported for migration" -Severity 'Error'
-            return
+            log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty"
+            $backendType = 'Empty'
         }
         Else {
             log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendPoolMemberTypes -join ',')'" -Severity 'Error'
@@ -143,6 +143,8 @@ Function Test-SupportedMigrationScenario {
                 return
             }
         }
+        log -Message "[Test-SupportedMigrationScenario] Load balancer does not have a frontend IPV6 configuration"
+
         $scenario.ExternalOrInternal = 'External'
     }
     ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix.Id)) {
@@ -232,7 +234,7 @@ Function Test-SupportedMigrationScenario {
                     }
                 }
                 Else {
-                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
                     log -Message $message -Severity 'Warning'
                 }
             }
@@ -273,7 +275,7 @@ Function Test-SupportedMigrationScenario {
                     }
                 }
                 Else {
-                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
                     log -Message $message -Severity 'Warning'
                 }
             }
@@ -294,7 +296,7 @@ Function Test-SupportedMigrationScenario {
                     }
                 }
                 Else {
-                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
                     log -Message $message -Severity 'Warning'
                 }
             }
@@ -331,7 +333,7 @@ Function Test-SupportedMigrationScenario {
                     }
                 }
                 Else {
-                    $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                    $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
                     log -Message $message -Severity 'Warning'
                 }
             }
@@ -395,7 +397,7 @@ Function Test-SupportedMigrationScenario {
                 }
             }
             Else {
-                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
                 log -Message $message -Severity 'Warning'
             }
         }
@@ -419,7 +421,7 @@ Function Test-SupportedMigrationScenario {
                 }
             }
             Else {
-                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
                 log -Message $message -Severity 'Warning'
             }
         }
@@ -441,7 +443,7 @@ Function Test-SupportedMigrationScenario {
                 }
             }
             Else {
-                $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+                $message = "[Test-SupportedMigrationScenario] -Force or -ValidateMigration parameter was used, so continuing with migration validation"
                 log -Message $message -Severity 'Warning'
             }
         }
@@ -540,7 +542,7 @@ Function Test-SupportedMigrationScenario {
             }
         }
         Else {
-            $message = "[Test-SupportedMigrationScenario] -Force parameter was used, so continuing with migration"
+            $message = "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
             log -Message $message -Severity 'Warning'
         }
     }

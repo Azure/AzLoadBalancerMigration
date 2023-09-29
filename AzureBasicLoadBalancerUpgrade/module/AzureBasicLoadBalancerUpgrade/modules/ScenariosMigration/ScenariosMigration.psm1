@@ -523,6 +523,164 @@ function RestoreInternalLBMigrationVM {
     ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
+function PublicLBMigrationEmpty {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
+    )
+
+    log -Message "[PublicLBMigrationEmpty] Public Load Balancer with empty detected. Initiating Public Load Balancer Migration"
+
+    # Backup Basic Load Balancer Configurations
+    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+    # Migrate public IP addresses on Basic LB to static (if dynamic)
+    PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
+
+    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
+    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'Empty'
+
+    # Creation of Standard Load Balancer
+    $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
+
+    # Migration of Frontend IP Configurations
+    PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Load Balancing Rules
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Creating Outbound Rules for SNAT
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
+
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+}
+
+function InternalLBMigrationEmpty {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
+    )
+
+    log -Message "[InternalLBMigrationEmpty] Internal Load Balancer with empty detected. Initiating Internal Load Balancer Migration"
+
+    # Backup Basic Load Balancer Configurations
+    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
+    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'Empty'
+
+    # Creation of Standard Load Balancer
+    $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
+
+    # Migration of Private Frontend IP Configurations
+    PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
+
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Load Balancing Rules
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+}
+
+function RestoreExternalLBMigrationEmpty {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
+    )
+
+    log -Message "[RestoreExternalLBMigration] Restore Public Load Balancer with empty detected. Initiating Public Load Balancer Migration"
+
+    # Migrate public IP addresses on Basic LB to static (if dynamic)
+    PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
+
+    # Creation of Standard Load Balancer
+    $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
+
+    # Migration of Frontend IP Configurations
+    PublicFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Load Balancing Rules
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Creating Outbound Rules for SNAT
+    OutboundRulesCreation -StdLoadBalancer $StdLoadBalancer -Scenario $scenario
+
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+}
+
+function RestoreInternalLBMigrationEmpty {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
+    )
+
+    log -Message "[RestoreInternalLBMigration] Restore Internal Load Balancer with empty detected. Initiating Internal Load Balancer Migration"
+
+    # Creation of Standard Load Balancer
+    $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
+
+    # Migration of Private Frontend IP Configurations
+    PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
+Vmss
+    # Add Backend Pool to Standard Load Balancer
+    AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Probes
+    ProbesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of Load Balancing Rules
+    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # Migration of NAT Rules
+    NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    # validate the new standard load balancer configuration against the original basic load balancer configuration
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+}
+
 Export-ModuleMember -Function PublicLBMigrationVmss
 Export-ModuleMember -Function InternalLBMigrationVmss
 Export-ModuleMember -Function RestoreInternalLBMigrationVmss
@@ -531,3 +689,7 @@ Export-ModuleMember -Function PublicLBMigrationVM
 Export-ModuleMember -Function InternalLBMigrationVM
 Export-ModuleMember -Function RestoreInternalLBMigrationVM
 Export-ModuleMember -Function RestoreExternalLBMigrationVM
+Export-ModuleMember -Function PublicLBMigrationEmpty
+Export-ModuleMember -Function InternalLBMigrationEmpty
+Export-ModuleMember -Function RestoreInternalLBMigrationEmpty
+Export-ModuleMember -Function RestoreExternalLBMigrationEmpty
