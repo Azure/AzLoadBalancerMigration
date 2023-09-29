@@ -268,6 +268,26 @@ function Start-AzBasicLoadBalancerUpgrade {
                 }
             }
         }
+        'Empty' {
+            switch ($scenario.ExternalOrInternal) {
+                'internal' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        InternalLBMigrationEmpty @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreInternalLBMigrationEmpty @standardScenarioParams
+                    }
+                }
+                'external' {
+                    if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                        PublicLBMigrationEmpty @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                    }
+                    else {
+                        RestoreExternalLBMigrationEmpty @standardScenarioParams
+                    }
+                }
+            }
+        }
     }
 
     log -Message "############################## Migration Completed ##############################"
