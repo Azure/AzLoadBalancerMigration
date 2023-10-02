@@ -105,14 +105,6 @@ Function Test-SupportedMigrationScenario {
     $backendType = _GetScenarioBackendType -BasicLoadBalancer $BasicLoadBalancer
     $scenario.BackendType = $backendType
 
-    # checking that source load balancer has sub-resource configurations
-    log -Message "[Test-SupportedMigrationScenario] Checking that source load balancer is configured"
-    If ($BasicLoadBalancer.LoadBalancingRules.count -eq 0 -and $BasicLoadBalancer.InboundNatRules.Count -eq 0) {
-        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' has no load balancing rules or NAT Rules, so there is nothing to migrate!"
-        return
-    }
-    log -Message "[Test-SupportedMigrationScenario] Load balancer has at least 1 frontend IP configuration"
-
     # check if the load balancer name should be re-used, if so check if it's not standard already
     log -Message "[Test-SupportedMigrationScenario] Checking that standard load balancer name '$StdLoadBalancerName'"
     $chkStdLB = (Get-AzLoadBalancer -Name $StdLoadBalancerName -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -ErrorAction SilentlyContinue)
