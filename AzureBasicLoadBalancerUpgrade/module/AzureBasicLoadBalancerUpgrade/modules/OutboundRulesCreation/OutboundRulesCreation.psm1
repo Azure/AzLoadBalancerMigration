@@ -34,12 +34,7 @@ function OutboundRulesCreation {
                 $StdLoadBalancer | Add-AzLoadBalancerOutboundRuleConfig @outboundRuleConfig > $null
             }
             catch {
-                $message = @"
-                [OutboundRulesCreation] An error occured when adding Outbound Rule '$($backendAddressPool.Name)' to new Standard load
-                balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the
-                -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or
-                the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+                $message = "[OutboundRulesCreation] An error occured when adding Outbound Rule '$($backendAddressPool.Name)' to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration.`nError message: $_"
                 log "Error" $message -terminateOnError
             }
 

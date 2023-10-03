@@ -25,12 +25,7 @@ function ProbesMigration {
             $StdLoadBalancer | Add-AzLoadBalancerProbeConfig @probeConfig > $null
         }
         catch {
-            $message = @"
-            [ProbesMigration] Failed to add health probe config '$($probe.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource 
-            group '$($StdLoadBalancer.ResourceGroupName)'. To recover address the following error, and try again specifying the 
-            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or 
-            the directory specified with -RecoveryBackupPath. `nError message: $_ 
-"@
+            $message = "[ProbesMigration] Failed to add health probe config '$($probe.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)'. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
             log "Error" $message -terminateOnError
         }
     }
@@ -40,12 +35,7 @@ function ProbesMigration {
         Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
-        $message = @"
-        [ProbesMigration] Failed to add health probe config '$($probe.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource 
-        group '$($StdLoadBalancer.ResourceGroupName)'. To recover address the following error, and try again specifying the 
-        -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or 
-        the directory specified with -RecoveryBackupPath. `nError message: $_ 
-"@
+        $message = "[ProbesMigration] Failed to add health probe config '$($probe.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)'. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_ "
         log "Error" $message -terminateOnError
     }
 

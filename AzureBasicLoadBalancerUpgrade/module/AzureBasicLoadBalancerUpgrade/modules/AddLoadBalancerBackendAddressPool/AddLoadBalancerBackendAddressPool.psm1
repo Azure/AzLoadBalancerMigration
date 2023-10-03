@@ -15,11 +15,7 @@ function AddLoadBalancerBackendAddressPool {
             $StdLoadBalancer | Add-AzLoadBalancerBackendAddressPoolConfig -Name $basicBackendAddressPool.Name > $null
         }
         catch {
-            $message = @"
-                [AddLoadBalancerBackendAddressPool] An error occured when adding a backend pool to the new Standard LB '$($StdLoadBalancer.Name)'. To recover
-                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
-                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+            $message = "[AddLoadBalancerBackendAddressPool] An error occured when adding a backend pool to the new Standard LB '$($StdLoadBalancer.Name)'. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
             log 'Error' $message -terminateOnError
         }
     }
@@ -29,11 +25,7 @@ function AddLoadBalancerBackendAddressPool {
         $StdLoadBalancer | Set-AzLoadBalancer > $null
     }
     catch {
-        $message = @"
-        [AddLoadBalancerBackendAddressPool] An error occured when saving the added backend pools to the new Standard LB '$($StdLoadBalancer.Name)'. To recover
-        address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
-        State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+        $message = "[AddLoadBalancerBackendAddressPool] An error occured when saving the added backend pools to the new Standard LB '$($StdLoadBalancer.Name)'. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
         log 'Error' $message -terminateOnError
     }
 }

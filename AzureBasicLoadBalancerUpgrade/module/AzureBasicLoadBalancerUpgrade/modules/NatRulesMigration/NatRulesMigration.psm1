@@ -31,10 +31,7 @@ function NatRulesMigration {
             }
         }
         catch {
-            $message = @"
-            [NatRulesMigration] Failed to check if inbound nat rule config '$($inboundNatRule.Name)' was created for an Inbound NAT Pool. Migration will continue, FAILED RULE WILL 
-            NEED TO BE MANUALLY ADDED to the load balancer. Error: $_
-"@
+            $message = "[NatRulesMigration] Failed to check if inbound nat rule config '$($inboundNatRule.Name)' was created for an Inbound NAT Pool. Migration will continue, FAILED RULE WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
             log "Error" $message
         }
 
@@ -64,10 +61,7 @@ function NatRulesMigration {
             $StdLoadBalancer | Add-AzLoadBalancerInboundNatRuleConfig @inboundNatRuleConfig > $null
         }
         catch {
-            $message = @"
-            [NatRulesMigration] Failed to add inbound nat rule config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource
-            group '$($StdLoadBalancer.ResourceGroupName)'. Migration will continue, FAILED RULE WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_
-"@
+            $message = "[NatRulesMigration] Failed to add inbound nat rule config '$($inboundNatRule.Name)' to new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)'. Migration will continue, FAILED RULE WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
             log "Error" $message
         }
     }
@@ -88,12 +82,7 @@ function NatRulesMigration {
         }
     }
     catch {
-        $message = @"
-        [NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource
-        group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule
-        configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load
-        balancer. Error: $_
-"@
+        $message = "[NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
         log "Error" $message
     }
     log -Message "[NatRulesMigration] Nat Rules Migration Completed"
