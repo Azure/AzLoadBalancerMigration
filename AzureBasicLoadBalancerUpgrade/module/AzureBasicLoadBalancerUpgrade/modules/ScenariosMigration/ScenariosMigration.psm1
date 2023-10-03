@@ -664,7 +664,7 @@ function RestoreInternalLBMigrationEmpty {
 
     # Migration of Private Frontend IP Configurations
     PrivateFEMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $stdLoadBalancer
-Vmss
+    
     # Add Backend Pool to Standard Load Balancer
     AddLoadBalancerBackendAddressPool -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 

@@ -27,20 +27,12 @@ function UpdateVmssInstances {
             $updateJob | Wait-Job -Timeout $defaultJobWaitTimeout | Out-Null
         }
         catch {
-            $message = @"
-            An error occured when initiating the 'Update-AzVMssInstance' job on all instances in VMSS '$($vmss.Name)'. To recover, 
-            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
-            State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@  
+            $message = "[UpdateVmssInstances]An error occured when initiating the 'Update-AzVMssInstance' job on all instances in VMSS '$($vmss.Name)'. To recover, address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration.`nError message: $_"
             log 'Error' $message -terminateOnError
         }
         finally {
             If (![string]::IsNullorEmpty($updateJob.Error)) {
-                $message = @"
-                An error occured while executing the 'Update-AzVMssInstance' job on all instances in VMSS '$($vmss.Name)'. To recover, 
-                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup 
-                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $($updateJob.Error)
-"@  
+                $message = "An error occured while executing the 'Update-AzVMssInstance' job on all instances in VMSS '$($vmss.Name)'. To recover, address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $($updateJob.Error)"
                 log 'Error' $message -terminateOnError
             }
         }
