@@ -63,11 +63,7 @@ function _MigrateNetworkInterfaceConfigurations {
                     }
                 }
                 catch {
-                    $message = @"
-                        [_MigrateNetworkInterfaceConfigurations] An error occured creating a new VMSS IP Config. To recover
-                        address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
-                        State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+                    $message = "[_MigrateNetworkInterfaceConfigurations] An error occured creating a new VMSS IP Config. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
                     log 'Error' $message -terminateOnError
                 }
             }

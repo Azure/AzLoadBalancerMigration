@@ -40,11 +40,7 @@ function _MigrateHealthProbe{
         }
     }
     catch {
-            $message = @"
-            [_MigrateHealthProbe] An error occured migrating a health probe to the VMSS. To recover
-            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
-            State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+            $message = "[_MigrateHealthProbe] An error occured migrating a health probe to the VMSS. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
         log 'Error' $message -terminateOnError
     }
     log -Message "[_MigrateHealthProbe] Migrating Health Probes completed"
@@ -113,11 +109,7 @@ function _MigrateNetworkInterfaceConfigurationsVmss {
                             $genericListSubResource.Add($subResource)
                         }
                         catch {
-                            $message = @"
-                                [_MigrateNetworkInterfaceConfigurationsVmss] An error occured creating a new VMSS IP Config. To recover
-                                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
-                                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+                            $message = "[_MigrateNetworkInterfaceConfigurationsVmss] An error occured creating a new VMSS IP Config. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
                             log 'Error' $message -terminateOnError
                         }
                     }
@@ -228,11 +220,7 @@ function BackendPoolMigrationVM {
             $nic = Get-AzNetworkInterface -ResourceId $nicRecord.Name
         }
         catch {
-            $message = @"
-                [BackendPoolMigrationVmss] An error occured getting the Network Interface '$($nicRecord.Name)'. Check that the NIC exists. To recover
-                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup
-                State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+            $message = "[BackendPoolMigrationVmss] An error occured getting the Network Interface '$($nicRecord.Name)'. Check that the NIC exists. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
             log 'Error' $message -terminateOnError
         }
 
