@@ -55,7 +55,7 @@ Function UpgradeVMPublicIP {
     } while ($VMPIPRecords.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Minutes -lt 15)
 
     If ($timeoutStopwatch.Elapsed.Minutes -gt 15) {
-        log -Severity Error -Message "[UpgradeVMPublicIP] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected, follow the documented migration recovery steps here: https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-virtual-machine-scale-sets#what-happens-if-my-upgrade-fails-mid-migration" -terminateOnError
+        log -Severity Error -Message "[UpgradeVMPublicIP] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration." -terminateOnError
     }
 
     $publicIPsToUpgrade = $VMPIPRecords | Where-Object {![string]::IsNullOrEmpty($_.pipId)} # filtering out null outer-join records
@@ -82,7 +82,7 @@ Function UpgradeVMPublicIP {
         $job = $_
         If ($job.Error -or $job.State -eq 'Failed') {
             $publicIPsToUpgrade | Select-Object -Property pipId,pipIpConfig | ConvertTo-Json
-            log -Severity Error -Message "Changing a Public IP allocation method from Dynamic to Static failed with the following errors: $($job.error; $job | Receive-Job). To continue, address the error then follow the script documentation on recovering from a failed migration and try again." -terminateOnError
+            log -Severity Error -Message "Changing a Public IP allocation method from Dynamic to Static failed with the following errors: $($job.error; $job | Receive-Job). To continue, address the error then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration" -terminateOnError
         }
     }
 

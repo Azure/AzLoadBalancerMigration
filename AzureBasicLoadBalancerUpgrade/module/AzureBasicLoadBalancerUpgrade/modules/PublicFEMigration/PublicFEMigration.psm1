@@ -20,12 +20,7 @@ function PublicIPToStatic {
                 $upgradedPip = Set-AzPublicIpAddress -PublicIpAddress $pip
             }
             catch {
-                $message = @"
-                [LBPublicIPToStatic] An error occured when changing public IP '$($pip.Name)' from dyanamic to standard. To recover 
-                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load 
-                Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
-                `nError message: $_
-"@
+                $message = "[LBPublicIPToStatic] An error occured when changing public IP '$($pip.Name)' from dyanamic to standard. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
                 log 'Error' $message -terminateOnError
             }
 
@@ -56,12 +51,7 @@ function PublicFEMigration {
                 $upgradedPip = Set-AzPublicIpAddress -PublicIpAddress $pip
             }
             catch {
-                $message = @"
-                [PublicFEMigration] An error occured when upgrading public IP '$($pip.Name)' from Basic to Standard SKU. To recover 
-                address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load 
-                Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
-                `nError message: $_
-"@
+                $message = "[PublicFEMigration] An error occured when upgrading public IP '$($pip.Name)' from Basic to Standard SKU. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
                 log 'Error' $message -terminateOnError
             }
 
@@ -73,12 +63,7 @@ function PublicFEMigration {
             $StdLoadBalancer | Add-AzLoadBalancerFrontendIpConfig -Name $feConfig.Name -PublicIpAddressId $pip.Id > $null
         }
         catch {
-            $message = @"
-            [PublicFEMigration] An error occured when adding the public front end '$($feConfig.Name)' to the new Standard LB. To recover 
-            address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load 
-            Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. 
-            `nError message: $_
-"@
+            $message = "[PublicFEMigration] An error occured when adding the public front end '$($feConfig.Name)' to the new Standard LB. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration.`nError message: $_"
             log 'Error' $message -terminateOnError
         }
     }
@@ -89,12 +74,7 @@ function PublicFEMigration {
         Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
-        $message = @"
-        [PublicFEMigration] An error occured when moving Public IPs to the new Standard Load Balancer. To recover 
-        address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic 
-        Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath.
-         `nError message: $_
-"@
+        $message = "[PublicFEMigration] An error occured when moving Public IPs to the new Standard Load Balancer. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
         log 'Error' $message -terminateOnError
     }
 
