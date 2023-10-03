@@ -63,7 +63,7 @@ function _MigrateNetworkInterfaceConfigurations {
                     }
                 }
                 catch {
-                    $message = "[_MigrateNetworkInterfaceConfigurations] An error occured creating a new VMSS IP Config. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
+                    $message = "[_MigrateNetworkInterfaceConfigurations] An error occured creating a new VMSS IP Config. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. Error: $_"
                     log 'Error' $message -terminateOnError
                 }
             }
@@ -108,7 +108,7 @@ function InboundNatPoolsMigration {
             $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @inboundNatPoolConfig > $null 
         }
         catch {
-            $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. `n$($inboundNatPoolConfig | ConvertTo-Json -Depth 5)$_$_"
+            $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. `n$($inboundNatPoolConfig | ConvertTo-Json -Depth 5) $_"
             log 'Warning' $message
         }
     }

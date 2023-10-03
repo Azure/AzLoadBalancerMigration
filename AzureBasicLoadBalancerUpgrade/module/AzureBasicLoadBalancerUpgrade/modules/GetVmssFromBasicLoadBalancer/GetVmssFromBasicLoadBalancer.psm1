@@ -15,7 +15,7 @@ function GetVmssFromBasicLoadBalancer {
         $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
     }
     catch {
-        $message = "[GetVmssFromBasicLoadBalancer] An error occured when getting VMSS '$($vmss.Name)' in resource group '$($vmss.ResourceGroupName)'. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration."
+        $message = "[GetVmssFromBasicLoadBalancer] An error occured when getting VMSS '$($vmss.Name)' in resource group '$($vmss.ResourceGroupName)'. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. Error: $_"
         log 'Error' $message -terminateOnError
     }
     log -Message "[GetVmssFromBasicLoadBalancer] VMSS loaded Name $($vmss.Name) from RG $($vmss.ResourceGroupName)"
