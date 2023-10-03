@@ -108,9 +108,7 @@ function InboundNatPoolsMigration {
             $StdLoadBalancer | Add-AzLoadBalancerInboundNatPoolConfig @inboundNatPoolConfig > $null 
         }
         catch {
-            $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard 
-                Load Balancer. The script will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. 
-                `n$($inboundNatPoolConfig | ConvertTo-Json -Depth 5)$_$_"
+            $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. `n$($inboundNatPoolConfig | ConvertTo-Json -Depth 5)$_$_"
             log 'Warning' $message
         }
     }
@@ -130,11 +128,7 @@ function InboundNatPoolsMigration {
         }
     }
     catch {
-        $message = @"
-            [InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script 
-            will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. 
-            `n$($StdLoadBalancer | Get-AzLoadBalancerInboundNatPoolConfig | ConvertTo-Json -Depth 5)$_
-"@
+        $message = "[InboundNatPoolsMigration] An error occured when adding Inbound NAT Pool config '$($pool.name)' to the new Standard Load Balancer. The script will continue. MANUALLY CREATE THE FOLLOWING INBOUND NAT POOL CONFIG ONCE THE SCRIPT COMPLETES. `n$($StdLoadBalancer | Get-AzLoadBalancerInboundNatPoolConfig | ConvertTo-Json -Depth 5)$_"
         log 'Warning' $message
     }
 
@@ -152,21 +146,11 @@ function InboundNatPoolsMigration {
     catch {
         $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
         if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
-            $message = @"
-            [InboundNatPoolsMigration] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode).
-            Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances
-            must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS
-            Upgrade Policy manually. `nError message: $_
-"@
+            $message = "[InboundNatPoolsMigration] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode). Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS Upgrade Policy manually. `nError message: $_"
             log 'Error' $message -terminateOnError
         }
         else {
-            $message = @"
-            [InboundNatPoolsMigration] An error occured when attempting to update VMSS network config on the new Standard 
-            LB backend pool membership. To recover address the following error, and try again specifying the 
-            -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in 
-            this directory or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+            $message = "[InboundNatPoolsMigration] An error occured when attempting to update VMSS network config on the new Standard LB backend pool membership. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_"
             log 'Error' $message -terminateOnError
         }
     }
