@@ -30,13 +30,7 @@ function LoadBalacingRulesMigration {
             $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
         }
         catch {
-            $message = @"
-                [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load
-                balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, redeploy the Basic
-                load balancer from the backup 'ARMTemplate-$($BasicLoadBalancer.Name)-$($BasicLoadBalancer.ResourceGroupName)...' file, add backend
-                pool membership back (see the backup '$('State-' + $BasicLoadBalancer.Name + '-' + $BasicLoadBalancer.ResourceGroupName + '...')' state
-                file for original pool membership), and retry the migration.  Error: $_
-"@
+            $message = "[LoadBalacingRulesMigration] An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, and follow the process at https://aka.ms/basiclbupgradefailure to retry migration. Error: $_"
             log "Error" $message -terminateOnError
         }
     }
@@ -47,12 +41,7 @@ function LoadBalacingRulesMigration {
         Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
-        $message = @"
-        [LoadBalacingRulesMigration] An error occured when adding Load Balancing Rules configuration to new Standard load
-        balancer '$($StdLoadBalancer.Name)'. To recover address the following error, and try again specifying the
-        -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory
-        or the directory specified with -RecoveryBackupPath. `nError message: $_
-"@
+        $message = "[LoadBalacingRulesMigration] An error occured when adding Load Balancing Rules configuration to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover address the following error, https://aka.ms/basiclbupgradefailure. `nError message: $_"
         log "Error" $message -terminateOnError
     }
     log -Message "[LoadBalacingRulesMigration] LoadBalacing Rules Migration Completed"
