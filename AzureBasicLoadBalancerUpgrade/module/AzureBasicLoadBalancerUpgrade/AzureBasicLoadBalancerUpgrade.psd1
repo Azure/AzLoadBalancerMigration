@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.1.5'
+    ModuleVersion = '2.2.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -30,7 +30,7 @@
     Copyright = '(c) 2023 Microsoft. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description = 'This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) or VMs to a Standard SKU load balancer, preserving the existing configuration and functionality.'
+    Description = 'This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset or Virtual Machines to a Standard SKU load balancer, preserving the existing configuration and functionality.'
 
     # Minimum version of the PowerShell engine required by this module
     PowerShellVersion = '5.1'
@@ -51,7 +51,7 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    # RequiredModules = @()
+    RequiredModules = @('Az.Compute','Az.Network','Az.Resources','Az.Accounts','Az.ResourceGraph')
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = 'Move required Az modules to RequiredModules section instead of validating in-script. This will allow automatic installion of required modules when installing this module.'
 
             # Prerelease string of this module
             # Prerelease = ''
