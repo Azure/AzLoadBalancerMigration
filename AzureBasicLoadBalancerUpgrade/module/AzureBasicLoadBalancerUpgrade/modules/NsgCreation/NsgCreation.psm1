@@ -16,9 +16,22 @@ function _AddLBNSGSecurityRules {
         $nsg = Get-AzResource -ResourceId $nsgId | Get-AzNetworkSecurityGroup
     }
 
-    log -Message "[_AddLBNSGSecurityRules] Adding one NSG Rule for each Load Balancing Rule"
     $loadBalancingRules = $BasicLoadBalancer.LoadBalancingRules
-    $priorityCount = 100
+    $inboundNatRules = $BasicLoadBalancer.InboundNatRules
+
+    log -Message "[_AddLBNSGSecurityRules] Adding one NSG Rule for each Load Balancing Rule"
+
+    If ($nsg.SecurityRules.count -eq 0) {
+        $priorityCount = 250
+    }
+    Else {
+        $priorityCount = ($nsg.SecurityRules | Measure-Object -Property Priority -Minimum).Minimum - ($loadBalancingRules.count + $inboundNatRules.count)
+
+        If ($priorityCount -lt 100) {
+            log -Severity Error -Message "[_AddLBNSGSecurityRules] Unable to set rule priority for NSG '$($nsg.Name)' because it has rules too close to priority 100. Manually add security rules to the NSG following the migration!" -terminateOnError
+        }
+    }
+
     foreach ($loadBalancingRule in $loadBalancingRules) {
         $networkSecurityRuleConfig = @{
             Name                                = ($loadBalancingRule.Name + "-loadBalancingRule")
@@ -41,7 +54,6 @@ function _AddLBNSGSecurityRules {
     # Adding NSG Rule for each inboundNAT Rule
     log -Message "[_AddLBNSGSecurityRules] Adding one NSG Rule for each inboundNatRule"
     $networkSecurityRuleConfig = $null
-    $inboundNatRules = $BasicLoadBalancer.InboundNatRules
     foreach ($inboundNatRule in $inboundNatRules) {
         if ([string]::IsNullOrEmpty($inboundNatRule.FrontendPortRangeStart)) {
             $dstportrange = ($inboundNatRule.BackendPort).ToString()
@@ -311,8 +323,13 @@ function NsgCreationVM {
     # add security rule to existing NSGs ensuring LB traffic is allowed
     # NOTE: this is not implemented, because if an NSG already existed, we assume the necessary traffic would already have been allowed
     Foreach ($nsgId in $nsgIDsToUpdate) {
-        log -Severity Warning -Message "[NsgCreationVM] Updating exising NSGs is not implemented; ensure your NSG '$nsgId' has rules to allow traffic from the Load Balancer!"
-        #_AddLBNSGSecurityRules -BasicLoadBalancer $BasicLoadBalancer -nsgId $nsgId
+        If ($nsgId.split('/')[-1] -like 'nsg-lbmigration-*') {
+            log -Severity Warning -Message "[NsgCreationVM] Updating exising NSGs '$($nsgId.split('/')[-1])' because it appears to have been created by this script (for example, in a multi-LB migration scenario)"
+            _AddLBNSGSecurityRules -BasicLoadBalancer $BasicLoadBalancer -nsgId $nsgId
+        }
+        Else {
+            log -Severity Warning -Message "[NsgCreationVM] Updating exising NSGs is not implemented; ensure your NSG '$nsgId' has rules to allow traffic from the Load Balancer!"
+        }
     }
 
     # create new NSGs and associate with NICs

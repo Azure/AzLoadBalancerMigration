@@ -210,8 +210,21 @@ Function ValidateMigration {
                 $nicsNeedingNewNSG, $nsgIDsToUpdate = _GetVMNSG -BasicLoadBalancer $BasicLoadBalancer -skipLogging
 
                 If ($nicsNeedingNewNSG.count -gt 0) {
-                    log -Message "[ValidateMigration] The following VM NICs need new NSGs: $($nicsNeedingNewNSG)" -Severity Error
-                    $validationResult.failedValidations += "The following VM NICs need new NSGs: $($nicsNeedingNewNSG)"
+                    # _GetVMNSG querys Azure Resource Graph, which may be delayed in returning results. Double-checking against network RP. Latency should improve in new ARG releases, so this may not be necessary in the future.
+                    ForEach ($nicId in $nicsNeedingNewNSG) {
+                        $nic = Get-AzNetworkInterface -ResourceId $nicId
+
+                        # check for NSG on NIC
+                        If ([string]::IsNullOrEmpty($nic.NetworkSecurityGroup)) {
+                            $subnetConfig = Get-AzVirtualNetworkSubnetConfig -ResourceId $nic.IpConfigurations.Subnet.Id
+
+                            # if there is no NSG on NIC, check subnet
+                            If ([string]::IsNullOrEmpty($subnetConfig.NetworkSecurityGroup)) {
+                                log -Message "[ValidateMigration] The following VM NICs need new NSGs: $($nicsNeedingNewNSG)" -Severity Error
+                                $validationResult.failedValidations += "The following VM NICs need new NSGs: $($nicsNeedingNewNSG)"
+                            }
+                        }
+                    }
                 }
                 Else {
                     log -Message "[ValidateMigration] All VM NICs have NSGs" -Severity Information
