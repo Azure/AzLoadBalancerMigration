@@ -72,6 +72,11 @@ Function Test-SupportedMigrationScenario {
         [string]
         $StdLoadBalancerName,
 
+        
+        [Parameter(Mandatory = $false)]
+        [switch]
+        $isMultiLB,
+
         # force
         [Parameter(Mandatory = $false)]
         [switch]
@@ -175,7 +180,7 @@ Function Test-SupportedMigrationScenario {
                 }
             }
 
-            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
+            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1 -and !$isMultiLB.IsPresent) {
                 $message = @"
                 [Test-SupportedMigrationScenario] One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
                 the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
@@ -453,7 +458,7 @@ Function Test-SupportedMigrationScenario {
                 }
             }
 
-            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
+            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1 -and !$isMultiLB.IsPresent) {
                 $message = @"
                 [Test-SupportedMigrationScenario] One (or more) backend address pool VM members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
                 the backend address pool on another load balancer. `nVM: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
@@ -544,4 +549,27 @@ Function Test-SupportedMigrationScenario {
     return $scenario
 }
 
-Export-ModuleMember -Function Test-SupportedMigrationScenario, _GetScenarioBackendType
+Function Test-SupportedMultiLBScenario {
+    param (
+        [Parameter(Mandatory = $true)]
+        [psobject[]]
+        $multiLBConfig
+    )
+
+    log -Message "[Test-SupportedMultiLBScenario] Verifying if Multi-LB configuration is valid for migration"
+
+    # check that standard load balancer names are different if basic load balancers are in the same resource group
+    log -Message "[Test-SupportedMultiLBScenario] Checking that standard load balancer names are different if basic load balancers are in the same resource group"
+
+    ForEach ($config in $multiLBConfig) {
+        $matchingConfigs = @()
+        $matchingConfigs += $multiLBConfig | Where-Object { $_.StandardLoadBalancerName -eq $config.StandardLoadBalancerName -and $_.BasicLoadBalancer.ResourceGroupName -eq $config.BasicLoadBalancer.ResourceGroupName }
+        If ($matchingConfigs.count -gt 1) {
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($config.StandardLoadBalancerName)' is used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group." -terminateOnError
+        }
+    }
+
+    log -Message "[Test-SupportedMultiLBScenario] Multi-LB configuration is valid for migration"
+}
+
+Export-ModuleMember -Function Test-SupportedMigrationScenario, _GetScenarioBackendType, Test-SupportedMultiLBScenario

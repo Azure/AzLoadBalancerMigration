@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Move required Az modules to RequiredModules section instead of validating in-script. This will allow automatic installion of required modules when installing this module.'
+            ReleaseNotes = ''
 
             # Prerelease string of this module
             # Prerelease = ''
