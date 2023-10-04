@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.2.1'
+    ModuleVersion = '2.2.2'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Move required Az modules to RequiredModules section instead of validating in-script. This will allow automatic installion of required modules when installing this module.'
+            ReleaseNotes = 'Fixed an issue where NSG validation post-migration sometimes failed due to resource graph ingestion delay'
 
             # Prerelease string of this module
             # Prerelease = ''
