@@ -114,9 +114,6 @@ function PublicLBMigrationVmss {
 
     # Migrate public IP addresses on Basic LB to static (if dynamic)
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VMSS'
     
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
