@@ -44,6 +44,20 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -BasicLoadBalancer $basicLB
 PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
 
 .EXAMPLE
+# migrate multiple load balancers with shared backend pool members
+PS C:\> $multiLBConfig = @(
+    @{
+        'standardLoadBalancerName' = 'myStandardLB01'
+        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01
+    },
+        @{
+        'standardLoadBalancerName' = 'myStandardLB02'
+        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02
+    }
+)
+PS C:\> Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig
+
+.EXAMPLE
 # Retry a failed VMSS migration
 PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
 
@@ -82,6 +96,19 @@ Switch parameter to output the migration validation object to the console - usef
 
 .PARAMETER StandardLoadBalancerName
 Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
+
+.PARAMETER MultiLBConfig
+Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members
+Example value: $multiLBConfig = @(
+    @{
+        'standardLoadBalancerName' = 'myStandardLB01'
+        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01
+    },
+        @{
+        'standardLoadBalancerName' = 'myStandardLB02'
+        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02
+    }
+)
 
 .PARAMETER RecoveryBackupPath
 Location of the Recovery backup files
@@ -209,8 +236,8 @@ function Start-AzBasicLoadBalancerUpgrade {
     }
 
     # verify basic load balancer configuration is a supported scenario
-    # Ternary operator is only supported in PowerShell 7 and above to keep compatibility with PowerShell 5.1, we use the If statement
-    #$StdLoadBalancerName = ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) ? $StandardLoadBalancerName : $BasicLoadBalancer.Name
+
+    ## verify scenario for a single load balancer
     If ($PSCmdlet.ParameterSetName -ne 'MultiLB') {
         if ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) {
             $StdLoadBalancerName = $StandardLoadBalancerName
@@ -219,32 +246,43 @@ function Start-AzBasicLoadBalancerUpgrade {
             $StdLoadBalancerName = $BasicLoadBalancer.Name
         }
 
-        $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateScenarioOnly.isPresent) -Pre:$Pre.IsPresent
+        $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateScenarioOnly.isPresent) -Pre:$Pre.IsPresent -basicLBBackendIds $BasicLoadBalancer.BackendAddressPools.Id
 
+        # create a migration config object array with a single entry
         $migrationConfigs = @(@{
                 BasicLoadBalancer        = $BasicLoadBalancer
                 StandardLoadBalancerName = $StdLoadBalancerName
                 scenario                 = $scenario
             })
         
-            
         if ($validateScenarioOnly) {
             log -Message "[Start-AzBasicLoadBalancerUpgrade] Scenario validation completed, exiting because -validateScenarioOnly was specified"
             break
         }
     }
+    ## verify scenario for multiple load balancers
     ElseIf ($PSCmdlet.ParameterSetName -eq 'MultiLB') {
         log -Message "[Start-AzBasicLoadBalancerUpgrade] -MultiLBConfig parameter set detected, validating scenarios for multiple load balancers"
 
+        # verify the scenario for multi-load balancer configurations
         Test-SupportedMultiLBScenario -MultiLBConfig $multiLBConfig
 
+        # verify scenario for each load balancer in the multiLBConfig array
         ForEach ($LBConfig in $multiLBConfig) {
+            if (![string]::IsNullOrEmpty($LBConfig.standardLoadBalancerName)) {
+                $StdLoadBalancerName = $LBConfig.standardLoadBalancerName
+            }
+            else {
+                $LBConfig.standardLoadBalancerName = $BasicLoadBalancer.Name
+                $StdLoadBalancerName = $BasicLoadBalancer.Name
+            }
+
             $BasicLoadBalancer = $LBConfig.basicLoadBalancer
-            $StdLoadBalancerName = $LBConfig.standardLoadBalancerName
 
             log -Message "[Start-AzBasicLoadBalancerUpgrade] Validating scenario for Basic Load Balancer '$($BasicLoadBalancer.Name)' in Resource Group '$($basicLoadBalancer.ResourceGroupName)'"
-            $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateScenarioOnly.isPresent) -Pre:$Pre.IsPresent -isMultiLB
+            $scenario = Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancerName -Force:($force.IsPresent -or $validateScenarioOnly.isPresent) -Pre:$Pre.IsPresent -basicLBBackendIds $multiLBConfig.BasicLoadBalancer.BackendAddressPools.Id
 
+            # add the evaluated scenario details to the LBConfig object
             $LBConfig['scenario'] = $scenario
         }
         
@@ -253,13 +291,16 @@ function Start-AzBasicLoadBalancerUpgrade {
             break
         }
 
+        # create a migration config object array from the input multiLBConfig parameter object array
         $migrationConfigs = $multiLBConfig
     }
 
-    # prepare for migration by backing up the basic LB and deleting it
+    # prepare for migration by backing up the basic LB, upgrading Public IPs, and deleting the LB
+    # this is done before the migration starts to ensure that all basic LBs are disassociated with any backend pool members, avoiding a mixed SKU scenario which would otherwise occur
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Preparing for migration by backing up and deleteing the basic LB(s)"
     LBMigrationPrep -migrationConfigs $migrationConfigs -RecoveryBackupPath $RecoveryBackupPath
 
+    # initiate the migration of each load balancer in the migration config array
     ForEach ($migrationConfig in $migrationConfigs) {
         log -Message "[Start-AzBasicLoadBalancerUpgrade] Starting migration for Basic Load Balancer '$($migrationConfig.BasicLoadBalancer.Name)' in Resource Group '$($migrationConfig.BasicLoadBalancer.ResourceGroupName)'"
 
