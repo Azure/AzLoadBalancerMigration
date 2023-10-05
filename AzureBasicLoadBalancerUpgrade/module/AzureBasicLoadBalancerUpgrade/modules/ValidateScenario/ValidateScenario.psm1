@@ -335,6 +335,7 @@ Function Test-SupportedMigrationScenario {
     If ($scenario.BackendType -eq 'VM') {
 
         # create array of VMs associated with the load balancer for following checks and verify that NICs are associated to VMs
+        $basicLBVMs = @()
         foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
             foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {        
                 $nic = Get-AzNetworkInterface -ResourceId ($backendIpConfiguration.Id -split '/ipconfigurations/')[0]
