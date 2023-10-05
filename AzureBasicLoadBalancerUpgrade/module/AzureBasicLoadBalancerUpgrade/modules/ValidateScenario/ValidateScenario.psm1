@@ -179,7 +179,7 @@ Function Test-SupportedMigrationScenario {
                 ForEach ($membership in $differentMembership) {
                     switch ($membership.sideIndicator) {
                         '<=' {
-                            log -Message "[Test-SupportedMigrationScenario] VMSS '$($vmss.Id)' has a NIC IP configuration associated with backend pool ID '$($membership.Id)', which does not belong to the Basic Load Balancer(s) to be migrated. To migrate this scenario, use the -MultiLBConfig parameter to specify multiple Basic Load Balancers to migrate at the same time." -Severity Error -terminateOnError
+                            log -Message "[Test-SupportedMigrationScenario] VMSS '$($vmss.Id)' has a NIC IP configuration associated with backend pool ID '$($membership.Inputobject)', which does not belong to the Basic Load Balancer(s) to be migrated. To migrate this scenario, use the -MultiLBConfig parameter to specify multiple Basic Load Balancers to migrate at the same time." -Severity Error -terminateOnError
                         }
                     }
                 }
@@ -370,7 +370,7 @@ Function Test-SupportedMigrationScenario {
             ForEach ($membership in $differentMembership) {
                 switch ($membership.sideIndicator) {
                     '<=' {
-                        log -Message "[Test-SupportedMigrationScenario] A VM NIC IP configuration in the backend pool of the basic load balancer(s) to be migrated is associated with backend pool ID '$($membership.Id)', which does not belong to the Basic Load Balancer(s) to be migrated. To migrate this scenario, use the -MultiLBConfig parameter to specify multiple Basic Load Balancers to migrate at the same time." -Severity Error -terminateOnError
+                        log -Message "[Test-SupportedMigrationScenario] A VM NIC IP configuration in the backend pool of the basic load balancer(s) to be migrated is associated with backend pool ID '$($membership.InputObject)', which does not belong to the Basic Load Balancer(s) to be migrated. To migrate this scenario, use the -MultiLBConfig parameter to specify multiple Basic Load Balancers to migrate at the same time." -Severity Error -terminateOnError
                     }
                 }
             }

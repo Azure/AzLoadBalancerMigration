@@ -8,19 +8,27 @@ This module consists of a number of child modules which abstract the operations 
 A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
 
 Unsupported scenarios:
-- Basic load balancers with a VMSS backend pool member which is also a member of a backend pool on a different load balancer
 - Basic load balancers with backend pool members which are not VMs or a VMSS
 - Basic load balancers with IPV6 frontend IP configurations
-- Basic load balancers with a VMSS backend pool member configured with 'Flexible' orchestration mode
 - Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
 - Migrating a Basic load balancer to an existing Standard load balancer
+
+Multi-load balancer support:
+In a situation where multiple Basic load balancers are configured with the same backend pool members (internal and external load balancers), the migration can be performed in a single operation by specifying the 
+-MultiLBConfig parameter. This option deletes all specified basic load balancers before starting the migration, then creates new standard load balancers mirroring the basic load balancer configurations. 
+
+Recovering from a failed migration:
+The module takes a backup of the basic load balancer configuration, which can be used to retry a failed migration. The backup files are stored in the directory where the script is executed, or in the directory 
+specified with the -RecoveryBackupPath parameter.
+
+In a multi-load balancer migration, recovery in performed on a per-load balancer basis--attempt to retry the migration of each load balancer individually.
 
 .OUTPUTS
 This module outputs the following files on execution:
   - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration.
   - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only.
   - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios.
-  - 'VMSS_<vmssName>_<vmssRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the VMSS, used in retry scenarios.
+  - 'State_VMSS_<vmssName>_<vmssRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the VMSS, used in retry scenarios.
 
 .EXAMPLE
 # Basic usage
@@ -141,7 +149,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string]
         $FailedMigrationRetryFilePathLB,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVmss')][string] $FailedMigrationRetryFilePathVMSS,
-        [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')][string]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][string]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByObject')][string]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVm')][string] 
