@@ -1,137 +1,3 @@
-<#
-
-.DESCRIPTION
- This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) or Virtual Machine(s) to a Standard SKU load balancer, preserving the existing configuration and functionality.
-
-.SYNOPSIS
-This module consists of a number of child modules which abstract the operations required to successfully migrate a Basic to a Standard load balancer.
-A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
-
-Unsupported scenarios:
-- Basic load balancers with backend pool members which are not VMs or a VMSS
-- Basic load balancers with IPV6 frontend IP configurations
-- Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
-- Migrating a Basic load balancer to an existing Standard load balancer
-
-Multi-load balancer support:
-In a situation where multiple Basic load balancers are configured with the same backend pool members (internal and external load balancers), the migration can be performed in a single operation by specifying the 
--MultiLBConfig parameter. This option deletes all specified basic load balancers before starting the migration, then creates new standard load balancers mirroring the basic load balancer configurations. 
-
-Recovering from a failed migration:
-The module takes a backup of the basic load balancer configuration, which can be used to retry a failed migration. The backup files are stored in the directory where the script is executed, or in the directory 
-specified with the -RecoveryBackupPath parameter.
-
-In a multi-load balancer migration, recovery in performed on a per-load balancer basis--attempt to retry the migration of each load balancer individually.
-
-.OUTPUTS
-This module outputs the following files on execution:
-  - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration.
-  - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only.
-  - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios.
-  - 'State_VMSS_<vmssName>_<vmssRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the VMSS, used in retry scenarios.
-
-.EXAMPLE
-# Basic usage
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB
-
-.EXAMPLE
-# Pass LoadBalancer via pipeline input
-PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade -StandardLoadBalancerName myStandardLB
-
-.EXAMPLE
-# Pass LoadBalancer via pipeline input and re-use the existing Load Balancer Name
-PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade
-
-.EXAMPLE
-# Pass LoadBalancer object using -BasicLoadBalancer parameter input and re-use the existing Load Balancer Name
-PS C:\> $basicLB = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB
-PS C:\> Start-AzBasicLoadBalancerUpgrade -BasicLoadBalancer $basicLB
-
-.EXAMPLE
-# Specify a custom path for recovery backup files
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
-
-.EXAMPLE
-# migrate multiple load balancers with shared backend pool members
-PS C:\> $multiLBConfig = @(
-    @{
-        'standardLoadBalancerName' = 'myStandardLB01'
-        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
-    },
-        @{
-        'standardLoadBalancerName' = 'myStandardLB02'
-        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
-    }
-)
-PS C:\> Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig
-
-.EXAMPLE
-# Retry a failed VMSS migration
-PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
-
-.EXAMPLE
-# Retry a failed VM migration
-PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
-
-.EXAMPLE
-# display logs in the console as the command executes
-PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
-
-.EXAMPLE
-# validate a completed migration using the exported Basic Load Balancer state file. Add -StandardLoadBalancerName to validate against a Standard Load Balancer with a different name than the Basic Load Balancer
-PS C:\> Start-AzBasicLoadBalancerUpgrade -validateCompletedMigration -basicLoadBalancerStatePath C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
-
-.PARAMETER ResourceGroupName
-Resource group containing the Basic Load Balancer to migrate. The new Standard load balancer will be created in this resource group.
-
-.PARAMETER BasicLoadBalancerName
-Name of the existing Basic Load Balancer to migrate
-
-.PARAMETER BasicLoadBalancer
-Load Balancer object to migrate passed as pipeline input or parameter
-
-.PARAMETER basicLoadBalancerStatePath
-Use in combination with -validateCompletedMigration to validate a completed migration
-
-.PARAMETER FailedMigrationRetryFilePathLB
-Location of a Basic load balancer backup file (used when retrying a failed migration or manual configuration comparison)
-
-.PARAMETER FailedMigrationRetryFilePathVMSS
-Location of a VMSS backup file (used when retrying a failed migration or manual configuration comparison)
-
-.PARAMETER outputMigrationValiationObj
-Switch parameter to output the migration validation object to the console - useful for large scale and pipeline migrations
-
-.PARAMETER StandardLoadBalancerName
-Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
-
-.PARAMETER MultiLBConfig
-Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members. Optionally, specify a new standard load balancer name for each basic load balancers.
-Example value: $multiLBConfig = @(
-    @{
-        'standardLoadBalancerName' = 'myStandardLB01'
-        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
-    },
-        @{
-        'standardLoadBalancerName' = 'myStandardLB02'
-        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
-    }
-)
-
-.PARAMETER RecoveryBackupPath
-Location of the Recovery backup files
-
-.PARAMETER FollowLog
-Switch parameter to enable the display of logs in the console
-
-.PARAMETER validateScenarioOnly
-Only perform the validation portion of the migration, then exit the script without making changes
-
-.PARAMETER validateCompletedMigration
-Using the exported Basic Load Balancer state file, validate the migration was completed successfully
-
-#>
-
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ScenariosMigration\ScenariosMigration.psd1")
@@ -139,6 +5,143 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ValidateScenario\ValidateS
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ValidateMigration\ValidateMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
 
+<#
+.SYNOPSIS
+    This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset (VMSS) or Virtual Machine(s) to a Standard SKU load balancer, preserving the existing configuration and functionality.
+
+.DESCRIPTION
+    This module consists of a number of child modules which abstract the operations required to successfully migrate a Basic to a Standard load balancer.
+    A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
+
+    Unsupported scenarios:
+    - Basic load balancers with backend pool members which are not VMs or a VMSS
+    - Basic load balancers with IPV6 frontend IP configurations
+    - Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
+    - Migrating a Basic load balancer to an existing Standard load balancer
+
+    Multi-load balancer support:
+    In a situation where multiple Basic load balancers are configured with the same backend pool members (internal and external load balancers), the migration can be performed in a single operation by specifying the 
+    -MultiLBConfig parameter. This option deletes all specified basic load balancers before starting the migration, then creates new standard load balancers mirroring the basic load balancer configurations. 
+
+    Recovering from a failed migration:
+    The module takes a backup of the basic load balancer configuration, which can be used to retry a failed migration. The backup files are stored in the directory where the script is executed, or in the directory 
+    specified with the -RecoveryBackupPath parameter.
+
+    In a multi-load balancer migration, recovery in performed on a per-load balancer basis--attempt to retry the migration of each load balancer individually.
+
+.PARAMETER ResourceGroupName
+    Resource group containing the Basic Load Balancer to migrate. The new Standard load balancer will be created in this resource group.
+
+.PARAMETER BasicLoadBalancerName
+    Name of the existing Basic Load Balancer to migrate
+
+.PARAMETER BasicLoadBalancer
+    Load Balancer object to migrate passed as pipeline input or parameter
+
+.PARAMETER basicLoadBalancerStatePath
+Use in combination with -validateCompletedMigration to validate a completed migration
+
+.PARAMETER FailedMigrationRetryFilePathLB
+    Location of a Basic load balancer backup file (used when retrying a failed migration or manual configuration comparison)
+
+.PARAMETER FailedMigrationRetryFilePathVMSS
+    Location of a VMSS backup file (used when retrying a failed migration or manual configuration comparison)
+
+.PARAMETER outputMigrationValiationObj
+    Switch parameter to output the migration validation object to the console - useful for large scale and pipeline migrations
+
+.PARAMETER StandardLoadBalancerName
+    Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
+
+.PARAMETER MultiLBConfig
+    Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members. Optionally, specify a new standard load balancer name for each basic load balancers.
+    Example value: $multiLBConfig = @(
+        @{
+            'standardLoadBalancerName' = 'myStandardLB01'
+            'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
+        },
+            @{
+            'standardLoadBalancerName' = 'myStandardLB02'
+            'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
+        }
+    )
+
+.PARAMETER RecoveryBackupPath
+    Location of the Recovery backup files
+
+.PARAMETER FollowLog
+    Switch parameter to enable the display of logs in the console
+
+.PARAMETER validateScenarioOnly
+    Only perform the validation portion of the migration, then exit the script without making changes
+
+.PARAMETER validateCompletedMigration
+    Using the exported Basic Load Balancer state file, validate the migration was completed successfully
+
+.OUTPUTS
+    This module outputs the following files on execution:
+    - Start-AzBasicLoadBalancerUpgrade.log: in the directory where the script is executed, this file contains a log of the migration operation. Refer to it for error details in a failed migration.
+    - 'ARMTemplate_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is an ARM template for the basic LB, for reference only.
+    - 'State_<basicLBName>_<basicLBRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the basic LB, used in retry scenarios.
+    - 'State_VMSS_<vmssName>_<vmssRGName>_<timestamp>.json: either in the directory where the script is executed or the path specified with -RecoveryBackupPath. This is a state backup of the VMSS, used in retry scenarios.
+
+.EXAMPLE
+    # Basic usage
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB
+
+.EXAMPLE
+    # Pass LoadBalancer via pipeline input
+    PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade -StandardLoadBalancerName myStandardLB
+
+.EXAMPLE
+    # Pass LoadBalancer via pipeline input and re-use the existing Load Balancer Name
+    PS C:\> Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB | Start-AzBasicLoadBalancerUpgrade
+
+.EXAMPLE
+    # Pass LoadBalancer object using -BasicLoadBalancer parameter input and re-use the existing Load Balancer Name
+    PS C:\> $basicLB = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -BasicLoadBalancer $basicLB
+
+.EXAMPLE
+    # Specify a custom path for recovery backup files
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -RecoveryBackupPath C:\RecoveryBackups
+
+.EXAMPLE
+    # migrate multiple load balancers with shared backend pool members
+    PS C:\> $multiLBConfig = @(
+        @{
+            'standardLoadBalancerName' = 'myStandardLB01'
+            'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
+        },
+            @{
+            'standardLoadBalancerName' = 'myStandardLB02'
+            'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
+        }
+    )
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig
+
+.EXAMPLE
+    # Retry a failed VMSS migration
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json -FailedMigrationRetryFilePathVMSS C:\RecoveryBackups\VMSS_myVMSS_rg-basiclbrg_20220912T1740032148.json
+
+.EXAMPLE
+    # Retry a failed VM migration
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -FailedMigrationRetryFilePathLB C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
+
+.EXAMPLE
+    # display logs in the console as the command executes
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalancerName myBasicLB -FollowLog
+
+.EXAMPLE
+    # validate a completed migration using the exported Basic Load Balancer state file. Add -StandardLoadBalancerName to validate against a Standard Load Balancer with a different name than the Basic Load Balancer
+    PS C:\> Start-AzBasicLoadBalancerUpgrade -validateCompletedMigration -basicLoadBalancerStatePath C:\RecoveryBackups\State_mybasiclb_rg-basiclbrg_20220912T1740032148.json
+
+.LINK 
+    https://github.com/Azure/AzLoadBalancerMigration/tree/main/AzureBasicLoadBalancerUpgrade
+
+.LINK
+    https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-with-powershell
+#>
 function Start-AzBasicLoadBalancerUpgrade {
     [CmdletBinding()]
     Param(
