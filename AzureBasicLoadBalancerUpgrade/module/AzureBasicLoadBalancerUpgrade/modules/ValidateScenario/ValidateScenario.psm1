@@ -72,6 +72,11 @@ Function Test-SupportedMigrationScenario {
         [string]
         $StdLoadBalancerName,
 
+        
+        [Parameter(Mandatory = $false)]
+        [string[]]
+        $basicLBBackendIds,
+
         # force
         [Parameter(Mandatory = $false)]
         [switch]
@@ -166,21 +171,28 @@ Function Test-SupportedMigrationScenario {
         # check if load balancer backend pool contains VMSSes which are part of another LBs backend pools
         log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
         ForEach ($vmss in $basicLBVMSSs) {
-            $loadBalancerAssociations = @()
-            ForEach ($nicConfig in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
-                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
-                    ForEach ($bepMembership in $ipConfig.LoadBalancerBackendAddressPools) {
-                        $loadBalancerAssociations += $bepMembership.id.split('/')[0..8] -join '/'
+
+            try {
+                $nicBackendPoolMembershipsIds = @()
+                $nicBackendPoolMembershipsIds += $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipCOnfigurations.LoadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
+                $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+            }
+            catch {
+                $message = "[Test-SupportedMigrationScenario] Error comparing NIC backend pool memberships ($($nicBackendPoolMembershipsIds -join ',')) to basicLBBackendIds ($($basicLBBackendIds -join ',')). Error: $($_.Exception.Message)"
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
+
+            If ($differentMembership) {
+                ForEach ($membership in $differentMembership) {
+                    switch ($membership.sideIndicator) {
+                        '<=' {
+                            log -Message "[Test-SupportedMigrationScenario] VMSS '$($vmss.Id)' has a NIC IP configuration associated with backend pool ID '$($membership.Inputobject)', which does not belong to the Basic Load Balancer(s) to be migrated. To migrate this scenario, use the -MultiLBConfig parameter to specify multiple Basic Load Balancers to migrate at the same time." -Severity Error -terminateOnError
+                        }
                     }
                 }
             }
-
-            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
-                $message = @"
-                [Test-SupportedMigrationScenario] One (or more) backend address pool VMSS members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
-                the backend address pool on another load balancer. `nVMSS: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
-"@
-                log 'Error' $message -terminateOnError
+            Else {
+                log -Message "[Test-SupportedMigrationScenario] All VMSS load balancer associations are with the Basic LB(s) to be migrated." -Severity Information
             }
         }
     
@@ -233,7 +245,6 @@ Function Test-SupportedMigrationScenario {
         }
 
         # check if internal LB backend VMs does not have public IPs
-
         log -Message "[Test-SupportedMigrationScenario] Checking if internal load balancer backend VMSS VMs have public IPs..."
         ForEach ($vmss in $basicLBVMSSs) {
             $vmssVMsHavePublicIPs = $false
@@ -336,6 +347,7 @@ Function Test-SupportedMigrationScenario {
 
         # create array of VMs associated with the load balancer for following checks and verify that NICs are associated to VMs
         $basicLBVMs = @()
+        $basicLBVMNics = @()
         foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
             foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {        
                 $nic = Get-AzNetworkInterface -ResourceId ($backendIpConfiguration.Id -split '/ipconfigurations/')[0]
@@ -347,9 +359,39 @@ Function Test-SupportedMigrationScenario {
                 Else {      
                     # add VM resources to array for later validation
                     $basicLBVMs += Get-AzVM -ResourceId $nic.VirtualMachine.id
+
+                    # add VM nics to array for later validation
+                    $basicLBVMNics += $nic
                 }
             }
         }
+
+        # check if load balancer backend pool contains VMs which are part of another LBs backend pools
+        log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
+
+        ## compare nic backend pool memberships to basicLBBackendIds
+        try {
+            $nicBackendPoolMembershipsIds = @()
+            $nicBackendPoolMembershipsIds += $basicLBVMNics.IpConfigurations.loadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
+            $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+        }
+        catch {
+            $message = "[Test-SupportedMigrationScenario] Error comparing NIC backend pool memberships ($($nicBackendPoolMembershipsIds -join ',')) to basicLBBackendIds ($($basicLBBackendIds -join ',')). Error: $($_.Exception.Message)"
+            log -Message $message -Severity 'Error' -terminateOnError
+        }
+
+        If ($differentMembership) {
+            ForEach ($membership in $differentMembership) {
+                switch ($membership.sideIndicator) {
+                    '<=' {
+                        log -Message "[Test-SupportedMigrationScenario] A VM NIC IP configuration in the backend pool of the basic load balancer(s) to be migrated is associated with backend pool ID '$($membership.InputObject)', which does not belong to the Basic Load Balancer(s) to be migrated. To migrate this scenario, use the -MultiLBConfig parameter to specify multiple Basic Load Balancers to migrate at the same time." -Severity Error -terminateOnError
+                    }
+                }
+            }
+        }
+        Else {
+            log -Message "[Test-SupportedMigrationScenario] All VM load balancer associations are with the Basic LB(s) to be migrated." -Severity Information
+        }        
 
         # check if internal LB backend VMs does not have public IPs
         log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs have public IPs..."
@@ -440,34 +482,6 @@ Function Test-SupportedMigrationScenario {
                 log -Message $message -Severity 'Warning'
             }
         }
-
-        # check if load balancer backend pool contains VMs which are part of another LBs backend pools
-        log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
-        ForEach ($vm in $basicLBVMs) {
-            $loadBalancerAssociations = @()
-            ForEach ($nicId in $vm.NetworkProfile.NetworkInterfaces.id) {
-                $nic = Get-AzNetworkInterface -ResourceId $nicId
-                ForEach ($ipConfig in $nic.ipConfigurations) {
-                    ForEach ($bepMembership in $ipConfig.LoadBalancerBackendAddressPools) {
-                        $loadBalancerAssociations += $bepMembership.id.split('/')[0..8] -join '/'
-                    }
-                }
-            }
-
-            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1) {
-                $message = @"
-                [Test-SupportedMigrationScenario] One (or more) backend address pool VM members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
-                the backend address pool on another load balancer. `nVM: '$($vmssId)'; `nMember of load balancer backend pools on: $beps
-"@
-                log 'Error' $message -terminateOnError
-            }
-        }
-    }
-
-    # warn about pre-release for VM migrations
-    If ($scenario.BackendType -eq 'VM' -and !$pre.isPresent) {
-        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk and please report any issues encountered at https://github.com/Azure/AzLoadBalancerMigration/issues."
-        log -Message $message -Severity 'Error' -terminateOnError
     }
 
     # check that Az.ResourceGraph module is installed for VM migrations
@@ -545,4 +559,27 @@ Function Test-SupportedMigrationScenario {
     return $scenario
 }
 
-Export-ModuleMember -Function Test-SupportedMigrationScenario, _GetScenarioBackendType
+Function Test-SupportedMultiLBScenario {
+    param (
+        [Parameter(Mandatory = $true)]
+        [psobject[]]
+        $multiLBConfig
+    )
+
+    log -Message "[Test-SupportedMultiLBScenario] Verifying if Multi-LB configuration is valid for migration"
+
+    # check that standard load balancer names are different if basic load balancers are in the same resource group
+    log -Message "[Test-SupportedMultiLBScenario] Checking that standard load balancer names are different if basic load balancers are in the same resource group"
+
+    ForEach ($config in $multiLBConfig) {
+        $matchingConfigs = @()
+        $matchingConfigs += $multiLBConfig | Where-Object { $_.StandardLoadBalancerName -eq $config.StandardLoadBalancerName -and $_.BasicLoadBalancer.ResourceGroupName -eq $config.BasicLoadBalancer.ResourceGroupName }
+        If ($matchingConfigs.count -gt 1) {
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($config.StandardLoadBalancerName)' is used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group." -terminateOnError
+        }
+    }
+
+    log -Message "[Test-SupportedMultiLBScenario] Multi-LB configuration is valid for migration"
+}
+
+Export-ModuleMember -Function Test-SupportedMigrationScenario, _GetScenarioBackendType, Test-SupportedMultiLBScenario
