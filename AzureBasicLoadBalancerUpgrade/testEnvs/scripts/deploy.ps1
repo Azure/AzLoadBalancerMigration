@@ -69,7 +69,22 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force
     }
 
-    $rgNamesToMigrate = $filteredTemplates | ForEach-Object { "rg-{0}{1}-{2}" -f $_.BaseName.split('-')[0], $resourceGroupSuffix, $_.BaseName.split('-', 2)[1] }
+    $scriptBlockMultiLB = {
+        param($RGName)
+        Write-Output $RGName
+        $pwd
+        Import-Module ../../module\AzureBasicLoadBalancerUpgrade  -Force
+        $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
+        New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
+        Set-Location $path
+
+        $multiLBConfig = @()
+        get-AzLoadBalancer -ResourceGroupName $RGName | ? {$_.sku.name -eq 'basic'} | select -First 2 | %{ $multiLBConfig += @{BasicLoadBalancer=$_;StandardLoadBalancerName=$_.name.replace('basic','standard')}}
+        Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig -Pre -Force
+    }
+
+    $rgNamesToMigrate = $filteredTemplates | ForEach-Object { 
+        Foreach ($suffix in $resourceGroupSuffix) {"rg-{0}{1}-{2}" -f $_.BaseName.split('-')[0], $suffix, $_.BaseName.split('-', 2)[1] }}
     $scenarios = Get-AzResourceGroup | Where-Object { $_.ResourceGroupName -iin $rgNamesToMigrate }
 
     $jobPool = @()
@@ -80,7 +95,12 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
             Start-Sleep -Seconds 5
         }
 
-        $jobPool += Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $ScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'"))
+        switch -regex ($RG.ResourceGroupName) {
+            'multi-lb-mix' { $jobScriptBlock = $ScriptBlockMultiLB }
+            default { $jobScriptBlock = $scriptBlock }
+        }
+
+        $jobPool += Start-Job -Name $rg.ResourceGroupName -ArgumentList $rg.ResourceGroupName -ScriptBlock $jobScriptBlock -InitializationScript ([scriptblock]::Create("set-location '$pwd'"))
     }
 
     Write-Output ("Total Jobs Created: " + $scenarios.Count)
