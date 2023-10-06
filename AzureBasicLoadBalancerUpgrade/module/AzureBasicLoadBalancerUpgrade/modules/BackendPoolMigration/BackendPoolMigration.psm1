@@ -225,7 +225,7 @@ function BackendPoolMigrationVM {
         $nic = Get-AzNetworkInterface -ResourceId $nicRecord.Name
 
         ForEach ($nicIPConfig in $nic.IpConfigurations) {
-            $nicIPConfig.LoadBalancerBackendAddressPools = $backendPoolNicTable[$nicRecord.Name].ipConfigs[$nicIPConfig.Name].backendPools
+            $nicIPConfig.LoadBalancerBackendAddressPools += $backendPoolNicTable[$nicRecord.Name].ipConfigs[$nicIPConfig.Name].backendPools
         }
 
         $jobs += Set-AzNetworkInterface -NetworkInterface $nic -AsJob
@@ -239,8 +239,7 @@ function BackendPoolMigrationVM {
         }
     }
 
-    #log -Message "[BackendPoolMigrationVmss] StackTrace $($StackTrace)" -Severity "Debug"
-    log -Message "[BackendPoolMigrationVmss] Backend Pool Migration Completed"
+    log -Message "[BackendPoolMigrationVM] Backend Pool Migration Completed"
 }
 
 Export-ModuleMember -Function BackendPoolMigrationVmss

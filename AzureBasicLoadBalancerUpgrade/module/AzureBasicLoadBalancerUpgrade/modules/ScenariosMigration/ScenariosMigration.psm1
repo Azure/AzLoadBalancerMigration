@@ -106,9 +106,6 @@ function PublicLBMigrationVmss {
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
-    # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
     # Backup VMSS Configurations
     BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
@@ -117,9 +114,6 @@ function PublicLBMigrationVmss {
 
     # Migrate public IP addresses on Basic LB to static (if dynamic)
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VMSS'
     
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
@@ -173,17 +167,11 @@ function InternalLBMigrationVmss {
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     $refVmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
-    # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
     # Backup VMSS Configurations
     BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Remove Public IP Configurations from VMSS
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VMSS'
 
     # Add Public IP Configurations to VMSS (with Standard SKU)
     AddVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer -refVmss $refVmss
@@ -347,15 +335,6 @@ function PublicLBMigrationVM {
 
     log -Message "[PublicLBMigrationVM] Public Load Balancer with VM backend detected. Initiating Public Load Balancer Migration"
 
-    # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
-    # Migrate public IP addresses on Basic LB to static (if dynamic)
-    PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VM'
-
     # Upgrade VMs Public IPs to Standard SKU
     UpgradeVMPublicIP -BasicLoadBalancer $BasicLoadBalancer
 
@@ -401,12 +380,6 @@ function InternalLBMigrationVM {
     )
 
     log -Message "[InternalLBMigrationVM] Internal Load Balancer with VM backend detected. Initiating Internal Load Balancer Migration"
-
-    # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'VM'
 
     # Upgrade VMs Public IPs to Standard SKU
     UpgradeVMPublicIP -BasicLoadBalancer $BasicLoadBalancer
@@ -534,15 +507,6 @@ function PublicLBMigrationEmpty {
     )
 
     log -Message "[PublicLBMigrationEmpty] Public Load Balancer with empty detected. Initiating Public Load Balancer Migration"
-
-    # Backup Basic Load Balancer Configurations
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
-    # Migrate public IP addresses on Basic LB to static (if dynamic)
-    PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'Empty'
 
     # Creation of Standard Load Balancer
     $StdLoadBalancer = _CreateStandardLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName $StandardLoadBalancerName
@@ -681,6 +645,37 @@ function RestoreInternalLBMigrationEmpty {
     ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
 }
 
+function LBMigrationPrep {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [psobject[]]
+        $migrationConfigs,
+        [Parameter(Mandatory = $true)]
+        [string]
+        $RecoveryBackupPath
+    )
+
+    $ErrorActionPreference = 'Stop' 
+
+    ForEach ($migrationConfig in $migrationConfigs) {
+        log -message "[LBMigrationPrep] Preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
+
+        # Backup Basic Load Balancer Configurations
+        BackupBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+        If ($migrationConfig.scenario.ExternalOrInternal -eq 'External') {
+            # Migrate public IP addresses on Basic LB to static (if dynamic)
+            PublicIPToStatic -BasicLoadBalancer $migrationConfig.BasicLoadBalancer
+        }
+
+        # Deletion of Basic Load Balancer and Delete Basic Load Balancer
+        RemoveBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -BackendType $migrationConfig.scenario.backendType
+
+        log -message "[LBMigrationPrep] Completed preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
+    }
+}
+
 Export-ModuleMember -Function PublicLBMigrationVmss
 Export-ModuleMember -Function InternalLBMigrationVmss
 Export-ModuleMember -Function RestoreInternalLBMigrationVmss
@@ -693,3 +688,4 @@ Export-ModuleMember -Function PublicLBMigrationEmpty
 Export-ModuleMember -Function InternalLBMigrationEmpty
 Export-ModuleMember -Function RestoreInternalLBMigrationEmpty
 Export-ModuleMember -Function RestoreExternalLBMigrationEmpty
+Export-ModuleMember -Function LBMigrationPrep
