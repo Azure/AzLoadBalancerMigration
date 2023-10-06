@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.2.3'
+    ModuleVersion = '2.3.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = ''
+            ReleaseNotes = 'Added support for multi-LB migrations; released VM migration feature'
 
             # Prerelease string of this module
             # Prerelease = ''

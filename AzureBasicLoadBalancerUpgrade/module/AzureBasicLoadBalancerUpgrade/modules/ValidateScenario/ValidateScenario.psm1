@@ -171,9 +171,16 @@ Function Test-SupportedMigrationScenario {
         # check if load balancer backend pool contains VMSSes which are part of another LBs backend pools
         log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
         ForEach ($vmss in $basicLBVMSSs) {
-            $nicBackendPoolMembershipsIds = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipCOnfigurations.LoadBalancerBackendAddressPools.id
 
-            $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+            try {
+                $nicBackendPoolMembershipsIds = @()
+                $nicBackendPoolMembershipsIds += $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipCOnfigurations.LoadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
+                $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+            }
+            catch {
+                $message = "[Test-SupportedMigrationScenario] Error comparing NIC backend pool memberships ($($nicBackendPoolMembershipsIds -join ',')) to basicLBBackendIds ($($basicLBBackendIds -join ',')). Error: $($_.Exception.Message)"
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
 
             If ($differentMembership) {
                 ForEach ($membership in $differentMembership) {
@@ -362,9 +369,16 @@ Function Test-SupportedMigrationScenario {
         # check if load balancer backend pool contains VMs which are part of another LBs backend pools
         log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
 
-        $nicBackendPoolMembershipsIds = $basicLBVMNics.IpConfigurations.loadBalancerBackendAddressPools.id
-
-        $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+        ## compare nic backend pool memberships to basicLBBackendIds
+        try {
+            $nicBackendPoolMembershipsIds = @()
+            $nicBackendPoolMembershipsIds += $basicLBVMNics.IpConfigurations.loadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
+            $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+        }
+        catch {
+            $message = "[Test-SupportedMigrationScenario] Error comparing NIC backend pool memberships ($($nicBackendPoolMembershipsIds -join ',')) to basicLBBackendIds ($($basicLBBackendIds -join ',')). Error: $($_.Exception.Message)"
+            log -Message $message -Severity 'Error' -terminateOnError
+        }
 
         If ($differentMembership) {
             ForEach ($membership in $differentMembership) {
@@ -468,34 +482,6 @@ Function Test-SupportedMigrationScenario {
                 log -Message $message -Severity 'Warning'
             }
         }
-
-        # check if load balancer backend pool contains VMs which are part of another LBs backend pools
-        log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
-        ForEach ($vm in $basicLBVMs) {
-            $loadBalancerAssociations = @()
-            ForEach ($nicId in $vm.NetworkProfile.NetworkInterfaces.id) {
-                $nic = Get-AzNetworkInterface -ResourceId $nicId
-                ForEach ($ipConfig in $nic.ipConfigurations) {
-                    ForEach ($bepMembership in $ipConfig.LoadBalancerBackendAddressPools) {
-                        $loadBalancerAssociations += $bepMembership.id.split('/')[0..8] -join '/'
-                    }
-                }
-            }
-
-            If (($beps = $loadBalancerAssociations | Sort-Object | Get-Unique).Count -gt 1 -and !$isMultiLB.IsPresent) {
-                $message = @"
-                [Test-SupportedMigrationScenario] One (or more) backend address pool VM members on basic load balancer '$($BasicLoadBalancer.Name)' is also member of
-                the backend address pool on another load balancer. `nVM: '$($vm.Id)'; `nMember of load balancer backend pools on: $beps. In order to migrate this configuration, you must use the -MultiLBConfig parameter to migrate all load balancers at the same time.
-"@
-                log 'Error' $message -terminateOnError
-            }
-        }
-    }
-
-    # warn about pre-release for VM migrations
-    If ($scenario.BackendType -eq 'VM' -and !$pre.isPresent) {
-        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends is in pre-release. Include the -Pre parameter to continue at your own risk and please report any issues encountered at https://github.com/Azure/AzLoadBalancerMigration/issues."
-        log -Message $message -Severity 'Error' -terminateOnError
     }
 
     # check that Az.ResourceGraph module is installed for VM migrations

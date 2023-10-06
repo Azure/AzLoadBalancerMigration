@@ -56,11 +56,11 @@ PS C:\> Start-AzBasicLoadBalancerUpgrade -ResourceGroupName myRG -BasicLoadBalan
 PS C:\> $multiLBConfig = @(
     @{
         'standardLoadBalancerName' = 'myStandardLB01'
-        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01
+        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
     },
         @{
         'standardLoadBalancerName' = 'myStandardLB02'
-        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02
+        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
     }
 )
 PS C:\> Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig
@@ -106,15 +106,15 @@ Switch parameter to output the migration validation object to the console - usef
 Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
 
 .PARAMETER MultiLBConfig
-Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members
+Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members. Optionally, specify a new standard load balancer name for each basic load balancers.
 Example value: $multiLBConfig = @(
     @{
         'standardLoadBalancerName' = 'myStandardLB01'
-        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01
+        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
     },
         @{
         'standardLoadBalancerName' = 'myStandardLB02'
-        'basicLoadBalancer' = Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02
+        'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
     }
 )
 
