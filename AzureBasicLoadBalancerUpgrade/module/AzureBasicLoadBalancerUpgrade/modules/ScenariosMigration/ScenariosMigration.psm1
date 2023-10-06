@@ -659,7 +659,7 @@ function LBMigrationPrep {
     $ErrorActionPreference = 'Stop' 
 
     ForEach ($migrationConfig in $migrationConfigs) {
-        log -message "[MultiLBMigrationPrep] Preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
+        log -message "[LBMigrationPrep] Preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
 
         # Backup Basic Load Balancer Configurations
         BackupBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
@@ -671,6 +671,8 @@ function LBMigrationPrep {
 
         # Deletion of Basic Load Balancer and Delete Basic Load Balancer
         RemoveBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -BackendType $migrationConfig.scenario.backendType
+
+        log -message "[LBMigrationPrep] Completed preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
     }
 }
 
