@@ -62,8 +62,8 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         param($RGName)
         Write-Output $RGName
         $pwd
-        Import-Module ../../module\AzureBasicLoadBalancerUpgrade  -Force
-        $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
+        Import-Module ../../module/AzureBasicLoadBalancerUpgrade  -Force
+        $path = "$env:HOMEPATH/temp/AzLoadBalancerMigration/$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
         Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force
@@ -74,7 +74,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         Write-Output $RGName
         $pwd
         Import-Module ../../module\AzureBasicLoadBalancerUpgrade  -Force
-        $path = "C:\Users\$env:USERNAME\temp\AzLoadBalancerMigration\$RGName"
+        $path = "$env:HOMEPATH/temp/AzLoadBalancerMigration/$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
 
