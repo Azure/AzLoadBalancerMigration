@@ -143,7 +143,7 @@ Use in combination with -validateCompletedMigration to validate a completed migr
     https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-with-powershell
 #>
 function Start-AzBasicLoadBalancerUpgrade {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByName')]
     Param(
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName, 
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
