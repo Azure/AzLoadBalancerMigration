@@ -49,7 +49,7 @@ module networkSecurityGroups '../modules/Microsoft.Network/networkSecurityGroups
   ]
 }
 
-module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+module publicIp01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
   name: 'pip-01'
   params: {
     name: 'pip-01'
