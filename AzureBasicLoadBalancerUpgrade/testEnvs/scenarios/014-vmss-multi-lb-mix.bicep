@@ -84,7 +84,7 @@ module loadbalancer01 '../modules/Microsoft.Network/loadBalancers_custom/deploy.
   ]
 }
 
-module publicIp01 '../modules/Microsoft.Network/publicIpAddresses/deploy.bicep' = {
+module publicIp01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' = {
   name: 'pip-01'
   params: {
     name: 'pip-01'
