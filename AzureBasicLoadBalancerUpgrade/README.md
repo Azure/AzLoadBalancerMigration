@@ -3,7 +3,7 @@
 >[!Important]
 >On September 30, 2025, Basic Load Balancer will be retired. For more information, see the [official announcement](https://azure.microsoft.com/updates/azure-basic-load-balancer-will-be-retired-on-30-september-2025-upgrade-to-standard-load-balancer/). If you are currently using Basic Load Balancer, make sure to upgrade to Standard Load Balancer prior to the retirement date. 
 
-[Azure Standard Load Balancer](load-balancer-overview) offers a rich set of functionality and high availability through zone redundancy. To learn more about Load Balancer SKU, see [comparison table](https://learn.microsoft.com/azure/load-balancer/skus#skus).
+[Azure Standard Load Balancer](https://learn.microsoft.com/azure/load-balancer/load-balancer-overview) offers a rich set of functionality and high availability through zone redundancy. To learn more about Load Balancer SKU, see [comparison table](https://learn.microsoft.com/azure/load-balancer/skus#skus).
 
 This article introduces a PowerShell module that creates a Standard Load Balancer with the same configuration as the Basic Load Balancer, then associates the Virtual Machine Scale Set or Virtual Machine backend pool members with the new Load Balancer.
 
@@ -41,7 +41,7 @@ The PowerShell module performs the following functions:
 
 - **PowerShell**: A supported version of PowerShell version 7 or higher is recommended for use with the AzureBasicLoadBalancerUpgrade module on all platforms including Windows, Linux, and macOS. However, PowerShell 5.1 on Windows is supported. 
 - **Az PowerShell Module**: Determine whether you have the latest Az PowerShell module installed
-  - Install the latest [Az PowerShell module](/powershell/azure/install-azure-powershell)
+  - Install the latest [Az PowerShell module](https://learn.microsoft.com/powershell/azure/install-azure-powershell)
 - **Az.ResourceGraph PowerShell Module**: The Az.ResourceGraph PowerShell module is used to query resource configuration during upgrade and is a separate install from the Az PowerShell module. It will be automatically installed if you install the `AzureBasicLoadBalancerUpgrade` module using the `Install-Module` command as shown below. 
 
 ### Module Installation
@@ -268,4 +268,4 @@ The basic failure recovery procedure is:
 
 ## Next steps
 
-[Learn about Azure Load Balancer](load-balancer-overview)
+[Learn about Azure Load Balancer](https://learn.microsoft.com/azure/load-balancer/load-balancer-overview)
