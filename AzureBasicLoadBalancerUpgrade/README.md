@@ -1,16 +1,3 @@
----
-title: Upgrade from Basic to Standard with PowerShell
-titleSuffix: Azure Load Balancer
-description: This article shows you how to upgrade a load balancer from basic to standard SKU for Virtual Machine or Virtual Machine Scale Sets backends using a PowerShell module.
-services: load-balancer
-author: mbender-ms
-ms.service: load-balancer
-ms.topic: how-to
-ms.date: 10/03/2023
-ms.author: mbender
-ms.custom: template-how-to, engagement-fy23
----
-
 # Upgrade a basic load balancer with PowerShell
 
 >[!Important]
