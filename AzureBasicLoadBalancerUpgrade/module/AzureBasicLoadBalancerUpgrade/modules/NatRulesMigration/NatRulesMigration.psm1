@@ -17,7 +17,7 @@ function NatRulesMigration {
 
             # inbound nat pools will create dynamic inbound nat rules for each VMSS instance where assigned
             # the nat rule name will either be natpoolname.0 or natpoolname.0.nicname.ipconfigname (for more than one ipconfig/natpool combo)
-            $inboundNatPoolNamePattern = $inboundNatRule.Name -replace '\.\d{1,3}(\..+?)?$', ''
+            $inboundNatPoolNamePattern = $inboundNatRule.Name -replace '\.\d{1,4}(\..+?)?$', ''
             log -Message "[NatRulesMigration] Checking if the NAT rule has a name that '$($inboundNatRule.Name)' matches an Inbound NAT Pool name with pattern '$inboundNatPoolNamePattern'"
             If ($matchedNatPool = $inboundNatPools | Where-Object { $_.Name -ieq $inboundNatPoolNamePattern } ) {
                 If ($inboundNatRule.FrontendPort -ge $matchedNatPool[0].FrontendPortRangeStart -and 
