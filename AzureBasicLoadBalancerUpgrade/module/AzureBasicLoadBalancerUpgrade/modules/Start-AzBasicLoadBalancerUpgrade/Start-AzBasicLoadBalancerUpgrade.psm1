@@ -214,6 +214,7 @@ function Start-AzBasicLoadBalancerUpgrade {
 
     ### initiate a new or recovery migration ###
     # Load Azure Resources
+    Write-Progress -Activity "Loading Azure Resources" -Status "Loading Azure Resources" -Id 1
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Loading Azure Resources"
 
     try {
@@ -246,9 +247,12 @@ function Start-AzBasicLoadBalancerUpgrade {
         log -severity Error -message $message -terminateOnError
     }
 
+    Write-Progress -Activity "Loading Azure Resources" -Status "Loading Azure Resources" -Completed -Id 1
+
     # verify basic load balancer configuration is a supported scenario
 
     ## verify scenario for a single load balancer
+    Write-Progress -Activity "Validating Migration Scenario" -Status "Validating Migration Scenario" -Id 2
     If ($PSCmdlet.ParameterSetName -ne 'MultiLB') {
         if ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) {
             $StdLoadBalancerName = $StandardLoadBalancerName
@@ -305,14 +309,21 @@ function Start-AzBasicLoadBalancerUpgrade {
         # create a migration config object array from the input multiLBConfig parameter object array
         $migrationConfigs = $multiLBConfig
     }
+    Write-Progress -Activity "Validating Migration Scenario" -Status "Validating Migration Scenario" -Completed -Id 2
 
     # prepare for migration by backing up the basic LB, upgrading Public IPs, and deleting the LB
     # this is done before the migration starts to ensure that all basic LBs are disassociated with any backend pool members, avoiding a mixed SKU scenario which would otherwise occur
+    
+    Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Id 3
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Preparing for migration by backing up and deleteing the basic LB(s)"
     LBMigrationPrep -migrationConfigs $migrationConfigs -RecoveryBackupPath $RecoveryBackupPath
+    Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Completed -Id 3
 
     # initiate the migration of each load balancer in the migration config array
+    Write-Progress -Activity "Starting Migration" -Status "Starting Migration" -Id 4
+    $migrationConfigsCompleted = 0
     ForEach ($migrationConfig in $migrationConfigs) {
+        Write-Progress -Activity "Starting Migration" -Status "Starting migration of basic load balancer '$($migrationConfig.BasicLoadBalancer.Name)'" -Id 4
         log -Message "[Start-AzBasicLoadBalancerUpgrade] Starting migration for Basic Load Balancer '$($migrationConfig.BasicLoadBalancer.Name)' in Resource Group '$($migrationConfig.BasicLoadBalancer.ResourceGroupName)'"
 
         $standardScenarioParams = @{
@@ -384,6 +395,10 @@ function Start-AzBasicLoadBalancerUpgrade {
                 }
             }
         }
+
+        $migrationConfigsCompleted++
+        $completedPercent = ($migrationConfigsCompleted / $migrationConfigs.Count) * 100
+        Write-Progress -Activity "Completed migration" -Status "Completed migration of basic load balancer '$($migrationConfig.BasicLoadBalancer.Name)'" -PercentComplete $completedPercent -Id 4
     }
 
     log -Message "############################## Migration Completed ##############################"
