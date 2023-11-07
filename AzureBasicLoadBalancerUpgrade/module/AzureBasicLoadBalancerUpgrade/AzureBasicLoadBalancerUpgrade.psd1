@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.3.3'
+    ModuleVersion = '2.3.4'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fixed issue with creating a reference object of the VMSS, resulting inconsistent NAT Pool membership'
+            ReleaseNotes = 'Fix spurious error when calling _HardCopyObject when an IPConfig has no pool membership'
 
             # Prerelease string of this module
             # Prerelease = ''
