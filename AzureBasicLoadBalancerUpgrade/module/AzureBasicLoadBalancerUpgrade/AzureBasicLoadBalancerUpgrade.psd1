@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.3.2'
+    ModuleVersion = '2.3.3'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Added progress bar to the migration process.'
+            ReleaseNotes = 'Fixed issue with creating a reference object of the VMSS, resulting inconsistent NAT Pool membership'
 
             # Prerelease string of this module
             # Prerelease = ''
