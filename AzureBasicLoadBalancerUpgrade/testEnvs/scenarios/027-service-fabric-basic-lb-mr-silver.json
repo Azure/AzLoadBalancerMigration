@@ -21,7 +21,7 @@
     },
        "clusterName": {
       "type": "string",
-      "defaultValue": "clustermtb7",
+      "defaultValue": "[concat('cluster',substring(uniqueString(deployment().properties.templateHash),0,4))]",
       "metadata": {
         "description": "Name of your cluster - Between 3 and 23 characters. Letters and numbers only"
       }

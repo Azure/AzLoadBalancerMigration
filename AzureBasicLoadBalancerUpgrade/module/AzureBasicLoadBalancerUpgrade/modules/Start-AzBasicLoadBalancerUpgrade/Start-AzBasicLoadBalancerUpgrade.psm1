@@ -252,7 +252,7 @@ function Start-AzBasicLoadBalancerUpgrade {
     # verify basic load balancer configuration is a supported scenario
 
     ## verify scenario for a single load balancer
-    Write-Progress -Activity "Validating Migration Scenario" -Status "Validating Migration Scenario" -Id 2
+    Write-Progress -Activity "Validating Migration Scenario" -Status "Validating Migration Scenario" -PercentComplete 0 -Id 2
     If ($PSCmdlet.ParameterSetName -ne 'MultiLB') {
         if ($PSBoundParameters.ContainsKey("StandardLoadBalancerName")) {
             $StdLoadBalancerName = $StandardLoadBalancerName
@@ -268,6 +268,7 @@ function Start-AzBasicLoadBalancerUpgrade {
                 BasicLoadBalancer        = $BasicLoadBalancer
                 StandardLoadBalancerName = $StdLoadBalancerName
                 scenario                 = $scenario
+                vmssRefObject            = ''
             })
         
         if ($validateScenarioOnly) {
@@ -314,16 +315,16 @@ function Start-AzBasicLoadBalancerUpgrade {
     # prepare for migration by backing up the basic LB, upgrading Public IPs, and deleting the LB
     # this is done before the migration starts to ensure that all basic LBs are disassociated with any backend pool members, avoiding a mixed SKU scenario which would otherwise occur
     
-    Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Id 3
+    Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Id 3 -PercentComplete 0
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Preparing for migration by backing up and deleteing the basic LB(s)"
-    LBMigrationPrep -migrationConfigs $migrationConfigs -RecoveryBackupPath $RecoveryBackupPath
+    $migrationConfigs = LBMigrationPrep -migrationConfigs $migrationConfigs -RecoveryBackupPath $RecoveryBackupPath
     Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Completed -Id 3
 
     # initiate the migration of each load balancer in the migration config array
     Write-Progress -Activity "Starting Migration" -Status "Starting Migration" -Id 4
     $migrationConfigsCompleted = 0
     ForEach ($migrationConfig in $migrationConfigs) {
-        Write-Progress -Activity "Starting Migration" -Status "Starting migration of basic load balancer '$($migrationConfig.BasicLoadBalancer.Name)'" -Id 4
+        Write-Progress -Activity "Starting Migration" -Status "Starting migration of basic load balancer '$($migrationConfig.BasicLoadBalancer.Name)'" -Id 4 -PercentComplete 0
         log -Message "[Start-AzBasicLoadBalancerUpgrade] Starting migration for Basic Load Balancer '$($migrationConfig.BasicLoadBalancer.Name)' in Resource Group '$($migrationConfig.BasicLoadBalancer.ResourceGroupName)'"
 
         $standardScenarioParams = @{
@@ -358,7 +359,7 @@ function Start-AzBasicLoadBalancerUpgrade {
                 switch ($migrationConfig.scenario.ExternalOrInternal) {
                     'internal' {
                         if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                            InternalLBMigrationVmss @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                            InternalLBMigrationVmss @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath -refVmss $migrationConfig.vmssRefObject
                         }
                         else {
                             RestoreInternalLBMigrationVmss @standardScenarioParams -vmss $vmss
@@ -366,7 +367,7 @@ function Start-AzBasicLoadBalancerUpgrade {
                     }
                     'external' {
                         if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
-                            PublicLBMigrationVmss @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                            PublicLBMigrationVmss @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath -refVmss $migrationConfig.vmssRefObject
                         }
                         else {
                             RestoreExternalLBMigrationVmss @standardScenarioParams -vmss $vmss
