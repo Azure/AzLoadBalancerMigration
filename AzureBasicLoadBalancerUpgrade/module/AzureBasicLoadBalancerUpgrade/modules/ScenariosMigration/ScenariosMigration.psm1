@@ -98,7 +98,8 @@ function PublicLBMigrationVmss {
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
-        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj,
+        [Parameter(Mandatory = $false)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
 
     $progressParams = @{
@@ -111,7 +112,6 @@ function PublicLBMigrationVmss {
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     Write-Progress -Status "Backing up VMSS" -ParentId 4 @progressParams
-    $refVmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Backup VMSS Configurations
     BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
@@ -180,7 +180,8 @@ function InternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
-        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
+        [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj,
+        [Parameter(Mandatory = $false)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
 
     $progressParams = @{
@@ -192,7 +193,6 @@ function InternalLBMigrationVmss {
 
     # Creating a vmss object before it gets changed as a reference for the backend pool migration
     Write-Progress -Status "Backing up VMSS" -PercentComplete ((1/14) * 100) @progressParams
-    $refVmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
     # Backup VMSS Configurations
     Write-Progress -Status "Backing up VMSS Configurations" -PercentComplete ((2/14) * 100) @progressParams
@@ -838,6 +838,11 @@ function LBMigrationPrep {
         Write-Progress -Status "Backing up Basic Load Balancer Configurations" -PercentComplete ((2/4) * 100) @progressParams
         BackupBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
+        # get a reference copy of the vmss prior to modifying it
+        If ($migrationConfig.scenario.backendType -eq 'VMSS') {
+            $migrationConfig['vmssRefObject'] = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer
+        }
+
         If ($migrationConfig.scenario.ExternalOrInternal -eq 'External') {
             # Migrate public IP addresses on Basic LB to static (if dynamic)
             Write-Progress -Status "Migrating public IP addresses on Basic LB to static (if dynamic)" -PercentComplete ((3/4) * 100) @progressParams
@@ -850,6 +855,9 @@ function LBMigrationPrep {
 
         log -message "[LBMigrationPrep] Completed preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
     }
+
+    # return the migration configs with the reference vmss object
+    return $migrationConfigs
 }
 
 Export-ModuleMember -Function PublicLBMigrationVmss
