@@ -116,7 +116,9 @@ function _MigrateNetworkInterfaceConfigurationsVmss {
                 }
             }
             # Taking a hard copy of the object and assigning, it's important because the object was passed by reference
-            $ipConfiguration.LoadBalancerBackendAddressPools = _HardCopyObject -listSubResource $genericListSubResource
+            If ($genericListSubResource.Count -gt 0) {
+                $ipConfiguration.LoadBalancerBackendAddressPools = _HardCopyObject -listSubResource $genericListSubResource
+            }
             $genericListSubResource.Clear()
         }
     }
