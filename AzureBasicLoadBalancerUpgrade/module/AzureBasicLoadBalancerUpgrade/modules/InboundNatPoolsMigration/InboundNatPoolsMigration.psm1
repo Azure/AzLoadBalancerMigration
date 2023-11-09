@@ -88,6 +88,12 @@ function InboundNatPoolsMigration {
     log -Message "[InboundNatPoolsMigration] Initiating Inbound NAT Pools Migration"
 
     $inboundNatPools = $BasicLoadBalancer.InboundNatPools
+
+    If ($inboundNatPools.count -eq 0) {
+        log -Message "[InboundNatPoolsMigration] Load balancer has no NAT Pools to migrate"
+        return
+    }
+    
     foreach ($pool in $inboundNatPools) {
         log -Message "[InboundNatPoolsMigration] Adding Inbound NAT Pool $($pool.Name) to Standard Load Balancer"
         $frontEndIPConfig = Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($pool.FrontEndIPConfiguration.Id.split('/')[-1])

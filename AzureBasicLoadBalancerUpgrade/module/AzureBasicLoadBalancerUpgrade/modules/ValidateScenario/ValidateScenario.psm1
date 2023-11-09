@@ -96,7 +96,13 @@ Function Test-SupportedMigrationScenario {
         'SkipOutboundRuleCreationMultiBE' = $false
     }
 
+    $progressParams = @{
+        Activity = "Validating Migration Scenario"
+        ParentId = 2
+    }
+
     # checking source load balance SKU
+    Write-Progress -Status "[Test-SupportedMigrationScenario] Verifying if Load Balancer $($BasicLoadBalancer.Name) is valid for migration" -PercentComplete 0 @progressParams
     log -Message "[Test-SupportedMigrationScenario] Verifying if Load Balancer $($BasicLoadBalancer.Name) is valid for migration"
 
     log -Message "[Test-SupportedMigrationScenario] Verifying source load balancer SKU"
@@ -150,6 +156,8 @@ Function Test-SupportedMigrationScenario {
     }
 
     If ($scenario.BackendType -eq 'VMSS') {
+        Write-Progress -Status "Validating VMSS backend scenario parameters" -PercentComplete 50 @progressParams
+
         # create array of VMSSes associated with the load balancer for following checks
         $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
         $basicLBVMSSs = @()
@@ -344,6 +352,7 @@ Function Test-SupportedMigrationScenario {
     }
 
     If ($scenario.BackendType -eq 'VM') {
+        Write-Progress -Status "Validating VM backend scenario parameters" -PercentComplete 50 @progressParams
 
         # create array of VMs associated with the load balancer for following checks and verify that NICs are associated to VMs
         $basicLBVMs = @()
@@ -553,6 +562,8 @@ Function Test-SupportedMigrationScenario {
             log -Message $message -Severity 'Warning'
         }
     }
+
+    Write-Progress -Status "Finished VMSS backend scenario parameters" -PercentComplete 100 @progressParams
 
     log -Message "[Test-SupportedMigrationScenario] Detected migration scenario: $($scenario | ConvertTo-Json -Depth 10 -Compress)"
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
