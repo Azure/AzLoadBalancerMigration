@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix NAT Rule backend migration, Add NAT Pool to NAT'
+            ReleaseNotes = 'Fix NAT Rule backend migration, Add NAT Pool to NAT Rule migration'
 
             # Prerelease string of this module
             # Prerelease = ''
