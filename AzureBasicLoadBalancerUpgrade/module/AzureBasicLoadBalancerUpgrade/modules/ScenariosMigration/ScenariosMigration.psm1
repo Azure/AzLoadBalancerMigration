@@ -266,6 +266,7 @@ function RestoreExternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -354,6 +355,7 @@ function RestoreInternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -430,6 +432,7 @@ function PublicLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -504,6 +507,7 @@ function InternalLBMigrationVM {
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -568,6 +572,7 @@ function RestoreExternalLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -640,6 +645,7 @@ function RestoreInternalLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -700,6 +706,7 @@ function PublicLBMigrationEmpty {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -761,6 +768,7 @@ function InternalLBMigrationEmpty {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -771,14 +779,6 @@ function InternalLBMigrationEmpty {
     }
 
     log -Message "[InternalLBMigrationEmpty] Internal Load Balancer with empty detected. Initiating Internal Load Balancer Migration"
-
-    # Backup Basic Load Balancer Configurations
-    Write-Progress -Status "Backup Basic Load Balancer Configurations" -PercentComplete ((1/14) * 100) @progressParams
-    BackupResources -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
-    # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-    Write-Progress -Status "Deletion of Basic Load Balancer and Delete Basic Load Balancer" -PercentComplete ((2/14) * 100) @progressParams
-    RemoveBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -BackendType 'Empty'
 
     # Creation of Standard Load Balancer
     Write-Progress -Status "Creation of Standard Load Balancer" -PercentComplete ((3/14) * 100) @progressParams
@@ -825,6 +825,7 @@ function RestoreExternalLBMigrationEmpty {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -890,6 +891,7 @@ function RestoreInternalLBMigrationEmpty {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][psobject] $scenario,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
