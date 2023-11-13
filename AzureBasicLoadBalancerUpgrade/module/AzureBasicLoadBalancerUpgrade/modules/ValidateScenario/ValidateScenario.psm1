@@ -1,5 +1,6 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 
 function _GetScenarioBackendType {
     param(
@@ -19,45 +20,63 @@ function _GetScenarioBackendType {
 
     # Detecting if there are any backend pools that is not virtualMachineScaleSets or virtualMachines
     log -Message "[Test-SupportedMigrationScenario] Checking backend pool member types and that all backend pools are not empty"
-    $backendPoolMemberTypes = @()
+    $backendMemberTypes = @()
+
+    # get backend types from backend pools
     foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
         foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {
-            $backendPoolMemberType = $backendIpConfiguration.Id.split("/")[7]
+            $backendMemberType = $backendIpConfiguration.Id.split("/")[7]
     
             # check that backend pool NIC members is attached to a VM
-            If ($backendPoolMemberType -eq 'networkInterfaces') {
-                $backendPoolMemberTypes += 'virtualMachines'
+            If ($backendMemberType -eq 'networkInterfaces') {
+                $backendMemberTypes += 'virtualMachines'
             }
         
             Else {
-                $backendPoolMemberTypes += $backendPoolMemberType
+                $backendMemberTypes += $backendMemberType
             }
         }
-
-
-        If (($backendPoolMemberTypes | Sort-Object | Get-Unique).count -gt 1) {
-            log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendPoolMemberTypes -join ',')'" -Severity 'Error'
-            return
-        }
-        If ($backendPoolMemberTypes[0] -eq 'virtualMachines') {
-            log -Message "[Test-SupportedMigrationScenario] All backend pools members are virtualMachines!"
-            $backendType = 'VM'
-        }
-        ElseIf ($backendPoolMemberTypes[0] -eq 'virtualMachineScaleSets') {
-            log -Message "[Test-SupportedMigrationScenario] All backend pools members are virtualMachineScaleSets!"
-            $backendType = 'VMSS'
-        }
-        ElseIf ([string]::IsNullOrEmpty($backendPoolMemberTypes[0])) {
-            log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty"
-            $backendType = 'Empty'
-        }
-        Else {
-            log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendPoolMemberTypes -join ',')'" -Severity 'Error'
-            return
-        }
-
-        return $backendType
     }
+
+    # get backend types from NAT rules
+    foreach ($inboundNatRule in $BasicLoadBalancer.InboundNatRules) {
+        foreach ($backendIpConfiguration in $inboundNatRule.BackendIpConfiguration) {
+            $backendMemberType = $backendIpConfiguration.Id.split("/")[7]
+    
+            # check that nat rule NIC members is attached to a VM
+            If ($backendMemberType -eq 'networkInterfaces') {
+                $backendMemberTypes += 'virtualMachines'
+            }
+        
+            Else {
+                $backendMemberTypes += $backendMemberType
+            }
+        }
+    }
+
+
+    If (($backendMemberTypes | Sort-Object | Get-Unique).count -gt 1) {
+        log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'" -Severity 'Error'
+        return
+    }
+    If ($backendMemberTypes[0] -eq 'virtualMachines') {
+        log -Message "[Test-SupportedMigrationScenario] All backend pools members are virtualMachines!"
+        $backendType = 'VM'
+    }
+    ElseIf ($backendMemberTypes[0] -eq 'virtualMachineScaleSets') {
+        log -Message "[Test-SupportedMigrationScenario] All backend pools members are virtualMachineScaleSets!"
+        $backendType = 'VMSS'
+    }
+    ElseIf ([string]::IsNullOrEmpty($backendMemberTypes[0])) {
+        log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty"
+        $backendType = 'Empty'
+    }
+    Else {
+        log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'" -Severity 'Error'
+        return
+    }
+
+    return $backendType
 }
 
 Function Test-SupportedMigrationScenario {
@@ -159,17 +178,13 @@ Function Test-SupportedMigrationScenario {
         Write-Progress -Status "Validating VMSS backend scenario parameters" -PercentComplete 50 @progressParams
 
         # create array of VMSSes associated with the load balancer for following checks
-        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
-        $basicLBVMSSs = @()
-        ForEach ($vmssId in $vmssIds) {
-            $basicLBVMSSs += Get-AzResource -ResourceId $vmssId | Get-AzVMSS
-        }
+        $basicLBVMSSs = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
         # Detecting if there are more than one VMSS in the backend pool, if so, exit
         # Basic Load Balancers doesn't allow more than one VMSS as a backend pool becuase they would be under different availability sets.
         # This is a sanity check to make sure that the script is not run on a Basic Load Balancer that has more than one VMSS in the backend pool.
         log -Message "[Test-SupportedMigrationScenario] Checking if there are more than one VMSS in the backend pool"
-        $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
+        $vmssIds = $basicLBVMSSs.id
         if ($vmssIds.count -gt 1) {
             log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has more than one VMSS in the backend pool, exiting" -Severity 'Error'
             return
@@ -292,7 +307,7 @@ Function Test-SupportedMigrationScenario {
             }
 
             If (!$vmssVMsHavePublicIPs -and $scenario.ExternalOrInternal -eq 'Internal') {
-                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmssId)'"
+                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmss.Name)'"
                 log -Message $message -Severity 'Warning'
 
                 Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
@@ -563,7 +578,7 @@ Function Test-SupportedMigrationScenario {
         }
     }
 
-    Write-Progress -Status "Finished VMSS backend scenario parameters" -PercentComplete 100 @progressParams
+    Write-Progress -Status "Finished VMSS backend scenario validation" -PercentComplete 100 @progressParams
 
     log -Message "[Test-SupportedMigrationScenario] Detected migration scenario: $($scenario | ConvertTo-Json -Depth 10 -Compress)"
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
