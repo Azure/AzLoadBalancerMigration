@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.3.4'
+    ModuleVersion = '2.4.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix spurious error when calling _HardCopyObject when an IPConfig has no pool membership'
+            ReleaseNotes = 'Fix NAT Rule backend migration, Add NAT Pool to NAT'
 
             # Prerelease string of this module
             # Prerelease = ''

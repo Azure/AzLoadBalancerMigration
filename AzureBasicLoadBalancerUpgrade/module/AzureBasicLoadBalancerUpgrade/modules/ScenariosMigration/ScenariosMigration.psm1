@@ -41,7 +41,7 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/AddLoadBalancerBackendAddressPool/AddLoadBalancerBackendAddressPool.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackendPoolMigration/BackendPoolMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackupBasicLoadBalancer/BackupBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackupResources/BackupResources.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/InboundNatPoolsMigration/InboundNatPoolsMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/LoadBalacingRulesMigration/LoadBalacingRulesMigration.psd1")
@@ -56,6 +56,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "/RemoveBasicLoadBalancer/Re
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/ValidateMigration/ValidateMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/VMPublicIPConfigMigration/VMPublicIPConfigMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/VmssPublicIPConfigMigration/VmssPublicIPConfigMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/NatPoolToNatRuleMigration/NatPoolToNatRuleMigration.psd1")
 
 function _CreateStandardLoadBalancer {
     [CmdletBinding()]
@@ -99,6 +100,7 @@ function PublicLBMigrationVmss {
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
 
@@ -156,9 +158,16 @@ function PublicLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of Inbound NAT Pools
-    Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
 
     # Creating NSG for Standard Load Balancer
     Write-Progress -Status "Creating NSG for Standard Load Balancer" -PercentComplete ((12 / 14) * 100) @progressParams
@@ -170,7 +179,7 @@ function PublicLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipMigrateNATPoolsToNATRules)
 }
 
 function InternalLBMigrationVmss {
@@ -181,6 +190,7 @@ function InternalLBMigrationVmss {
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj,
+        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
 
@@ -230,9 +240,16 @@ function InternalLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    # Migration of Inbound NAT Pools
-    Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11/14) * 100) @progressParams
-    InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
 
     # Migration of Backend Address Pools
     Write-Progress -Status "Migrating Backend Address Pools" -PercentComplete ((12/14) * 100) @progressParams
@@ -240,7 +257,7 @@ function InternalLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipMigrateNATPoolsToNATRules)
 }
 
 function RestoreExternalLBMigrationVmss {
@@ -302,6 +319,17 @@ function RestoreExternalLBMigrationVmss {
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
 
     # Migration of Inbound NAT Pools
     Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11/14) * 100) @progressParams
@@ -372,6 +400,17 @@ function RestoreInternalLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
+
     # Migration of Inbound NAT Pools
     Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((9/14) * 100) @progressParams
     InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -434,6 +473,17 @@ function PublicLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
+
     # Creating NSG for Standard Load Balancer
     Write-Progress -Status "Creating NSG for Standard Load Balancer" -PercentComplete ((9 / 14) * 100) @progressParams
     NsgCreationVM -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -492,6 +542,17 @@ function InternalLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((7 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
+
     # Migration of Backend Address Pools
     Write-Progress -Status "Migrating Backend Address Pools" -PercentComplete ((8 / 14) * 100) @progressParams
     BackendPoolMigrationVM -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -549,6 +610,17 @@ function RestoreExternalLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
+
     # Creating NSG for Standard Load Balancer
     Write-Progress -Status "Creating NSG for Standard Load Balancer" -PercentComplete ((9 / 14) * 100) @progressParams
     NsgCreationVm -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -601,6 +673,17 @@ function RestoreInternalLBMigrationVM {
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((6 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
 
     # Migration of Backend Address Pools
     Write-Progress -Status "Migrating Backend Address Pools" -PercentComplete ((7 / 14) * 100) @progressParams
@@ -656,6 +739,17 @@ function PublicLBMigrationEmpty {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((7/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
+
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
     ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
@@ -680,7 +774,7 @@ function InternalLBMigrationEmpty {
 
     # Backup Basic Load Balancer Configurations
     Write-Progress -Status "Backup Basic Load Balancer Configurations" -PercentComplete ((1/14) * 100) @progressParams
-    BackupBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+    BackupResources -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Deletion of Basic Load Balancer and Delete Basic Load Balancer
     Write-Progress -Status "Deletion of Basic Load Balancer and Delete Basic Load Balancer" -PercentComplete ((2/14) * 100) @progressParams
@@ -709,6 +803,17 @@ function InternalLBMigrationEmpty {
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
@@ -763,6 +868,17 @@ function RestoreExternalLBMigrationEmpty {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
+
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
     ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
@@ -807,6 +923,17 @@ function RestoreInternalLBMigrationEmpty {
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((6/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+
+    If ($skipMigrateNATPoolsToNATRules) {
+        # Migration of Inbound NAT Pools
+        Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
+        InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    }
+    Else {
+        # upgrade NAT Pools to NAT Rules instead of migrating them
+        Write-Progress -Status "Upgrading NAT Pools to NAT Rules" -PercentComplete ((11 / 14) * 100) @progressParams
+        Start-NatPoolToNatRuleMigration -StandardLoadBalancer $StdLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    }
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams

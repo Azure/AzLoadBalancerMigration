@@ -3,7 +3,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "\Log\Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ScenariosMigration\ScenariosMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ValidateScenario\ValidateScenario.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "\ValidateMigration\ValidateMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupBasicLoadBalancer\BackupBasicLoadBalancer.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupResources\BackupResources.psd1")
 
 <#
 .SYNOPSIS
@@ -162,6 +162,11 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $false)][switch] $FollowLog,
         [Parameter(Mandatory = $false)][switch] $validateScenarioOnly,
         [Parameter(Mandatory = $True, ParameterSetName = 'MultiLB')][psobject[]] $multiLBConfig, # @(@{standardLoadBalancerName='lb-standard-01';basicLoadBalancer=<[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer]>})
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][switch]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByObject')][switch]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][switch] 
+        [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')][switch]
+        $skipMigrateNATPoolsToNATRules,
         [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][switch] $validateCompletedMigration,
         [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][string] $basicLoadBalancerStatePath,
         [Parameter(Mandatory = $false)][switch] $outputMigrationValiationObj,
@@ -207,7 +212,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         # import basic LB from file
         $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $basicLoadBalancerStatePath
 
-        ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName -OutputMigrationValiationObj:$($OutputMigrationValiationObj.IsPresent)
+        ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName -OutputMigrationValiationObj:$($OutputMigrationValiationObj.IsPresent) -natPoolsMigratedToNatRules:(!$skipMigrateNATPoolsToNATRules)
 
         return
     }
@@ -328,10 +333,10 @@ function Start-AzBasicLoadBalancerUpgrade {
         log -Message "[Start-AzBasicLoadBalancerUpgrade] Starting migration for Basic Load Balancer '$($migrationConfig.BasicLoadBalancer.Name)' in Resource Group '$($migrationConfig.BasicLoadBalancer.ResourceGroupName)'"
 
         $standardScenarioParams = @{
-            BasicLoadBalancer           = $migrationConfig.BasicLoadBalancer
-            StandardLoadBalancerName    = $migrationConfig.StandardLoadBalancerName
-            Scenario                    = $migrationConfig.scenario
-            outputMigrationValiationObj = $outputMigrationValiationObj.IsPresent
+            BasicLoadBalancer             = $migrationConfig.BasicLoadBalancer
+            StandardLoadBalancerName      = $migrationConfig.StandardLoadBalancerName
+            Scenario                      = $migrationConfig.scenario
+            outputMigrationValiationObj   = $outputMigrationValiationObj.IsPresent
         }
 
         switch ($migrationConfig.scenario.BackendType) {
@@ -356,6 +361,8 @@ function Start-AzBasicLoadBalancerUpgrade {
                 }
             }
             'VMSS' {
+                $standardScenarioParams += @{skipMigrateNATPoolsToNATRules = $skipMigrateNATPoolsToNATRules.IsPresent}
+
                 switch ($migrationConfig.scenario.ExternalOrInternal) {
                     'internal' {
                         if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {

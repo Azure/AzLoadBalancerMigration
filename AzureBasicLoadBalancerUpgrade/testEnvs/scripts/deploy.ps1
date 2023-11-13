@@ -56,7 +56,7 @@ Foreach ($resourceGroupSuffixI in $resourceGroupSuffix) {
 }
 
 # if -RunMigration switch is supplied, the VMSS Load Balancer migration modules is run against all environments
-if ($RunMigration -and $null -ne $filteredTemplates) {
+if ($RunMigration.IsPresent -and $null -ne $filteredTemplates) {
 
     $ScriptBlock = {
         param($RGName)
@@ -66,7 +66,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
         $path = "$env:HOMEPATH/temp/AzLoadBalancerMigration/$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force
+        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force -outputMigrationValiationObj
     }
 
     $scriptBlockMultiLB = {
@@ -80,7 +80,7 @@ if ($RunMigration -and $null -ne $filteredTemplates) {
 
         $multiLBConfig = @()
         get-AzLoadBalancer -ResourceGroupName $RGName | ? {$_.sku.name -eq 'basic'} | select -First 2 | %{ $multiLBConfig += @{BasicLoadBalancer=$_;StandardLoadBalancerName=$_.name.replace('basic','standard')}}
-        Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig -Pre -Force
+        Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig -Pre -Force -outputMigrationValiationObj
     }
 
     $rgNamesToMigrate = $filteredTemplates | ForEach-Object { 
