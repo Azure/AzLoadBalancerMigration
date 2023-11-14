@@ -53,6 +53,9 @@ Use in combination with -validateCompletedMigration to validate a completed migr
 .PARAMETER StandardLoadBalancerName
     Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
 
+.PARAMETER skipUpgradeNATPoolsToNATRules
+    If specified, the migration will skip upgrading NAT Pools to NAT Rules. NAT Rules are more managable and functional than NAT Pools, while providing the same functionality
+
 .PARAMETER MultiLBConfig
     Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members. Optionally, specify a new standard load balancer name for each basic load balancers.
     Example value: $multiLBConfig = @(
@@ -110,12 +113,12 @@ Use in combination with -validateCompletedMigration to validate a completed migr
     # migrate multiple load balancers with shared backend pool members
     PS C:\> $multiLBConfig = @(
         @{
-            'standardLoadBalancerName' = 'myStandardLB01'
             'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB01)
+            'standardLoadBalancerName' = 'myStandardLB01'       # optional new standard load balancer name
         },
             @{
-            'standardLoadBalancerName' = 'myStandardLB02'
             'basicLoadBalancer' = (Get-AzLoadBalancer -ResourceGroupName myRG -Name myBasicLB02)
+            'standardLoadBalancerName' = 'myStandardLB02'
         }
     )
     PS C:\> Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig
@@ -161,12 +164,13 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
         [Parameter(Mandatory = $false)][switch] $validateScenarioOnly,
-        [Parameter(Mandatory = $True, ParameterSetName = 'MultiLB')][psobject[]] $multiLBConfig, # @(@{standardLoadBalancerName='lb-standard-01';basicLoadBalancer=<[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer]>})
+        [Parameter(Mandatory = $True, ParameterSetName = 'MultiLB')][psobject[]] $multiLBConfig, # @(@{basicLoadBalancer=<[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer]>[;standardLoadBalancerName='lb-standard-01']})
         [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][switch]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByObject')][switch]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][switch] 
+        [Parameter(Mandatory = $false, ParameterSetName = 'MultiLB')][switch] 
         [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')][switch]
-        $skipMigrateNATPoolsToNATRules,
+        $skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][switch] $validateCompletedMigration,
         [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][string] $basicLoadBalancerStatePath,
         [Parameter(Mandatory = $false)][switch] $outputMigrationValiationObj,
@@ -212,7 +216,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         # import basic LB from file
         $BasicLoadBalancer = RestoreLoadBalancer -BasicLoadBalancerJsonFile $basicLoadBalancerStatePath
 
-        ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName -OutputMigrationValiationObj:$($OutputMigrationValiationObj.IsPresent) -natPoolsMigratedToNatRules:(!$skipMigrateNATPoolsToNATRules)
+        ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StandardLoadBalancerName -OutputMigrationValiationObj:$($OutputMigrationValiationObj.IsPresent) -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules)
 
         return
     }
@@ -337,7 +341,7 @@ function Start-AzBasicLoadBalancerUpgrade {
             StandardLoadBalancerName      = $migrationConfig.StandardLoadBalancerName
             Scenario                      = $migrationConfig.scenario
             outputMigrationValiationObj   = $outputMigrationValiationObj.IsPresent
-            skipMigrateNATPoolsToNATRules = $skipMigrateNATPoolsToNATRules.IsPresent
+            skipUpgradeNATPoolsToNATRules = $skipUpgradeNATPoolsToNATRules.IsPresent
         }
 
         switch ($migrationConfig.scenario.BackendType) {

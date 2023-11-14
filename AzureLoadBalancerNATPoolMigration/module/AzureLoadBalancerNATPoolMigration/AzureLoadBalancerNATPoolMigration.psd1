@@ -12,7 +12,7 @@
 RootModule = 'AzureLoadBalancerNATPoolMigration'
 
 # Version number of this module.
-ModuleVersion = '0.0.4'
+ModuleVersion = '1.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -108,7 +108,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'Added support for LBs without associated VMSS'
 
         # Prerelease string of this module
         # Prerelease = ''

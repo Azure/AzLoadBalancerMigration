@@ -100,7 +100,7 @@ function PublicLBMigrationVmss {
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
 
@@ -158,7 +158,7 @@ function PublicLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -179,7 +179,7 @@ function PublicLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipMigrateNATPoolsToNATRules)
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules)
 }
 
 function InternalLBMigrationVmss {
@@ -190,7 +190,7 @@ function InternalLBMigrationVmss {
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
 
@@ -240,7 +240,7 @@ function InternalLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -257,7 +257,7 @@ function InternalLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipMigrateNATPoolsToNATRules)
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules)
 }
 
 function RestoreExternalLBMigrationVmss {
@@ -266,7 +266,7 @@ function RestoreExternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -321,7 +321,7 @@ function RestoreExternalLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -355,7 +355,7 @@ function RestoreInternalLBMigrationVmss {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -402,7 +402,7 @@ function RestoreInternalLBMigrationVmss {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -432,7 +432,7 @@ function PublicLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -476,7 +476,7 @@ function PublicLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -507,7 +507,7 @@ function InternalLBMigrationVM {
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
         [Parameter(Mandatory = $true)][psobject] $scenario,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -546,7 +546,7 @@ function InternalLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((7 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -572,7 +572,7 @@ function RestoreExternalLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][psobject] $scenario,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -615,7 +615,7 @@ function RestoreExternalLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -645,7 +645,7 @@ function RestoreInternalLBMigrationVM {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][psobject] $scenario,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -680,7 +680,7 @@ function RestoreInternalLBMigrationVM {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((6 / 14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -706,7 +706,7 @@ function PublicLBMigrationEmpty {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -746,7 +746,7 @@ function PublicLBMigrationEmpty {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((7/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -768,7 +768,7 @@ function InternalLBMigrationEmpty {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][string] $RecoveryBackupPath,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -804,7 +804,7 @@ function InternalLBMigrationEmpty {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -refVmss $refVmss
@@ -825,7 +825,7 @@ function RestoreExternalLBMigrationEmpty {
     Param(
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true)][psobject] $scenario,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
@@ -869,7 +869,7 @@ function RestoreExternalLBMigrationEmpty {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
@@ -891,7 +891,7 @@ function RestoreInternalLBMigrationEmpty {
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $true)][psobject] $scenario,
-        [Parameter(Mandatory = $false)][switch]$skipMigrateNATPoolsToNATRules,
+        [Parameter(Mandatory = $false)][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $false)][switch]$outputMigrationValiationObj
     )
 
@@ -926,7 +926,7 @@ function RestoreInternalLBMigrationEmpty {
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((6/14) * 100) @progressParams
     NatRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
-    If ($skipMigrateNATPoolsToNATRules.IsPresent) {
+    If ($skipUpgradeNATPoolsToNATRules.IsPresent) {
         # Migration of Inbound NAT Pools
         Write-Progress -Status "Migrating Inbound NAT Pools" -PercentComplete ((11 / 14) * 100) @progressParams
         InboundNatPoolsMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
