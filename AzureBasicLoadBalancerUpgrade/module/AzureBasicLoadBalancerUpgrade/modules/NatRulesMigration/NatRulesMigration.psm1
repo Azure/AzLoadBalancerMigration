@@ -1,5 +1,85 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+
+function _NatRuleNicMembershipMigration {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
+        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
+    )
+    log -Message "[NatRuleNicMembershipMigration] Initiating NAT rule VM membership migration"
+
+    log -Message "[NatRuleNicMembershipMigration] Adding original VMs to the new Standard Load Balancer NAT rules"
+
+    # build table of NICs and their ipconfigs and associate them to backend pools
+    # this is used to associate the ipconfigs to the backend pools on the NICs in a single operation per NIC
+    $natRuleNicTable = @{}
+    ForEach ($InboundNATRule in $BasicLoadBalancer.InboundNATRules) {
+
+        # create a subresource to represent the nat rule
+        $subResource = New-Object Microsoft.Azure.Commands.Network.Models.PSInboundNatRule
+        $subResource.Id = ($StdLoadBalancer.InboundNatRules | Where-Object { $_.Name -eq $InboundNATRule.Name }).Id
+
+        If ($InboundNATRule.BackendIpConfiguration.id) {
+            $NatRuleIpConfiguration = $InboundNATRule.BackendIpConfiguration
+
+            $lbNatRuleNicId = ($NatRuleIpConfiguration.Id -split '/ipConfigurations/')[0]
+            $ipConfigName = ($NatRuleIpConfiguration.Id -split '/ipConfigurations/')[1]
+
+            # create empty list of ip configs for this NIC if it doesn't exist
+            If (!$natRuleNicTable[$lbNatRuleNicId]) {
+                $natRuleNicTable[$lbNatRuleNicId] = @(@{ipConfigs = @{} })
+            }
+            # add ip config with associated nat rule to list
+            # create new nat rule list for this ipconfig if one doesn't exist
+            If (!$natRuleNicTable[$lbNatRuleNicId].ipConfigs[$ipConfigName]) {
+
+                $natRulesList = New-Object 'System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSInboundNatRule]'
+                $natRulesList.Add($subResource)
+
+                $natRuleNicTable[$lbNatRuleNicId].ipConfigs[$ipConfigName] = @{natRulesList = $natRulesList}
+            }
+            # add nat rule to existing nat rule list for this ipconfig if the list already exists
+            Else {
+                $natRuleNicTable[$lbNatRuleNicId].ipConfigs[$ipConfigName].natRulesList.add($subResource)
+            }
+        }
+        Else {
+            log -Message "[NatRuleNicMembershipMigration] NAT rule '$($InboundNATRule.Name)' does not have a backend ip configuration, skipping NIC association"
+        }
+    }
+
+    # loop though nics and associate ipconfigs to backend pools
+    $jobs = @()
+    ForEach ($nicRecord in $natRuleNicTable.GetEnumerator()) {
+
+        log -Message "[NatRuleNicMembershipMigration] Adding ipconfigs on NIC $($nicRecord.Name.split('/')[-1]) to NAT rules"
+
+        try {
+            $nic = Get-AzNetworkInterface -ResourceId $nicRecord.Name
+        }
+        catch {
+            $message = "[NatRuleNicMembershipMigration] An error occured getting the Network Interface '$($nicRecord.Name)'. Check that the NIC exists. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. Error: $_"
+            log 'Error' $message -terminateOnError
+        }
+
+        ForEach ($nicIPConfig in $nic.IpConfigurations) {
+            $nicIPConfig.loadBalancerInboundNatRules = $natRuleNicTable[$nicRecord.Name].ipConfigs[$nicIPConfig.Name].natRulesList
+        }
+
+        $jobs += Set-AzNetworkInterface -NetworkInterface $nic -AsJob
+    }
+
+    log -Message "[NatRuleNicMembershipMigration] Waiting for all '$($jobs.count)' NIC NAT Rule association jobs to complete"
+    $jobs | Wait-Job -Timeout $defaultJobWaitTimeout | Foreach-Object {
+        $job = $_
+        If ($job.Error -or $job.State -eq 'Failed') {
+            log -Severity Error -Message "Associating NIC with LB NAT Rule failed with the following errors: $($job.error; $job | Receive-Job). Migration will continue--to recover, manually associate NICs with the backend pool after the script completes. See association table: `n $($backendPoolNicTable | ConvertTo-Json -depth 10)"
+        }
+    }
+
+    log -Message "[NatRuleNicMembershipMigration] NAT Rule Migration Completed"
+}
 function NatRulesMigration {
     [CmdletBinding()]
     param (
@@ -67,25 +147,33 @@ function NatRulesMigration {
     }
     log -Message "[NatRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
-    try {
-        $ErrorActionPreference = 'Stop'
-
-        $UpdateLBNATRulesJob = Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -AsJob
-
-        While ($UpdateLBNATRulesJob.State -eq 'Running') {
-            Start-Sleep -Seconds 15
-            log -Message "[NatRulesMigration] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
-        }
-
-        If ($UpdateLBNATRulesJob.Error -or $UpdateLBNATRulesJob.State -eq 'Failed') {
-            Write-Error $UpdateLBNATRulesJob.Error 
-        }
+    if ($StdLoadBalancer.InboundNatRules.Count -eq 0) {
+        log -Message "[NatRulesMigration] No NAT Rules to migrate. Skipping save."
+        return
     }
-    catch {
-        $message = "[NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
-        log "Error" $message
+    else {
+        try {
+            $ErrorActionPreference = 'Stop'
+
+            $UpdateLBNATRulesJob = Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -AsJob
+
+            While ($UpdateLBNATRulesJob.State -eq 'Running') {
+                Start-Sleep -Seconds 15
+                log -Message "[NatRulesMigration] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
+            }
+
+            If ($UpdateLBNATRulesJob.Error -or $UpdateLBNATRulesJob.State -eq 'Failed') {
+                Write-Error $UpdateLBNATRulesJob.Error 
+            }
+        }
+        catch {
+            $message = "[NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
+            log "Error" $message
+        }
     }
     log -Message "[NatRulesMigration] Nat Rules Migration Completed"
+
+    _NatRuleNicMembershipMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 }
 
 Export-ModuleMember -Function NatRulesMigration

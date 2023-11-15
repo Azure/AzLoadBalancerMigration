@@ -18,7 +18,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2020-10-01",
-      "name": "rgdeployment",
+      "name": "[parameters('resourceGroupName')]",
       "properties": {
         "mode": "Incremental",
         "expressionEvaluationOptions": {
@@ -43,11 +43,12 @@
               "name": "pip-01",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "Basic"
+                "name": "Basic",
+                "tier": "Regional"
               },
               "properties": {
                 "publicIPAddressVersion": "IPv4",
-                "publicIPAllocationMethod": "Static",
+                "publicIPAllocationMethod": "Dynamic",
                 "idleTimeoutInMinutes": 4,
                 "ipTags": []
               }
@@ -58,11 +59,12 @@
               "name": "pip-02",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "Basic"
+                "name": "Basic",
+                "tier": "Regional"
               },
               "properties": {
                 "publicIPAddressVersion": "IPv4",
-                "publicIPAllocationMethod": "Static",
+                "publicIPAllocationMethod": "Dynamic",
                 "idleTimeoutInMinutes": 4,
                 "ipTags": []
               }
@@ -190,11 +192,7 @@
                                   "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'vnet-01', 'subnet1')]"
                                 },
                                 "privateIPAddressVersion": "IPv4",
-                                "loadBalancerBackendAddressPools": [
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
-                                  }
-                                ],
+                                "loadBalancerBackendAddressPools": [],
                                 "loadBalancerInboundNatPools": [
                                   {
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-01')]"
@@ -289,7 +287,8 @@
                 "pip-01"
               ],
               "sku": {
-                "name": "Basic"
+                "name": "Basic",
+                "tier": "Regional"
               },
               "properties": {
                 "frontendIPConfigurations": [

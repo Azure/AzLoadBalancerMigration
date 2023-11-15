@@ -14,6 +14,11 @@ Function UpgradeVMPublicIP {
             $nicIDs += "'$(($backendIpConfiguration.Id -split '/ipconfigurations/')[0])'"
         }
     }
+    foreach ($inboundNatRule in $BasicLoadBalancer.inboundNatRules) {
+        foreach ($backendIpConfiguration in ($inboundNatRule.BackendIpConfiguration | Select-Object -Property Id -Unique)) {
+            $nicIDs += "'$(($backendIpConfiguration.Id -split '/ipconfigurations/')[0])'"
+        }
+    }
 
     $joinedNicIDs = $nicIDs -join ','
     
