@@ -197,6 +197,7 @@ function BackendPoolMigrationVM {
             $lbBeNicId = ($BackendIpConfiguration.Id -split '/ipConfigurations/')[0]
             $ipConfigName = ($BackendIpConfiguration.Id -split '/ipConfigurations/')[1]
 
+            # create empty array for this Nic ID if it doesn't exist
             If (!$backendPoolNicTable[$lbBeNicId]) {
                 $backendPoolNicTable[$lbBeNicId] = @(@{ipConfigs = @{} })
             }
