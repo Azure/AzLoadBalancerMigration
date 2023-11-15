@@ -179,7 +179,7 @@ function PublicLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules)
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function InternalLBMigrationVmss {
@@ -257,7 +257,7 @@ function InternalLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules)
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function RestoreExternalLBMigrationVmss {
@@ -346,7 +346,7 @@ function RestoreExternalLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function RestoreInternalLBMigrationVmss {
@@ -423,7 +423,7 @@ function RestoreInternalLBMigrationVmss {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function PublicLBMigrationVM {
@@ -497,7 +497,7 @@ function PublicLBMigrationVM {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function InternalLBMigrationVM {
@@ -759,7 +759,7 @@ function PublicLBMigrationEmpty {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function InternalLBMigrationEmpty {
@@ -817,7 +817,7 @@ function InternalLBMigrationEmpty {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function RestoreExternalLBMigrationEmpty {
@@ -882,7 +882,7 @@ function RestoreExternalLBMigrationEmpty {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function RestoreInternalLBMigrationEmpty {
@@ -939,7 +939,7 @@ function RestoreInternalLBMigrationEmpty {
 
     # validate the new standard load balancer configuration against the original basic load balancer configuration
     Write-Progress -Status "Validating the new standard load balancer configuration against the original basic load balancer configuration" -Completed @progressParams
-    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj
+    ValidateMigration -BasicLoadBalancer $BasicLoadBalancer -StandardLoadBalancerName $StdLoadBalancer.Name -outputMigrationValiationObj:$outputMigrationValiationObj -natPoolsMigratedToNatRules:(!$skipUpgradeNATPoolsToNATRules.isPresent)
 }
 
 function LBMigrationPrep {
