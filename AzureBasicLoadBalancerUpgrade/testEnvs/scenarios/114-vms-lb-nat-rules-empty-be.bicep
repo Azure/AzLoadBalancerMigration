@@ -1,8 +1,7 @@
 targetScope = 'subscription'
 param location string
 param resourceGroupName string
-param keyVaultName string
-param keyVaultResourceGroupName string
+param randomGuid string = newGuid()
 
 // Resource Group
 module rg '../modules/Microsoft.Resources/resourceGroups/deploy.bicep' = {
@@ -26,7 +25,7 @@ module virtualNetworks '../modules/Microsoft.Network/virtualNetworks/deploy.bice
     name: 'vnet-01'
     subnets: [
       {
-        name: 'subnet1'
+        name: 'subnet-01'
         addressPrefix: '10.0.1.0/24'
       }
     ]
@@ -43,8 +42,8 @@ module publicIp01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' 
     location: location
     publicIPAddressVersion: 'IPv4'
     skuTier: 'Regional'
-    skuName: 'Standard'
-    publicIPAllocationMethod: 'Static'
+    skuName: 'Basic'
+    publicIPAllocationMethod: 'Dynamic'
   }
   scope: resourceGroup(resourceGroupName)
   dependsOn: [
@@ -54,10 +53,10 @@ module publicIp01 '../modules/Microsoft.Network/publicIPAddresses/deploy.bicep' 
 
 // basic lb
 module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bicep' = {
-  name: 'lb-standard01'
+  name: 'lb-basic01'
   scope: resourceGroup(resourceGroupName)
   params: {
-    name: 'lb-standard-01'
+    name: 'lb-basic-01'
     location: location
     frontendIPConfigurations: [
       {
@@ -70,8 +69,16 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
         name: 'be-01'
       }
     ]
-    inboundNatRules: []
-    loadBalancerSku: 'Standard'
+    inboundNatRules: [
+      {
+        name: 'nat-01'
+        frontendIPConfigurationName: 'fe-01'
+        frontendPort: 81
+        backendPort: 81
+        protocol: 'Tcp'        
+      }
+    ]
+    loadBalancerSku: 'Basic'
     loadBalancingRules: [
       {
         backendAddressPoolName: 'be-01'
@@ -100,28 +107,65 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
   ]
 }
 
-resource kv1 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroupName)
-}
-
-module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSetsFlex_custom/deploy.bicep' = {
-  name: 'vmss-01'
+module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bicep' = {
+  name: 'bootdiag-storage-01'
   scope: resourceGroup(resourceGroupName)
   params: {
+    name: 'bootdiag${uniqueString(deployment().name)}'
     location: location
-    // Required parameters
-    encryptionAtHost: false
+    storageAccountSku: 'Standard_LRS'
+    storageAccountKind: 'StorageV2'
+    supportsHttpsTrafficOnly: true
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
+module availabilitySet '../modules/Microsoft.Compute/availabilitySets/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'as-01'
+  params: {
+    location: location
+    name: 'as-01'
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
+module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'vm-01'
+  params: {
+    name: 'vm-01'
     adminUsername: 'admin-vm'
-    skuCapacity: 1
-    upgradePolicyMode: 'Manual'
+    adminPassword: '${uniqueString(randomGuid)}rpP@340'
+    availabilitySetResourceId: availabilitySet.outputs.resourceId
+    location: location
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
       sku: '2022-Datacenter'
       version: 'latest'
     }
-    name: 'vmss-01'
+    nicConfigurations: [
+      {
+        location: location
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerInboundNatRules: [
+              {
+                id: '${loadbalancer.outputs.resourceId}/inboundNatRules/nat-01'
+              }
+            ]
+          }
+        ]
+        nicSuffix: 'nic'
+      }
+    ]
     osDisk: {
       createOption: 'fromImage'
       diskSizeGB: '128'
@@ -130,32 +174,47 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
       }
     }
     osType: 'Windows'
-    skuName: 'Standard_DS1_v2'
-    // Non-required parameters
+    vmSize: 'Standard_DS1_v2'
+  }
+}
+
+module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'vm-02'
+  params: {
+    name: 'vm-02'
+    adminUsername: 'admin-vm'
+    availabilitySetResourceId: availabilitySet.outputs.resourceId
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
-    orchestrationMode: 'Flexible'
+    location: location
+    imageReference: {
+      offer: 'WindowsServer'
+      publisher: 'MicrosoftWindowsServer'
+      sku: '2022-Datacenter'
+      version: 'latest'
+    }
     nicConfigurations: [
       {
+        location: location
         ipConfigurations: [
           {
             name: 'ipconfig1'
-            properties: {
-              subnet: {
-                id: virtualNetworks.outputs.subnetResourceIds[0]
-              }
-              loadBalancerBackendAddressPools: [
-                {
-                  id: loadbalancer.outputs.backendpools[0].id
-                }
-              ]
-            }
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerBackendAddressPools: [
+            ]
           }
         ]
-        nicSuffix: '-nic-01'
+        nicSuffix: 'nic'
       }
     ]
+    osDisk: {
+      createOption: 'fromImage'
+      diskSizeGB: '128'
+      managedDisk: {
+        storageAccountType: 'Standard_LRS'
+      }
+    }
+    osType: 'Windows'
+    vmSize: 'Standard_DS1_v2'
   }
-  dependsOn: [
-    rg
-  ]
 }

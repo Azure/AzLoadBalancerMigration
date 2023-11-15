@@ -110,6 +110,9 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
     storageAccountSku: 'Standard_LRS'
     storageAccountKind: 'StorageV2'
   }
+  dependsOn: [
+    rg
+  ]
 }
 
 module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScaleSets_custom/deploy.bicep' = {
@@ -169,3 +172,24 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
   ]
 }
 
+// resource installinspectorgadget 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01' = {
+//   name: '${wthhubvm01.name}/wth-runcmd-installinspectorgadget'
+//   location: location
+//   properties: {
+//     asyncExecution: true
+//     source: {
+
+//             /*
+//       To generate encoded command in PowerShell: 
+
+//       $s = @'
+//         Install-WindowsFeature Web-Server,Web-Asp-Net45 -IncludeManagementTools
+//         [System.Net.WebClient]::new().DownloadFile('https://raw.githubusercontent.com/jelledruyts/InspectorGadget/main/Page/default.aspx','c:\inetpub\wwwroot\default.aspx')
+//       '@
+//       $bytes = [System.Text.Encoding]::Unicode.GetBytes($s)
+//       [convert]::ToBase64String($bytes) */
+//       script: 'powershell.exe -ep bypass -encodedcommand IAAgACAAIAAgACAAIAAgAEkAbgBzAHQAYQBsAGwALQBXAGkAbgBkAG8AdwBzAEYAZQBhAHQAdQByAGUAIABXAGUAYgAtAFMAZQByAHYAZQByACwAVwBlAGIALQBBAHMAcAAtAE4AZQB0ADQANQAgAC0ASQBuAGMAbAB1AGQAZQBNAGEAbgBhAGcAZQBtAGUAbgB0AFQAbwBvAGwAcwAKACAAIAAgACAAIAAgACAAIABbAFMAeQBzAHQAZQBtAC4ATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdABdADoAOgBuAGUAdwAoACkALgBEAG8AdwBuAGwAbwBhAGQARgBpAGwAZQAoACcAaAB0AHQAcABzADoALwAvAHIAYQB3AC4AZwBpAHQAaAB1AGIAdQBzAGUAcgBjAG8AbgB0AGUAbgB0AC4AYwBvAG0ALwBqAGUAbABsAGUAZAByAHUAeQB0AHMALwBJAG4AcwBwAGUAYwB0AG8AcgBHAGEAZABnAGUAdAAvAG0AYQBpAG4ALwBQAGEAZwBlAC8AZABlAGYAYQB1AGwAdAAuAGEAcwBwAHgAJwAsACcAYwA6AFwAaQBuAGUAdABwAHUAYgBcAHcAdwB3AHIAbwBvAHQAXABkAGUAZgBhAHUAbAB0AC4AYQBzAHAAeAAnACkA'
+//     }
+//     timeoutInSeconds: 600
+//   }
+// }

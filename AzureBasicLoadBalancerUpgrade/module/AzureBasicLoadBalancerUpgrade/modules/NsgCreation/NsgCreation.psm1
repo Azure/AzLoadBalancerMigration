@@ -1,6 +1,7 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/UpdateVmssInstances/UpdateVmssInstances.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 
 function _AddLBNSGSecurityRules {
     [CmdletBinding()]
@@ -143,9 +144,12 @@ function _GetVMNSG {
     }
 
     log -Message "[NsgCreationVM] Looping all VMs in the backend pool of the Load Balancer"
-    $nicIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/ipConfigurations/')[0].ToLower() } | Select-Object -Unique
+    $nicIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id + $BasicLoadBalancer.inboundNatRules.BackendIpConfiguration.id  | Foreach-Object { 
+        if (![string]::IsNullOrEmpty($_)) {($_ -split '/ipConfigurations/')[0].ToLower() }
+    } | Select-Object -Unique
     
-    $joinedIPConfigIDs = ($BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | ForEach-Object { "'$_'" }) -join ','
+    $joinedIPConfigIDs = ($BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id + $BasicLoadBalancer.inboundNatRules.BackendIpConfiguration.id  | ForEach-Object { 
+        if (![string]::IsNullOrEmpty($_)) {"'$_'" }}) -join ','
     $joinedNicIDs = ($nicIDs | ForEach-Object { "'$_'" }) -join ','
 
     # NOTE: the resource graph data will lag behind ARM by a couple minutes, so creating resource and immediately 
@@ -232,11 +236,9 @@ function NsgCreationVmss {
     log -Message "[NsgCreationVmss] Initiating NSG Creation for VMSS"
 
     log -Message "[NsgCreationVmss] Looping all VMSS in the backend pool of the Load Balancer"
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique    
+    $vmsses = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $basicLoadBalancer    
     
-    foreach ($vmssId in $vmssIds) {
-        $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
-
+    foreach ($vmss in $vmsses) {
         log -Message "[NSGCreationVmss] Checking if VMSS $($vmss.Name) has a NSG"
 
         $vmssHasNSG = _GetVMSSNSG -vmss $vmss

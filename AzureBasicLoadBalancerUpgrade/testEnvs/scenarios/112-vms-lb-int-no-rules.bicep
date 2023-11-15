@@ -95,6 +95,9 @@ module availabilitySet '../modules/Microsoft.Compute/availabilitySets/deploy.bic
     location: location
     name: 'as-01'
   }
+  dependsOn: [
+    rg
+  ]
 }
 
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {

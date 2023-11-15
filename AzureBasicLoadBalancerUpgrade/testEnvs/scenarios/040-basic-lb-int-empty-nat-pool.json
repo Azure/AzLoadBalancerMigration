@@ -2,12 +2,12 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "location": {
+      "type": "string"
+    },
     "randomGuid": {
       "type": "string",
       "defaultValue": "[newGuid()]"
-    },
-    "location": {
-      "type": "string"
     },
     "resourceGroupName": {
       "type": "string"
@@ -18,7 +18,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2020-10-01",
-      "name": "rgdeployment",
+      "name": "[parameters('resourceGroupName')]",
       "properties": {
         "mode": "Incremental",
         "expressionEvaluationOptions": {
@@ -43,11 +43,12 @@
               "name": "pip-01",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "Basic"
+                "name": "Basic",
+                "tier": "Regional"
               },
               "properties": {
                 "publicIPAddressVersion": "IPv4",
-                "publicIPAllocationMethod": "Static",
+                "publicIPAllocationMethod": "Dynamic",
                 "idleTimeoutInMinutes": 4,
                 "ipTags": []
               }
@@ -58,11 +59,12 @@
               "name": "pip-02",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "Basic"
+                "name": "Basic",
+                "tier": "Regional"
               },
               "properties": {
                 "publicIPAddressVersion": "IPv4",
-                "publicIPAllocationMethod": "Static",
+                "publicIPAllocationMethod": "Dynamic",
                 "idleTimeoutInMinutes": 4,
                 "ipTags": []
               }
@@ -195,11 +197,7 @@
                                     "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
                                   }
                                 ],
-                                "loadBalancerInboundNatPools": [
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-01')]"
-                                  }
-                                ]
+                                "loadBalancerInboundNatPools": []
                               }
                             },
                             {
@@ -211,11 +209,7 @@
                                 },
                                 "privateIPAddressVersion": "IPv4",
                                 "loadBalancerBackendAddressPools": [],
-                                "loadBalancerInboundNatPools": [
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-02')]"
-                                  }
-                                ]
+                                "loadBalancerInboundNatPools": []
                               }
                             }
                           ]
@@ -241,11 +235,7 @@
                                 },
                                 "privateIPAddressVersion": "IPv4",
                                 "loadBalancerBackendAddressPools": [],
-                                "loadBalancerInboundNatPools": [
-                                  {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatPools', 'lb-basic-01', 'natpool-03')]"
-                                  }
-                                ]
+                                "loadBalancerInboundNatPools": []
                               }
                             },
                                                         {
@@ -289,7 +279,8 @@
                 "pip-01"
               ],
               "sku": {
-                "name": "Basic"
+                "name": "Basic",
+                "tier": "Regional"
               },
               "properties": {
                 "frontendIPConfigurations": [
@@ -320,35 +311,7 @@
                     "properties": {}
                   }
                 ],
-                "loadBalancingRules": [
-                  {
-                    "name": "rule-01",
-                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/loadBalancingRules/rule-01')]",
-                    "properties": {
-                      "frontendIPConfiguration": {
-                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/frontendIPConfigurations/fe-01')]"
-                      },
-                      "frontendPort": 80,
-                      "backendPort": 80,
-                      "enableFloatingIP": false,
-                      "idleTimeoutInMinutes": 4,
-                      "protocol": "Tcp",
-                      "enableTcpReset": false,
-                      "loadDistribution": "Default",
-                      "backendAddressPool": {
-                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
-                      },
-                      "backendAddressPools": [
-                        {
-                          "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'lb-basic-01', 'be-01')]"
-                        }
-                      ],
-                      "probe": {
-                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'lb-basic-01'), '/probes/probe-01')]"
-                      }
-                    }
-                  }
-                ],
+                "loadBalancingRules": [],
                 "probes": [
                   {
                     "name": "probe-01",
