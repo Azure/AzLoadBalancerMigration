@@ -1,5 +1,6 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 
 function RestoreLoadBalancer {
     [CmdletBinding()]
@@ -96,8 +97,9 @@ Function BackupVmss {
     log -Message "[BackupVmss] Initiating Backup of VMSS to path '$RecoveryBackupPath'"
 
     # Backup VMSS Object
-    $vmssIds = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
-    foreach ($vmssId in $vmssIds) {
+    $vmsses = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    foreach ($vmss in $vmsses) {
+        $vmssId = $vmss.Id
         $message = "[BackupVmss] Attempting to create a file-based backup VMSS with id '$vmssId'"
         log -Severity Information -Message $message
 
@@ -105,7 +107,6 @@ Function BackupVmss {
 
         try {
             $ErrorActionPreference = 'Stop'
-            $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss
             $outputFileNameVMSS = ('State_VMSS_' + $vmss.Name + "_" + $vmss.ResourceGroupName + "_" + $backupDateTime + ".json")
             $outputFilePathVSS = Join-Path -Path $RecoveryBackupPath -ChildPath $outputFileNameVMSS
 

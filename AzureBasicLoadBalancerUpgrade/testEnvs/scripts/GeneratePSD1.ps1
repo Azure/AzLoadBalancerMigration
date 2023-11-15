@@ -1,5 +1,5 @@
 cd .\modules\BacakupBasicLoadBalancer
-New-ModuleManifest -Path BackupBasicLoadBalancer.psd1 -RootModule BackupBasicLoadBalancer -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
+New-ModuleManifest -Path BackupResources.psd1 -RootModule BackupResources -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru
 cd ../../
 
 New-ModuleManifest -Path Start-AzBasicLoadBalancerUpgrade.psd1 -RootModule Start-AzBasicLoadBalancerUpgrade -Author "Victor Santana" -CompanyName "Microsoft" -Copyright "(c) 2022 Microsoft. All rights reserved." -FunctionsToExport '*' -CmdletsToExport '*' -AliasesToExport '*'  -PassThru

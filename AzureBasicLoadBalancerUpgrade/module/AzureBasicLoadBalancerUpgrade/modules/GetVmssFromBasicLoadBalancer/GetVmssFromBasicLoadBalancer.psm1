@@ -9,7 +9,12 @@ function GetVmssFromBasicLoadBalancer {
 
     try {
         $ErrorActionPreference = 'Stop'
-        $vmssId = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
+
+        # check backend pools and nat rules for vmssids
+        $vmssId = $BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id + $BasicLoadBalancer.inboundNatRules.BackendIpConfiguration.id | Foreach-Object { 
+            If (![string]::IsNullOrEmpty($_)) {
+                ($_ -split '/virtualMachines/')[0].ToLower() }
+        } | Select-Object -Unique
 
         log -Message "[GetVmssFromBasicLoadBalancer] Getting VMSS object '$vmssId' from Azure"
         $vmss = Get-AzResource -ResourceId $vmssId | Get-AzVmss

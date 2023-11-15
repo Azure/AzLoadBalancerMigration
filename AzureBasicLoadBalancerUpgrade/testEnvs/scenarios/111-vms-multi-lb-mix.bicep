@@ -163,12 +163,25 @@ module storageAccounts '../modules/Microsoft.Storage/storageAccounts/deploy.bice
   ]
 }
 
+module availabilitySet '../modules/Microsoft.Compute/availabilitySets/deploy.bicep' = {
+  scope: resourceGroup(resourceGroupName)
+  name: 'as-01'
+  params: {
+    location: location
+    name: 'as-01'
+  }
+  dependsOn: [
+    rg
+  ]
+}
+
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   scope: resourceGroup(resourceGroupName)
   name: 'vm-01'
   params: {
     adminUsername: 'admin-vmss'
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
+    availabilitySetResourceId: availabilitySet.outputs.resourceId
     location: location
     imageReference: {
       offer: 'WindowsServer'

@@ -83,11 +83,17 @@ function InboundNatPoolsMigration {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
+        [Parameter(Mandatory = $False)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
     )
     log -Message "[InboundNatPoolsMigration] Initiating Inbound NAT Pools Migration"
 
     $inboundNatPools = $BasicLoadBalancer.InboundNatPools
+
+    If ($inboundNatPools.count -eq 0) {
+        log -Message "[InboundNatPoolsMigration] Load balancer has no NAT Pools to migrate"
+        return
+    }
+    
     foreach ($pool in $inboundNatPools) {
         log -Message "[InboundNatPoolsMigration] Adding Inbound NAT Pool $($pool.Name) to Standard Load Balancer"
         $frontEndIPConfig = Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($pool.FrontEndIPConfiguration.Id.split('/')[-1])
@@ -132,40 +138,49 @@ function InboundNatPoolsMigration {
         log 'Warning' $message
     }
 
-    $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
+    If ($refVmss) {
+        log -Message "[InboundNatPoolsMigration] Associating Inbound NAT Pools to VMSS"
 
-    _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
+        $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
-    # Update VMSS on Azure
-    log -Message "[InboundNatPoolsMigration] Saving VMSS $($vmss.Name)"
-    try {
-        $ErrorActionPreference = 'Stop'
+        _MigrateNetworkInterfaceConfigurations -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer -vmss $vmss -refVmss $refVmss
 
-        Update-Vmss -Vmss $vmss
-    }
-    catch {
-        $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
-        if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
-            $message = "[InboundNatPoolsMigration] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode). Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS Upgrade Policy manually. `nError message: $_"
-            log 'Error' $message -terminateOnError
+        # Update VMSS on Azure
+        log -Message "[InboundNatPoolsMigration] Saving VMSS $($vmss.Name)"
+        try {
+            $ErrorActionPreference = 'Stop'
+
+            Update-Vmss -Vmss $vmss
         }
-        else {
-            $message = "[InboundNatPoolsMigration] An error occured when attempting to update VMSS network config on the new Standard LB backend pool membership. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_"
-            log 'Error' $message -terminateOnError
+        catch {
+            $exceptionType = (($_.Exception.Message -split 'ErrorCode:')[1] -split 'ErrorMessage:')[0].Trim()
+            if($exceptionType -eq "MaxUnhealthyInstancePercentExceededBeforeRollingUpgrade"){
+                $message = "[InboundNatPoolsMigration] An error occured when attempting to update VMSS upgrade policy back to $($vmss.UpgradePolicy.Mode). Looks like some instances were not healthy and in orther to change the VMSS upgra policy the majority of instances must be healthy according to the upgrade policy. The module will continue but it will be required to change the VMSS Upgrade Policy manually. `nError message: $_"
+                log 'Error' $message -terminateOnError
+            }
+            else {
+                $message = "[InboundNatPoolsMigration] An error occured when attempting to update VMSS network config on the new Standard LB backend pool membership. To recover address the following error, and try again specifying the -FailedMigrationRetryFilePath parameter and Basic Load Balancer backup State file located either in this directory or the directory specified with -RecoveryBackupPath. `nError message: $_"
+                log 'Error' $message -terminateOnError
+            }
         }
+
+        # Update Instances
+        UpdateVmssInstances -vmss $vmss
+
+        <#
+        This will happen in the backend pool migration...
+        # Restore VMSS Upgrade Policy Mode
+        #_RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
+
+        # Update VMSS on Azure
+        #Update-Vmss -vmss $vmss
+        #>
+
+        log -Message "[InboundNatPoolsMigration] Finished associating Inbound NAT Pools to VMSS"
     }
-
-    # Update Instances
-    UpdateVmssInstances -vmss $vmss
-
-    <#
-    This will happen in the backend pool migration...
-    # Restore VMSS Upgrade Policy Mode
-    #_RestoreUpgradePolicyMode -vmss $vmss -refVmss $refVmss
-
-    # Update VMSS on Azure
-    #Update-Vmss -vmss $vmss
-    #>
+    Else {
+        log -Message "[InboundNatPoolsMigration] No VMSS found associated with Basic Load Balancer (VM or empty backend). Skipping VMSS Inbound NAT Pool association"
+    }
 
     log -Message "[InboundNatPoolsMigration] Inbound NAT Pools Migration Completed"
 }
