@@ -87,95 +87,98 @@ Function Start-AzNATPoolMigration {
         Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any Inbound NAT Rules. This is unexpected. NAT Rules are created automatically when the VMSS Network Profile is updated to include an Inbound NAT Pool and the VMSS instances are updated with the VMSS mode."
     }
     $vmssIds = $LoadBalancer.InboundNatRules.BackendIpConfiguration.id | Foreach-Object { ($_ -split '/virtualMachines/')[0].ToLower() } | Select-Object -Unique
-    If ($vmssIds.count -lt 1) {
-        # this error should not be hit... but just in case
-        Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any VMSSes associated with its NAT Pools."
+    If ([string]::IsNullOrEmpty($vmssIds)) {
+        Write-Host "Load Balancer '$($loadBalancer.Name)' does not have any VMSSes associated with its NAT Pools."
     }
-    $vmssObjects = $vmssIds | ForEach-Object { Get-AzResource -ResourceId $_ | Get-AzVmss }
+    Else {
+        $vmssObjects = $vmssIds | ForEach-Object { Get-AzResource -ResourceId $_ | Get-AzVmss }
 
-    # build vmss table
-    $vmsses = @()
-    ForEach ($vmss in $vmssObjects) {
-        $vmsses += @{
-            vmss           = $vmss
-            updateRequired = $false
+        # build vmss table
+        $vmsses = @()
+        ForEach ($vmss in $vmssObjects) {
+            $vmsses += @{
+                vmss           = $vmss
+                updateRequired = $false
+            }
+        }
+
+        # check that vmsses use Manual or Automatic upgrade policy
+        $incompatibleUpgradePolicyVMSSes = $vmsses.vmss | Where-Object { $_.UpgradePolicy.Mode -notIn 'Manual', 'Automatic' }
+        If ($incompatibleUpgradePolicyVMSSes.count -gt 0) {
+            Write-Error "The following VMSSes have upgrade policies which are not Manual or Automatic: $($incompatibleUpgradePolicyVMSSes.id)"
         }
     }
 
-    # check that vmsses use Manual or Automatic upgrade policy
-    $incompatibleUpgradePolicyVMSSes = $vmsses.vmss | Where-Object { $_.UpgradePolicy.Mode -notIn 'Manual', 'Automatic' }
-    If ($incompatibleUpgradePolicyVMSSes.count -gt 0) {
-        Write-Error "The following VMSSes have upgrade policies which are not Manual or Automatic: $($incompatibleUpgradePolicyVMSSes.id)"
-    }
+    If (![string]::IsNullOrEmpty($vmssIds)) {
+        # remove each vmss model's ipconfig from the load balancer's inbound nat pool
+        Write-Host "Removing the NAT Pool from the VMSS model ipConfigs."
+        $ipConfigNatPoolMap = @()
+        ForEach ($inboundNATPool in $LoadBalancer.InboundNatPools) {
+            ForEach ($vmssItem in $vmsses) {
+                ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                    ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+                        If ($ipConfig.loadBalancerInboundNatPools.id -contains $inboundNATPool.id) {
 
-    # remove each vmss model's ipconfig from the load balancer's inbound nat pool
-    Write-Host "Removing the NAT Pool from the VMSS model ipConfigs."
-    $ipConfigNatPoolMap = @()
-    ForEach ($inboundNATPool in $LoadBalancer.InboundNatPools) {
-        ForEach ($vmssItem in $vmsses) {
-            ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
-                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
-                    If ($ipConfig.loadBalancerInboundNatPools.id -contains $inboundNATPool.id) {
+                            Write-Host "Removing NAT Pool '$($inboundNATPool.id)' from VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)'"
+                            $ipConfigParams = @{vmssId = $vmssItem.vmss.id; nicName = $nicConfig.Name; ipconfigName = $ipConfig.Name; inboundNatPoolId = $inboundNatPool.id }
+                            $ipConfigNatPoolMap += $ipConfigParams
+                            $ipConfig.loadBalancerInboundNatPools = $ipConfig.loadBalancerInboundNatPools | Where-Object { $_.id -ne $inboundNATPool.Id }
 
-                        Write-Host "Removing NAT Pool '$($inboundNATPool.id)' from VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)'"
-                        $ipConfigParams = @{vmssId = $vmssItem.vmss.id; nicName = $nicConfig.Name; ipconfigName = $ipConfig.Name; inboundNatPoolId = $inboundNatPool.id }
-                        $ipConfigNatPoolMap += $ipConfigParams
-                        $ipConfig.loadBalancerInboundNatPools = $ipConfig.loadBalancerInboundNatPools | Where-Object { $_.id -ne $inboundNATPool.Id }
-
-                        $vmssItem.updateRequired = $true
+                            $vmssItem.updateRequired = $true
+                        }
                     }
                 }
             }
         }
-    }
 
-    # update each vmss to remove the nat pools from the model
-    $vmssModelUpdateRemoveNATPoolJobs = @()
-    ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
-        $vmss = $vmssItem.vmss
-        $job = $vmss | Update-AzVmss -AsJob
-        $job.Name = $vmss.vmss.Name + '_modelUpdateRemoveNATPool'
-        $vmssModelUpdateRemoveNATPoolJobs += $job
-    }
-
-    Write-Host "Waiting for VMSS model to update to remove the NAT Pool references..."
-    While ($vmssModelUpdateRemoveNATPoolJobs.State -contains 'Running') {
-        Start-Sleep -Seconds 15
-        Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
-    } 
-    
-    $vmssModelUpdateRemoveNATPoolJobs | Foreach-Object {
-        $job = $_
-        If ($job.Error -or $job.State -eq 'Failed') {
-            Write-Error "An error occured while updating the VMSS model to remove the NAT Pools: $($job.error; $job | Receive-Job)."
+        # update each vmss to remove the nat pools from the model
+        $vmssModelUpdateRemoveNATPoolJobs = @()
+        ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
+            $vmss = $vmssItem.vmss
+            $job = $vmss | Update-AzVmss -AsJob
+            $job.Name = $vmss.vmss.Name + '_modelUpdateRemoveNATPool'
+            $vmssModelUpdateRemoveNATPoolJobs += $job
         }
-    }
 
-    # update all vmss instances
-    Write-Host "Updating VMSS instances to remove the NAT Pool references..."
-    $vmssInstanceUpdateRemoveNATPoolJobs = @()
-    ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
-        $vmss = $vmssItem.vmss
-
-        If ($vmss.UpgradePolicy.Mode -eq 'Automatic') {
-            Wait-VMSSInstanceUpdate -vmss $vmss
-        }
-        Else {
-            $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
-
-            $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
-            $job.Name = $vmss.vmss.Name + '_instanceUpdateRemoveNATPool'
-            $vmssInstanceUpdateRemoveNATPoolJobs += $job
-        }
-    }
-
-    # for manual update vmsses, wait for the instance update jobs to complete
-    If ($vmssInstanceUpdateRemoveNATPoolJobs.count -gt 0) {
-        Write-Host "`tWaiting for VMSS instances to update to remove the NAT Pool references..."
-        $vmssInstanceUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
+        Write-Host "Waiting for VMSS model to update to remove the NAT Pool references..."
+        While ($vmssModelUpdateRemoveNATPoolJobs.State -contains 'Running') {
+            Start-Sleep -Seconds 15
+            Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
+        } 
+        
+        $vmssModelUpdateRemoveNATPoolJobs | Foreach-Object {
             $job = $_
             If ($job.Error -or $job.State -eq 'Failed') {
-                Write-Error "An error occured while updating the VMSS instances to remove the NAT Pools: $($job.error; $job | Receive-Job)."
+                Write-Error "An error occured while updating the VMSS model to remove the NAT Pools: $($job.error; $job | Receive-Job)."
+            }
+        }
+
+        # update all vmss instances
+        Write-Host "Updating VMSS instances to remove the NAT Pool references..."
+        $vmssInstanceUpdateRemoveNATPoolJobs = @()
+        ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
+            $vmss = $vmssItem.vmss
+
+            If ($vmss.UpgradePolicy.Mode -eq 'Automatic') {
+                Wait-VMSSInstanceUpdate -vmss $vmss
+            }
+            Else {
+                $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
+
+                $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
+                $job.Name = $vmss.vmss.Name + '_instanceUpdateRemoveNATPool'
+                $vmssInstanceUpdateRemoveNATPoolJobs += $job
+            }
+        }
+
+        # for manual update vmsses, wait for the instance update jobs to complete
+        If ($vmssInstanceUpdateRemoveNATPoolJobs.count -gt 0) {
+            Write-Host "`tWaiting for VMSS instances to update to remove the NAT Pool references..."
+            $vmssInstanceUpdateRemoveNATPoolJobs | Wait-Job | Foreach-Object {
+                $job = $_
+                If ($job.Error -or $job.State -eq 'Failed') {
+                    Write-Error "An error occured while updating the VMSS instances to remove the NAT Pools: $($job.error; $job | Receive-Job)."
+                }
             }
         }
     }
@@ -222,91 +225,93 @@ Function Start-AzNATPoolMigration {
 
     }
 
-    # add vmss model ip configs to new backend pools
-    Write-Host "Adding new backend pools to VMSS model ipConfigs..."
+    If (![string]::IsNullOrEmpty($vmssIds)) {
+        # add vmss model ip configs to new backend pools
+        Write-Host "Adding new backend pools to VMSS model ipConfigs..."
 
-    ForEach ($vmssItem in $vmsses) {
-        ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
-            ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+        ForEach ($vmssItem in $vmsses) {
+            ForEach ($nicConfig in $vmssItem.vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
             
-                # if there is an existing ipconfig to nat pool association, add the ipconfig to the new backend pool for the nat rule
-                If ($ipconfigRecord = $ipConfigNatPoolMap | Where-Object {
-                        $_.vmssId -eq $vmssItem.vmss.id -and
-                        $_.nicName -eq $nicConfig.Name -and
-                        $_.ipConfigName -eq $ipConfig.Name
-                    }) {
+                    # if there is an existing ipconfig to nat pool association, add the ipconfig to the new backend pool for the nat rule
+                    If ($ipconfigRecord = $ipConfigNatPoolMap | Where-Object {
+                            $_.vmssId -eq $vmssItem.vmss.id -and
+                            $_.nicName -eq $nicConfig.Name -and
+                            $_.ipConfigName -eq $ipConfig.Name
+                        }) {
 
-                    #$backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool]
-                    $backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
+                        #$backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool]
+                        $backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]
 
-                    # add existing backend pools to pool list to maintain existing membership
-                    ForEach ($existingBackendPoolId in $ipConfig.LoadBalancerBackendAddressPools.id) {
-                        $backendPoolObj = new-object Microsoft.Azure.Management.Compute.Models.SubResource
-                        $backendPoolObj.id = $existingBackendPoolId
+                        # add existing backend pools to pool list to maintain existing membership
+                        ForEach ($existingBackendPoolId in $ipConfig.LoadBalancerBackendAddressPools.id) {
+                            $backendPoolObj = new-object Microsoft.Azure.Management.Compute.Models.SubResource
+                            $backendPoolObj.id = $existingBackendPoolId
 
+                            $backendPoolList.Add($backendPoolObj)
+                        }
+                        #$backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool
+                        $backendPoolObj = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
+                        $backendPoolObj.id = $natPoolToBEPMap[$ipconfigRecord.inboundNatPoolId]
+
+                        Write-Host "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
                         $backendPoolList.Add($backendPoolObj)
+
+                        $ipConfig.LoadBalancerBackendAddressPools = $backendPoolList
+
+                        $vmssItem.updateRequired = $true
                     }
-                    #$backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool
-                    $backendPoolObj = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
-                    $backendPoolObj.id = $natPoolToBEPMap[$ipconfigRecord.inboundNatPoolId]
-
-                    Write-Host "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
-                    $backendPoolList.Add($backendPoolObj)
-
-                    $ipConfig.LoadBalancerBackendAddressPools = $backendPoolList
-
-                    $vmssItem.updateRequired = $true
                 }
             }
         }
-    }
 
-    # update each vmss to add the backend pool membership to the model
-    $vmssModelUpdateAddBackendPoolJobs = @()
-    ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
-        $vmss = $vmssItem.vmss
-        $job = $vmss | Update-AzVmss -AsJob
-        $job.Name = $vmss.vmss.Name + '_modelUpdateAddBackendPool'
-        $vmssModelUpdateAddBackendPoolJobs += $job
-    }
-
-    Write-Host "Waiting for VMSS model to update to include the new Backend Pools..."
-    While ($vmssModelUpdateAddBackendPoolJobs.State -contains 'Running') {
-        Start-Sleep -Seconds 15
-        Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
-    } 
-    
-    $vmssModelUpdateAddBackendPoolJobs | Foreach-Object {
-        $job = $_
-        If ($job.Error -or $job.State -eq 'Failed') {
-            Write-Error "An error occured while updating the VMSS model to add the NAT Rules: $($job.error; $job | Receive-Job)."
-        }
-    }
- 
-    # update all vmss instances to include the backend pool
-    Write-Host "Waiting for VMSS instances to update to include the new Backend Pools..."
-    $vmssInstanceUpdateAddBackendPoolJobs = @()
-    ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
-
-        If ($vmss.UpgradePolicy.Mode -eq 'Automatic') {
-            Wait-VMSSInstanceUpdate -vmss $vmss
-        }
-        Else {
+        # update each vmss to add the backend pool membership to the model
+        $vmssModelUpdateAddBackendPoolJobs = @()
+        ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
             $vmss = $vmssItem.vmss
-            $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
-
-            $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
-            $job.Name = $vmss.vmss.Name + '_instanceUpdateAddBackendPool'
-            $vmssInstanceUpdateAddBackendPoolJobs += $job
+            $job = $vmss | Update-AzVmss -AsJob
+            $job.Name = $vmss.vmss.Name + '_modelUpdateAddBackendPool'
+            $vmssModelUpdateAddBackendPoolJobs += $job
         }
-    }
 
-    # for manual update vmsses, wait for the instance update jobs to complete
-    If ($vmssInstanceUpdateAddBackendPoolJobs.count -gt 0) {
-        $vmssInstanceUpdateAddBackendPoolJobs | Wait-Job | Foreach-Object {
+        Write-Host "Waiting for VMSS model to update to include the new Backend Pools..."
+        While ($vmssModelUpdateAddBackendPoolJobs.State -contains 'Running') {
+            Start-Sleep -Seconds 15
+            Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
+        } 
+    
+        $vmssModelUpdateAddBackendPoolJobs | Foreach-Object {
             $job = $_
             If ($job.Error -or $job.State -eq 'Failed') {
-                Write-Error "An error occured while updating the VMSS instanaces to add the NAT Rules: $($job.error; $job | Receive-Job)."
+                Write-Error "An error occured while updating the VMSS model to add the NAT Rules: $($job.error; $job | Receive-Job)."
+            }
+        }
+ 
+        # update all vmss instances to include the backend pool
+        Write-Host "Waiting for VMSS instances to update to include the new Backend Pools..."
+        $vmssInstanceUpdateAddBackendPoolJobs = @()
+        ForEach ($vmssItem in ($vmsses | Where-Object { $_.updateRequired })) {
+
+            If ($vmss.UpgradePolicy.Mode -eq 'Automatic') {
+                Wait-VMSSInstanceUpdate -vmss $vmss
+            }
+            Else {
+                $vmss = $vmssItem.vmss
+                $vmssInstances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name
+
+                $job = Update-AzVmssInstance -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -InstanceId $vmssInstances.InstanceId -AsJob
+                $job.Name = $vmss.vmss.Name + '_instanceUpdateAddBackendPool'
+                $vmssInstanceUpdateAddBackendPoolJobs += $job
+            }
+        }
+
+        # for manual update vmsses, wait for the instance update jobs to complete
+        If ($vmssInstanceUpdateAddBackendPoolJobs.count -gt 0) {
+            $vmssInstanceUpdateAddBackendPoolJobs | Wait-Job | Foreach-Object {
+                $job = $_
+                If ($job.Error -or $job.State -eq 'Failed') {
+                    Write-Error "An error occured while updating the VMSS instanaces to add the NAT Rules: $($job.error; $job | Receive-Job)."
+                }
             }
         }
     }

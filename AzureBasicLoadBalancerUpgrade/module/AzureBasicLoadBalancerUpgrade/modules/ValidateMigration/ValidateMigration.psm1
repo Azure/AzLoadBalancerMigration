@@ -125,21 +125,24 @@ Function ValidateMigration {
     }
 
     # validate the standard load balancer has the same number of inbound NAT rules as the basic load balancer
-    If ($scenario.BackendType -eq 'Empty' -and $BasicLoadBalancer.InboundNatPools.count -gt 0 -and $natPoolsMigratedToNatRules) {
-        # standard load balancer will have additional NAT Rules for each NAT pool
-        $targetNatRuleCount = $basicLoadBalancer.InboundNatRules.Count + $basicLoadBalancer.InboundNatPools.Count
+    If ($natPoolsMigratedToNatRules) {
+        # each non nat pool nat rule will be migrated - may be less than the count of nat pools if nat pools are empty
+        # each nat pool will create a nat rule
+        $nonNATPoolNATRulesCount = $BasicLoadBalancer.InboundNatRules | Where-Object { $_.BackendIPConfiguration -and $_.BackendIPConfiguration.Id -notlike '*Microsoft.Compute/virtualMachineScaleSets*' } | Measure-Object | Select-Object -ExpandProperty Count
+        $natPoolCount = $BasicLoadBalancer.InboundNatPools.Count
+
+        $targetNatRuleCount = $nonNATPoolNATRulesCount + $natPoolCount
 
         If ($standardLoadBalancer.InboundNatRules.Count -ne $targetNatRuleCount) {
-            log -Message "[ValidateMigration] Standard Load Balancer does not have the expected number of NAT Rules ('$($targetNatRuleCount)') when backend type is 'Empty' and NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
-            $validationResult.failedValidations += "Standard Load Balancer does not have the expected number of NAT Rules ('$($targetNatRuleCount)') when backend type is 'Empty' and NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
+            log -Message "[ValidateMigration] Standard Load Balancer does not have the expected number of NAT Rules ('$($targetNatRuleCount)') when NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
+            $validationResult.failedValidations += "Standard Load Balancer does not have the expected number of NAT Rules ('$($targetNatRuleCount)') when NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
         }
         Else {
-            log -Message "[ValidateMigration] Standard Load Balancer has the expected number of NAT Rules ('$($targetNatRuleCount)') when backend type is 'Empty' and NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
-            $validationResult.passedValidations += "Standard Load Balancer has the expected number of NAT Rules ('$($targetNatRuleCount)') when backend type is 'Empty' and NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
+            log -Message "[ValidateMigration] Standard Load Balancer has the expected number of NAT Rules ('$($targetNatRuleCount)') when NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
+            $validationResult.passedValidations += "Standard Load Balancer has the expected number of NAT Rules ('$($targetNatRuleCount)') when NAT Pools are migrated to NAT Rules (one per NAT Pool plus original NAT Rules). Standard load balancer has: '$($standardLoadBalancer.InboundNatRules.Count)'"
         }
     }
     Else {
-        ## in a NAT Pool upgrade, the original NAT Rules created by the NAT pool are replaced with ones explicitly created by the upgrade, so count remains the same
         If ($standardLoadBalancer.InboundNatRules.Count -ne $BasicLoadBalancer.InboundNatRules.Count) {
             log -Message "[ValidateMigration] Standard Load Balancer does not have the same number of inbound NAT rules ('$($standardLoadBalancer.InboundNatRules.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatRules.Count)') " -Severity Error
             $validationResult.failedValidations += "Standard Load Balancer does not have the same number of inbound NAT rules ('$($standardLoadBalancer.InboundNatRules.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatRules.Count)')"
@@ -194,8 +197,8 @@ Function ValidateMigration {
     # validate the standard load balancer has the same number of inbound NAT pools as the basic load balancer
     If (!$natPoolsMigratedToNatRules) {
         If ($standardLoadBalancer.InboundNatPools.Count -ne $BasicLoadBalancer.InboundNatPools.Count) {
-            log -Message "[ValidateMigration] Standard Load Balancer does not have the same number of inbound NAT pools ('$($standardLoadBalancer.InboundNatPools.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatPools.Count)')" -Severity Error
-            $validationResult.failedValidations += "Standard Load Balancer does not have the same number of inbound NAT pools ('$($standardLoadBalancer.InboundNatPools.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatPools.Count)')"
+            log -Message "[ValidateMigration] Standard Load Balancer does not have the same number of inbound NAT pools ('$($standardLoadBalancer.InboundNatPools.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatPools.Count)')." -Severity Error
+            $validationResult.failedValidations += "Standard Load Balancer does not have the same number of inbound NAT pools ('$($standardLoadBalancer.InboundNatPools.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatPools.Count)'). If the Basic Load Balancer had NAT Pools with no membership and NAT Pools were migrated to NAT Rules, this could be expected."
         }
         Else {
             log -Message "[ValidateMigration] Standard Load Balancer has the same number of inbound NAT pools ('$($standardLoadBalancer.InboundNatPools.Count)') as the Basic Load Balancer ('$($basicLoadBalancer.InboundNatPools.Count)')" -Severity Information
