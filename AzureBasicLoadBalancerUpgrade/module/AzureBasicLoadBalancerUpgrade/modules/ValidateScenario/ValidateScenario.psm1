@@ -578,7 +578,7 @@ Function Test-SupportedMigrationScenario {
         }
     }
 
-    Write-Progress -Status "Finished VMSS backend scenario validation" -PercentComplete 100 @progressParams
+    Write-Progress -Status "Finished scenario validation" -PercentComplete 100 @progressParams
 
     log -Message "[Test-SupportedMigrationScenario] Detected migration scenario: $($scenario | ConvertTo-Json -Depth 10 -Compress)"
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
