@@ -490,7 +490,7 @@ Function Test-SupportedMigrationScenario {
             $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
             log -Message $message -Severity 'Warning'
 
-            Write-Host "In order for your VMs to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VM or assign a NAT Gateway to the VM subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+            Write-Host "In order for your VMs to access the internet, you'll need to take additional action before or after migration. Either add Public IPs to each VM, assign a NAT Gateway to the VM subnet, or route internet traffic through an NVA (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
             If (!$force.IsPresent) {
                 $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
