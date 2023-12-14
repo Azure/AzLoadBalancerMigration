@@ -225,11 +225,7 @@ Function Test-SupportedMigrationScenario {
 
         ForEach ($instance in $vmssInstances) {
             If ($instance.ProtectionPolicy.ProtectFromScaleSetActions) {
-                $message = @"
-                [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' contains 1 or more instances with a ProtectFromScaleSetActions Instance Protection configured. This
-                module cannot upgrade the associated load balancer because a VMSS cannot be a backend member of both basic and standard SKU load balancers. Remove the Instance
-                Protection policy and re-run the module.
-"@
+                $message = "[Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' contains 1 or more instances with a ProtectFromScaleSetActions Instance Protection configured. This module cannot upgrade the associated load balancer because a VMSS cannot be a backend member of both basic and standard SKU load balancers. Remove the Instance Protection policy and re-run the module."
                 log -Severity 'Error'
                 $vmssInstances.Remove($instance)
             }
