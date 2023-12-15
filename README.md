@@ -4,7 +4,7 @@ This repository hosts multiple modules related to migration and upgrade of Azure
 
 ## Upgrade a basic load balancer with PowerShell Official documentation
 
-[Upgrade a basic load balancer with PowerShell](https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell)
+Reference to the official documentation: [Upgrade a basic load balancer with PowerShell](https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell)
 
 ## Azure Basic Load Balancer Upgrade
 
