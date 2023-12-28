@@ -550,11 +550,24 @@ Function Test-SupportedMultiLBScenario {
     # check that standard load balancer names are different if basic load balancers are in the same resource group
     log -Message "[Test-SupportedMultiLBScenario] Checking that standard load balancer names are different if basic load balancers are in the same resource group"
 
+    # check standard load balancer names will be unique in the same resource group
     ForEach ($config in $multiLBConfig) {
         $matchingConfigs = @()
-        $matchingConfigs += $multiLBConfig | Where-Object { $_.StandardLoadBalancerName -eq $config.StandardLoadBalancerName -and $_.BasicLoadBalancer.ResourceGroupName -eq $config.BasicLoadBalancer.ResourceGroupName }
+
+        If ([string]::IsNullOrEmpty) {
+            $StdLoadBalancerName = $config.BasicLoadBalancer.Name
+        }
+        Else {
+            $StdLoadBalancerName = $config.StandardLoadBalancerName
+        }
+
+        $matchingConfigs += $multiLBConfig | Where-Object { 
+            (([string]::IsNullOrEmpty($_.StandardLoadBalancerName) -and $_.BasicLoadBalancer.Name -eq $StdLoadBalancerName) -or
+            ($_.StandardLoadBalancerName -eq $StdLoadBalancerName)) -and
+            ($_.BasicLoadBalancer.ResourceGroupName -eq $config.BasicLoadBalancer.ResourceGroupName) }
+
         If ($matchingConfigs.count -gt 1) {
-            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($config.StandardLoadBalancerName)' is used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group." -terminateOnError
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($StdLoadBalancerName)' will be used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group. If renaming load balancers with the -standardLoadBalancerName parameter, make sure new names are unique." -terminateOnError
         }
     }
 
