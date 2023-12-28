@@ -2,6 +2,10 @@
 
 This repository hosts multiple modules related to migration and upgrade of Azure Load Balancers and Public IPs.
 
+## Upgrade a basic load balancer with PowerShell Official documentation
+
+Reference to the official documentation: [Upgrade a basic load balancer with PowerShell](https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell)
+
 ## Azure Basic Load Balancer Upgrade
 
 This module migrates a Basic SKU Load Balancer to a Standard SKU Load Balancer. See [Azure Basic Load Balancer Upgrade](AzureBasicLoadBalancerUpgrade/README.md)
