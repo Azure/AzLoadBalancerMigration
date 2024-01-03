@@ -248,11 +248,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         }
     }
     catch {
-        $message = @"
-            [Start-AzBasicLoadBalancerUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription
-            '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names.
-            Error text: $_
-"@
+        $message = "[Start-AzBasicLoadBalancerUpgrade] Failed to find basic load balancer '$BasicLoadBalancerName' in resource group '$ResourceGroupName' under subscription '$((Get-AzContext).Subscription.Name)'. Ensure that the correct subscription is selected and verify the load balancer and resource group names. Error text: $_"
         log -severity Error -message $message -terminateOnError
     }
 
@@ -289,11 +285,10 @@ function Start-AzBasicLoadBalancerUpgrade {
     ElseIf ($PSCmdlet.ParameterSetName -eq 'MultiLB') {
         log -Message "[Start-AzBasicLoadBalancerUpgrade] -MultiLBConfig parameter set detected, validating scenarios for multiple load balancers"
 
-        # verify the scenario for multi-load balancer configurations
-        Test-SupportedMultiLBScenario -MultiLBConfig $multiLBConfig
-
         # verify scenario for each load balancer in the multiLBConfig array
         ForEach ($LBConfig in $multiLBConfig) {
+            
+            # set standard LB name if none is specified
             if (![string]::IsNullOrEmpty($LBConfig.standardLoadBalancerName)) {
                 $StdLoadBalancerName = $LBConfig.standardLoadBalancerName
             }
@@ -310,6 +305,9 @@ function Start-AzBasicLoadBalancerUpgrade {
             # add the evaluated scenario details to the LBConfig object
             $LBConfig['scenario'] = $scenario
         }
+
+        # verify the scenario for multi-load balancer configurations
+        Test-SupportedMultiLBScenario -MultiLBConfig $multiLBConfig
         
         if ($validateScenarioOnly) {
             log -Message "[Start-AzBasicLoadBalancerUpgrade] Scenario validation completed, exiting because -validateScenarioOnly was specified"
@@ -366,6 +364,8 @@ function Start-AzBasicLoadBalancerUpgrade {
                 }
             }
             'VMSS' {
+                $standardScenarioParams += @{skipMigrateNATPoolsToNATRules = $skipMigrateNATPoolsToNATRules.IsPresent}
+
                 switch ($migrationConfig.scenario.ExternalOrInternal) {
                     'internal' {
                         if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
