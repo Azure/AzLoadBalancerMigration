@@ -1,5 +1,7 @@
 # Upgrade a basic load balancer with PowerShell
 
+[**Microsoft Learn Documentation**](https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-with-powershell)
+
 >[!Important]
 >On September 30, 2025, Basic Load Balancer will be retired. For more information, see the [official announcement](https://azure.microsoft.com/updates/azure-basic-load-balancer-will-be-retired-on-30-september-2025-upgrade-to-standard-load-balancer/). If you are currently using Basic Load Balancer, make sure to upgrade to Standard Load Balancer prior to the retirement date. 
 

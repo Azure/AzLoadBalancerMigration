@@ -225,11 +225,7 @@ Function Test-SupportedMigrationScenario {
 
         ForEach ($instance in $vmssInstances) {
             If ($instance.ProtectionPolicy.ProtectFromScaleSetActions) {
-                $message = @"
-                [Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' contains 1 or more instances with a ProtectFromScaleSetActions Instance Protection configured. This
-                module cannot upgrade the associated load balancer because a VMSS cannot be a backend member of both basic and standard SKU load balancers. Remove the Instance
-                Protection policy and re-run the module.
-"@
+                $message = "[Test-SupportedMigrationScenario] VMSS '$($vmss.Name)' contains 1 or more instances with a ProtectFromScaleSetActions Instance Protection configured. This module cannot upgrade the associated load balancer because a VMSS cannot be a backend member of both basic and standard SKU load balancers. Remove the Instance Protection policy and re-run the module."
                 log -Severity 'Error'
                 $vmssInstances.Remove($instance)
             }
@@ -490,7 +486,7 @@ Function Test-SupportedMigrationScenario {
             $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
             log -Message $message -Severity 'Warning'
 
-            Write-Host "In order for your VMs to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VM or assign a NAT Gateway to the VM subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+            Write-Host "In order for your VMs to access the internet, you'll need to take additional action before or after migration. Either add Public IPs to each VM, assign a NAT Gateway to the VM subnet, or route internet traffic through an NVA (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
             If (!$force.IsPresent) {
                 $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
@@ -508,49 +504,6 @@ Function Test-SupportedMigrationScenario {
         }
     }
 
-    # check that Az.ResourceGraph module is installed for VM migrations
-    If ($scenario.BackendType -eq 'VM' -and !(Get-Module -Name Az.ResourceGraph -ListAvailable)) {
-        $message = "[Test-SupportedMigrationScenario] Migrating Load Balancers with VM backends requires the Az.ResourceGraph module, but the module was not found."
-        log -Message $message -Severity 'Warning'
-
-        If (!$force.IsPresent) {
-            Write-Host "Migrating Load Balancers with VM backends requires the Az.ResourceGraph module, but the module was not found to be installed." -ForegroundColor Yellow
-            $response = $null
-            while ($response -ine 'y' -and $response -ine 'n') {
-                $response = Read-Host -Prompt "Do you want the script to install the Az.ResourceGraph module for the current user? (y/n)"
-            }
-            If ($response -ieq 'n') {
-                $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
-                log -Message $message -Severity 'Error' -terminateOnError
-            }
-        }
-
-        If ($response -ieq 'y' -or $force.IsPresent) {
-
-            Write-Host "Installing the Az.ResourceGraph module in the CurrentUser scope..."
-
-            $message = "[Test-SupportedMigrationScenario] Installing the Az.ResourceGraph module in the CurrentUser scope..."
-            log -Message $message
-            
-            try {
-                $ErrorActionPreference = 'Stop'
-                Install-Module -Name Az.ResourceGraph -Scope CurrentUser -Force
-            }
-            catch {
-                $message = "[Test-SupportedMigrationScenario] Failed to install the Az.ResourceGraph module. Please install manually and re-run the script."
-                log -Message $message -Severity 'Error' -terminateOnError
-            }
-
-            Write-Host "Installing the Az.ResourceGraph module completed successfully."
-
-            $message = "[Test-SupportedMigrationScenario] Installing the Az.ResourceGraph module completed successfully."
-            log -Message $message
-        }
-    }
-    Else {
-        $message = "[Test-SupportedMigrationScenario] The Az.ResourceGraph module is already installed..."
-        log -Message $message
-    }
 
     # if the basic lb is external and has multiple backend pools, warn that the migration will not create a default outbound rule
     If ($scenario.ExternalOrInternal -eq 'External' -and $BasicLoadBalancer.BackendAddressPools.Count -gt 1 -and 
@@ -578,7 +531,7 @@ Function Test-SupportedMigrationScenario {
         }
     }
 
-    Write-Progress -Status "Finished VMSS backend scenario validation" -PercentComplete 100 @progressParams
+    Write-Progress -Status "Finished scenario validation" -PercentComplete 100 @progressParams
 
     log -Message "[Test-SupportedMigrationScenario] Detected migration scenario: $($scenario | ConvertTo-Json -Depth 10 -Compress)"
     log -Message "[Test-SupportedMigrationScenario] Load Balancer '$($BasicLoadBalancer.Name)' is valid for migration"
@@ -597,11 +550,24 @@ Function Test-SupportedMultiLBScenario {
     # check that standard load balancer names are different if basic load balancers are in the same resource group
     log -Message "[Test-SupportedMultiLBScenario] Checking that standard load balancer names are different if basic load balancers are in the same resource group"
 
+    # check standard load balancer names will be unique in the same resource group
     ForEach ($config in $multiLBConfig) {
         $matchingConfigs = @()
-        $matchingConfigs += $multiLBConfig | Where-Object { $_.StandardLoadBalancerName -eq $config.StandardLoadBalancerName -and $_.BasicLoadBalancer.ResourceGroupName -eq $config.BasicLoadBalancer.ResourceGroupName }
+
+        If ([string]::IsNullOrEmpty) {
+            $StdLoadBalancerName = $config.BasicLoadBalancer.Name
+        }
+        Else {
+            $StdLoadBalancerName = $config.StandardLoadBalancerName
+        }
+
+        $matchingConfigs += $multiLBConfig | Where-Object { 
+            (([string]::IsNullOrEmpty($_.StandardLoadBalancerName) -and $_.BasicLoadBalancer.Name -eq $StdLoadBalancerName) -or
+            ($_.StandardLoadBalancerName -eq $StdLoadBalancerName)) -and
+            ($_.BasicLoadBalancer.ResourceGroupName -eq $config.BasicLoadBalancer.ResourceGroupName) }
+
         If ($matchingConfigs.count -gt 1) {
-            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($config.StandardLoadBalancerName)' is used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group." -terminateOnError
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($StdLoadBalancerName)' will be used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group. If renaming load balancers with the -standardLoadBalancerName parameter, make sure new names are unique." -terminateOnError
         }
     }
 
