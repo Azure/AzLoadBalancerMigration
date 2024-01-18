@@ -364,8 +364,6 @@ function Start-AzBasicLoadBalancerUpgrade {
                 }
             }
             'VMSS' {
-                $standardScenarioParams += @{skipMigrateNATPoolsToNATRules = $skipMigrateNATPoolsToNATRules.IsPresent}
-
                 switch ($migrationConfig.scenario.ExternalOrInternal) {
                     'internal' {
                         if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
