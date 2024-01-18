@@ -1,0 +1,75 @@
+resources
+| where type == 'microsoft.network/loadbalancers' and sku.name == 'Basic'
+| project fes = properties.frontendIPConfigurations, bes = properties.backendAddressPools,['id']
+| extend backendPoolCount = array_length(bes)
+| extend internalOrExternal = iff(isnotempty(fes),iff(isnotempty(fes[0].properties.privateIPAddress),'Internal','External'),'None')
+    | join kind=leftouter hint.strategy=shuffle (
+        resources
+        | where type == 'microsoft.network/publicipaddresses'
+        | where properties.publicIPAddressVersion == 'IPv6'
+        | extend publicIPv6LBId = tostring(split(properties.ipConfiguration.id,'/frontendIPConfigurations/')[0])
+        | distinct publicIPv6LBId
+    ) on $left.id == $right.publicIPv6LBId
+    | join kind = leftouter hint.strategy=shuffle (
+        resources 
+        | where type == 'microsoft.network/networkinterfaces' and isnotempty(properties.virtualMachine.id)
+        | extend vmNICHasNSG = isnotnull(properties.networkSecurityGroup.id)
+        | extend vmNICSubnetIds = tostring(extract_all('(/subscriptions/[a-f0-9-]+?/resourceGroups/[a-zA-Z0-9-_]+?/providers/Microsoft.Network/virtualNetworks/[a-zA-Z0-9-_]+?/subnets/[a-zA-Z0-9-_]*)',tostring(properties.ipConfigurations)))
+        | mv-expand ipConfigs = properties.ipConfigurations
+        | extend vmPublicIPId = extract('/subscriptions/[a-f0-9-]+?/resourceGroups/[a-zA-Z0-9-_]+?/providers/Microsoft.Network/publicIPAddresses/[a-zA-Z0-9-_]*',0,tostring(ipConfigs))
+        | where isnotempty(ipConfigs.properties.loadBalancerBackendAddressPools) 
+        | mv-expand bes = ipConfigs.properties.loadBalancerBackendAddressPools
+        | extend nicLoadBalancerId = tostring(split(bes.id,'/backendAddressPools/')[0])
+        | summarize vmNICsNSGStatus = make_set(vmNICHasNSG) by nicLoadBalancerId,vmPublicIPId,vmNICSubnetIds
+        | extend allVMNicsHaveNSGs = set_has_element(vmNICsNSGStatus,False)
+        | summarize publicIpCount = dcount(vmPublicIPId) by nicLoadBalancerId, allVMNicsHaveNSGs, vmNICSubnetIds
+        ) on $left.id == $right.nicLoadBalancerId
+        | join kind = leftouter (
+            resources
+            | where type == 'microsoft.compute/virtualmachinescalesets'
+            | extend vmssSubnetIds = tostring(extract_all('(/subscriptions/[a-f0-9-]+?/resourceGroups/[a-zA-Z0-9-_]+?/providers/Microsoft.Network/virtualNetworks/[a-zA-Z0-9-_]+?/subnets/[a-zA-Z0-9-_]*)',tostring(properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations)))
+            | mv-expand nicConfigs = properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations
+            | extend vmssNicHasNSG = isnotnull(properties.networkSecurityGroup.id)
+            | mv-expand ipConfigs = nicConfigs.properties.ipConfigurations
+            | extend vmssHasPublicIPConfig = iff(tostring(ipConfigs) matches regex @'publicIPAddressVersion',true,false)
+            | where isnotempty(ipConfigs.properties.loadBalancerBackendAddressPools)
+            | mv-expand bes = ipConfigs.properties.loadBalancerBackendAddressPools
+            | extend vmssLoadBalancerId = tostring(split(bes.id,'/backendAddressPools/')[0])
+            | summarize vmssNICsNSGStatus = make_set(vmssNicHasNSG) by vmssLoadBalancerId, vmssHasPublicIPConfig, vmssSubnetIds
+            | extend allVMSSNicsHaveNSGs = set_has_element(vmssNICsNSGStatus,False)
+            | distinct vmssLoadBalancerId, vmssHasPublicIPConfig, allVMSSNicsHaveNSGs, vmssSubnetIds
+        ) on $left.id == $right.vmssLoadBalancerId
+| extend subnetIds = set_difference(todynamic(coalesce(vmNICSubnetIds,vmssSubnetIds)),dynamic([])) // return only unique subnet ids
+| mv-expand subnetId = subnetIds
+| extend subnetId = tostring(subnetId)
+| project-away vmNICSubnetIds, vmssSubnetIds, subnetIds
+| join kind = leftouter (
+    resources
+    | where type == 'microsoft.network/virtualnetworks'
+    | mv-expand subnet = properties.subnets
+    | extend subnetHasNatGW = isnotnull(subnet.properties.natGateway.Id)
+    | extend subnetHasRouteTable = isnotnull(subnet.properties.routeTable.id)
+    | extend subnetId = tostring(subnet.id)
+    | project subnetHasNatGW, subnetHasRouteTable,subnetId
+) on subnetId
+| extend backendType = iff(isnotempty(bes),iff(isnotempty(nicLoadBalancerId),'VMs',iff(isnotempty(vmssLoadBalancerId),'VMSS','Empty')),'Empty')
+| extend lbHasIPv6PublicIP = iff(isnotempty(publicIPv6LBId),true,false)
+| project-away fes, bes, nicLoadBalancerId, vmssLoadBalancerId, publicIPv6LBId, subnetId, subnetId1
+| summarize backendSubnetsHaveNATGWs = make_set(subnetHasNatGW) by id, backendPoolCount, internalOrExternal, allVMNicsHaveNSGs, allVMSSNicsHaveNSGs, publicIpCount,vmssHasPublicIPConfig,subnetHasRouteTable,backendType,lbHasIPv6PublicIP
+| extend allBackendSubnetsHaveNATGWs = set_has_element(backendSubnetsHaveNATGWs,False)
+| summarize backendSubnetsHaveRouteTables = make_set(subnetHasRouteTable) by id, backendPoolCount, internalOrExternal, allVMNicsHaveNSGs, allVMSSNicsHaveNSGs, publicIpCount,vmssHasPublicIPConfig,allBackendSubnetsHaveNATGWs,backendType,lbHasIPv6PublicIP
+| extend allBackendSubnetsHaveRouteTables = set_has_element(backendSubnetsHaveRouteTables, False)
+| project-away backendSubnetsHaveRouteTables
+| extend vmsHavePublicIPs = iff(publicIpCount > 0,true,false)
+| extend vmssHasPublicIPs = iff(isnotempty(vmssHasPublicIPConfig),vmssHasPublicIPConfig,false)
+| extend warningCount = 0
+| extend warningCount = warningCount + iff(vmssHasPublicIPs,1,0) // vmss public IPs will change AND will require NSGs for access
+| extend warningCount = warningCount + iff(vmsHavePublicIPs,1,0) // VM public IPs will require NSG
+| extend warningCount = warningCount + iff((internalOrExternal == 'Internal' and not(vmsHavePublicIPs)),1,0) // VMs will not have outbound access (need to check natgw or nva route)
+| extend warningCount = warningCount + iff((internalOrExternal == 'Internal' and not(vmssHasPublicIPs)),1,0) // VMSS will not have outbound access (need to check natgw or nva route)
+| extend warningCount = warningCount + iff((internalOrExternal == 'External' and backendPoolCount > 1),1,0) // outbound rules will not be created automatically
+| extend warningCount = warningCount + iff(((vmsHavePublicIPs or internalOrExternal == 'External') and not(allVMNicsHaveNSGs)),1,0)
+| extend warningCount = warningCount + iff(((vmssHasPublicIPs or internalOrExternal == 'External') and not(allVMSSNicsHaveNSGs)),1,0)
+| extend warningCount = warningCount + iff((internalOrExternal == 'External' and not(allBackendSubnetsHaveNATGWs or allBackendSubnetsHaveRouteTables)),1,0)
+| extend errorCount = 0
+| extend errorCount = errorCount + iff(lbHasIPv6PublicIP,1,0)
