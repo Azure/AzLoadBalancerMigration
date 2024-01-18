@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.2'
+    ModuleVersion = '2.4.3'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix skipMigrateNATPoolsToNATRules parameter not found in VMSS upgrades'
+            ReleaseNotes = 'Fix missed VMSS backups in -multiLBConfig mode'
 
             # Prerelease string of this module
             # Prerelease = ''
