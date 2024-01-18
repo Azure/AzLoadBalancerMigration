@@ -112,12 +112,6 @@ function PublicLBMigrationVmss {
     Write-Progress -Status "Public Load Balancer with VMSS backend detected. Initiating Public Load Balancer Migration" -PercentComplete 0 @progressParams
     log -Message "[PublicLBMigration] Public Load Balancer with VMSS backend found. Initiating Public Load Balancer Migration"
 
-    # Creating a vmss object before it gets changed as a reference for the backend pool migration
-    Write-Progress -Status "Backing up VMSS" -ParentId 4 @progressParams
-
-    # Backup VMSS Configurations
-    BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
-
     # Remove Public IP Configurations from VMSS
     Write-Progress -Status "Removing Public IP Configurations from VMSS" -PercentComplete ((1 / 14) * 100) @progressParams
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
@@ -200,13 +194,6 @@ function InternalLBMigrationVmss {
     }
 
     log -Message "[InternalLBMigration] Internal Load Balancer with VMSS backend detected. Initiating Internal Load Balancer Migration"
-
-    # Creating a vmss object before it gets changed as a reference for the backend pool migration
-    Write-Progress -Status "Backing up VMSS" -PercentComplete ((1/14) * 100) @progressParams
-
-    # Backup VMSS Configurations
-    Write-Progress -Status "Backing up VMSS Configurations" -PercentComplete ((2/14) * 100) @progressParams
-    BackupVmss -BasicLoadBalancer $BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
 
     # Remove Public IP Configurations from VMSS
     Write-Progress -Status "Removing Public IP Configurations from VMSS" -PercentComplete ((3/14) * 100) @progressParams
@@ -961,11 +948,29 @@ function LBMigrationPrep {
             Activity = "Preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
             Parent                   = 3
         }
-        Write-Progress -Status "Preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration" -PercentComplete ((1/4) * 100) @progressParams
+        Write-Progress -Status "Preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration" -PercentComplete ((1/5) * 100) @progressParams
 
-        # Backup Basic Load Balancer Configurations
-        Write-Progress -Status "Backing up Basic Load Balancer Configurations" -PercentComplete ((2/4) * 100) @progressParams
-        BackupBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+        try {
+            $errorActionPreference = 'Stop'
+
+            # Backup Basic Load Balancer Configurations
+            Write-Progress -Status "Backing up Basic Load Balancer Configurations" -PercentComplete ((2/5) * 100) @progressParams
+            BackupBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+
+            # Backup VMSS Configurations
+            # TO-DO will create a VMSS backup for each LB of the same VMSS but since -multiLBConfig is not restricted to shared backends, there may be different VMSSes anyway
+            if ($migrationConfig.scenario.backendType -eq 'VMSS') {
+                Write-Progress -Status "Backing up VMSS Configurations" -PercentComplete ((3/5) * 100) @progressParams
+                BackupVmss -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -RecoveryBackupPath $RecoveryBackupPath
+            }
+        }
+        catch {
+            log -message "[LBMigrationPrep] Failed backup preparation step for '$($migrationConfig.BasicLoadBalancer.Name)'"
+            throw $_
+        }
+    }
+
+    ForEach ($migrationConfig in $migrationConfigs) {
 
         # get a reference copy of the vmss prior to modifying it
         If ($migrationConfig.scenario.backendType -eq 'VMSS') {
@@ -974,12 +979,12 @@ function LBMigrationPrep {
 
         If ($migrationConfig.scenario.ExternalOrInternal -eq 'External') {
             # Migrate public IP addresses on Basic LB to static (if dynamic)
-            Write-Progress -Status "Migrating public IP addresses on Basic LB to static (if dynamic)" -PercentComplete ((3/4) * 100) @progressParams
+            Write-Progress -Status "Migrating public IP addresses on Basic LB to static (if dynamic)" -PercentComplete ((4/5) * 100) @progressParams
             PublicIPToStatic -BasicLoadBalancer $migrationConfig.BasicLoadBalancer
         }
 
         # Deletion of Basic Load Balancer and Delete Basic Load Balancer
-        Write-Progress -Status "Deletion of Basic Load Balancer and Delete Basic Load Balancer" -PercentComplete ((4/4) * 100) -Completed @progressParams
+        Write-Progress -Status "Deletion of Basic Load Balancer and Delete Basic Load Balancer" -PercentComplete ((5/5) * 100) -Completed @progressParams
         RemoveBasicLoadBalancer -BasicLoadBalancer $migrationConfig.BasicLoadBalancer -BackendType $migrationConfig.scenario.backendType
 
         log -message "[LBMigrationPrep] Completed preparing load balancer '$($migrationConfig.BasicLoadBalancer.Name)' for migration"
