@@ -293,8 +293,8 @@ function Start-AzBasicLoadBalancerUpgrade {
                 $StdLoadBalancerName = $LBConfig.standardLoadBalancerName
             }
             else {
-                $LBConfig.standardLoadBalancerName = $BasicLoadBalancer.Name
-                $StdLoadBalancerName = $BasicLoadBalancer.Name
+                $LBConfig.standardLoadBalancerName = $LBConfig.basicLoadBalancer.Name
+                $StdLoadBalancerName = $LBConfig.basicLoadBalancer.Name
             }
 
             $BasicLoadBalancer = $LBConfig.basicLoadBalancer
