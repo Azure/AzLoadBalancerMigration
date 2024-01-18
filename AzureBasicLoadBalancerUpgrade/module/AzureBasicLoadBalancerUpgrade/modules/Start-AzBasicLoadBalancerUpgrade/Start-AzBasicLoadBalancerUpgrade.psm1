@@ -293,8 +293,8 @@ function Start-AzBasicLoadBalancerUpgrade {
                 $StdLoadBalancerName = $LBConfig.standardLoadBalancerName
             }
             else {
-                $LBConfig.standardLoadBalancerName = $BasicLoadBalancer.Name
-                $StdLoadBalancerName = $BasicLoadBalancer.Name
+                $LBConfig.standardLoadBalancerName = $LBConfig.basicLoadBalancer.Name
+                $StdLoadBalancerName = $LBConfig.basicLoadBalancer.Name
             }
 
             $BasicLoadBalancer = $LBConfig.basicLoadBalancer
@@ -325,7 +325,7 @@ function Start-AzBasicLoadBalancerUpgrade {
     Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Id 3 -PercentComplete 0
     log -Message "[Start-AzBasicLoadBalancerUpgrade] Preparing for migration by backing up and deleteing the basic LB(s)"
     $migrationConfigs = LBMigrationPrep -migrationConfigs $migrationConfigs -RecoveryBackupPath $RecoveryBackupPath
-    Write-Progress -Activity "Preparing for Migration" -Status "Preparing for Migration" -Completed -Id 3
+    Write-Progress -Activity "Preparing for Migration" -Status "Completed preparing for migration" -Completed -Id 3
 
     # initiate the migration of each load balancer in the migration config array
     Write-Progress -Activity "Starting Migration" -Status "Starting Migration" -Id 4
