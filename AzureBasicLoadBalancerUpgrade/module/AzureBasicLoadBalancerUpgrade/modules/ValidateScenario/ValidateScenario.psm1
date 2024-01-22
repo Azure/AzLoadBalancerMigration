@@ -550,7 +550,7 @@ Function Test-SupportedMultiLBScenario {
     # check that backend type is not 'empty', meaning there is no reason to use -multiLBConfig
     log -Message "[Test-SupportedMultiLBScenario] Checking that backend type is not 'empty' for any of the multi load balancers"
     If ($multiLBConfig.scenario.backendType -contains 'Empty') {
-        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMultiLBScenario] One or more Basic Load Balancers backend is empty, for which Load Balancers, there no reason to use -multiLBConfig. Use standalone migrations or remove the load balancer with the empty backend from the -multiLBConfig parameter"
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMultiLBScenario] One or more Basic Load Balancers backend is empty. Empty load balancer should not be included in -multiLBConfig. Use standalone migrations or remove the load balancer with the empty backend from the -multiLBConfig parameter"
         return
     }
 
@@ -628,10 +628,10 @@ Function Test-SupportedMultiLBScenario {
         $joinedNicIDs = $nicIDs -join ','
 
         $graphQuery = @"
-        Resources |
+        resources |
             where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
             project lbNicVMId = tolower(tostring(properties.virtualMachine.id)) |
-            join ( Resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), availabilitySetId = coalesce(properties.availabilitySet.id, 'NO_AVAILABILITY_SET') on `$left.lbNicVMId == `$right.vmId |
+            join ( resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), availabilitySetId = coalesce(properties.availabilitySet.id, 'NO_AVAILABILITY_SET')) on `$left.lbNicVMId == `$right.vmId |
             project availabilitySetId
 "@
 
@@ -641,7 +641,7 @@ Function Test-SupportedMultiLBScenario {
         $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         do {        
             If (!$waitingForARG) {
-                log -Message "[UpgradeVMPublicIP] Querying Resource Graph for PIPs associated with VMs in the backend pool(s)..."
+                log -Message "[UpgradeVMPublicIP] Querying Resource Graph for availability sets of VMs in load balancers backend pools"
             }
             Else {
                 log -Message "[UpgradeVMPublicIP] Waiting 15 seconds before querying ARG again (total wait time up to 15 minutes before failure)..."
@@ -657,11 +657,12 @@ Function Test-SupportedMultiLBScenario {
             log -Severity Error -Message "[UpgradeVMPublicIP] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration." -terminateOnError
         }
 
-        If (($VMAvailabilitySets | Sort-Object | Get-Unique).count -gt 1) {
-            log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in differnet Availability Sets). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
+        # VMs must share an availability set or the backend must be a single VM with no availability set ('NO_AVAILABILITY_SET')
+        If (($VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique).count -gt 1 -or ($VMAvailabilitySets.availabilitySetId | Where-Object {$_ -eq 'NO_AVAILABILITY_SET'}).count -gt 1) {
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in different or no Availability Sets: '$($VMAvailabilitySets.availabilitySetId -join ',')'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
         }
         Else {
-            log -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers share '$($groupedBackends.count)' backend pool members."
+            log -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers share '$(($VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique).count)' availability set"
         }
     }
 
