@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.3'
+    ModuleVersion = '2.4.4'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix missed VMSS backups in -multiLBConfig mode'
+            ReleaseNotes = 'Enhanced -multiLBConfig validation to prevent incorrect useage'
 
             # Prerelease string of this module
             # Prerelease = ''
