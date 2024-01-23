@@ -547,6 +547,25 @@ Function Test-SupportedMultiLBScenario {
 
     log -Message "[Test-SupportedMultiLBScenario] Verifying if Multi-LB configuration is valid for migration"
 
+    # check that backend type is not 'empty', meaning there is no reason to use -multiLBConfig
+    log -Message "[Test-SupportedMultiLBScenario] Checking that backend type is not 'empty' for any of the multi load balancers"
+    If ($multiLBConfig.scenario.backendType -contains 'Empty') {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMultiLBScenario] One or more Basic Load Balancers backend is empty. Empty load balancer should not be included in -multiLBConfig. Use standalone migrations or remove the load balancer with the empty backend from the -multiLBConfig parameter"
+        return
+    }
+
+    # check that all backend pool members are VMs or VMSSes
+    log -Message "[Test-SupportedMultiLBScenario] Checking that all backend pool members are VMs or VMSSes"
+    $backendMemberTypes = ($multiLBConfig.scenario.BackendType | Sort-Object | Get-Unique)
+
+    If ($backendMemberTypes.count -gt 1) {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMultiLBScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'"
+        return
+    }
+    Else {
+        log -Message "[Test-SupportedMultiLBScenario] All backend pool members are '$($backendMemberTypes)'"
+    }
+
     # check that standard load balancer names are different if basic load balancers are in the same resource group
     log -Message "[Test-SupportedMultiLBScenario] Checking that standard load balancer names are different if basic load balancers are in the same resource group"
 
@@ -570,6 +589,83 @@ Function Test-SupportedMultiLBScenario {
             log -Severity Error -Message "[Test-SupportedMultiLBScenario] Standard Load Balancer name '$($StdLoadBalancerName)' will be used more than once in resource group '$($config.BasicLoadBalancer.ResourceGroupName)'. Standard Load Balancer names must be unique in the same resource group. If renaming load balancers with the -standardLoadBalancerName parameter, make sure new names are unique." -terminateOnError
         }
     }
+
+    # check that that the provided load balancer do share backend pool members - using -multiLBConfig when backend is not shared adds risk
+    log -Message "[Test-SupportedMultiLBScenario] Checking that that the provided load balancer do share backend pool members - using -multiLBConfig when backend is not shared adds risk"
+
+    ## shared backend should be a single VMSS
+    If ($multiLBConfig[0].scenario.backendType -eq 'VMSS') {
+        $basicLBBackends = @()
+        ForEach ($config in $multiLBConfig) {
+            $basicLBBackends += $config.BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | ForEach-Object {$_.split('/virtualMachines/')[0]}
+        }
+        $groupedBackends = $basicLBBackends | Sort-Object | Get-Unique
+
+        If ($groupedBackends.Count -gt 1) {
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (more than one backend VMSS found: '$($groupedBackends)'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
+        }
+        Else {
+            log -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers share '$($groupedBackends.count)' backend pool members."
+        }
+    }
+
+    ## shared backend should be a single Availability Set for VMs
+    If ($multiLBConfig[0].scenario.backendType -eq 'VM') {
+        $nicIDs = @() 
+        ForEach ($basicLoadBalancer in $multiLBConfig.BasicLoadBalancer) {
+            foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
+                foreach ($backendIpConfiguration in ($backendAddressPool.BackendIpConfigurations | Select-Object -Property Id -Unique)) {
+                    $nicIDs += "'$(($backendIpConfiguration.Id -split '/ipconfigurations/')[0])'"
+                }
+            }
+            foreach ($inboundNatRule in $BasicLoadBalancer.inboundNatRules) {
+                foreach ($backendIpConfiguration in ($inboundNatRule.BackendIpConfiguration | Select-Object -Property Id -Unique)) {
+                    $nicIDs += "'$(($backendIpConfiguration.Id -split '/ipconfigurations/')[0])'"
+                }
+            }
+        }
+
+        $joinedNicIDs = $nicIDs -join ','
+
+        $graphQuery = @"
+        resources |
+            where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
+            project lbNicVMId = tolower(tostring(properties.virtualMachine.id)) |
+            join ( resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), availabilitySetId = coalesce(properties.availabilitySet.id, 'NO_AVAILABILITY_SET')) on `$left.lbNicVMId == `$right.vmId |
+            project availabilitySetId
+"@
+
+        log -Severity Verbose -Message "Graph Query Text: `n$graphQuery"
+
+        $waitingForARG = $false
+        $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        do {        
+            If (!$waitingForARG) {
+                log -Message "[UpgradeVMPublicIP] Querying Resource Graph for availability sets of VMs in load balancers backend pools"
+            }
+            Else {
+                log -Message "[UpgradeVMPublicIP] Waiting 15 seconds before querying ARG again (total wait time up to 15 minutes before failure)..."
+                Start-Sleep 15
+            }
+
+            $VMAvailabilitySets = Search-AzGraph -Query $graphQuery
+
+            $waitingForARG = $true
+        } while ($VMPIPRecords.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Seconds -lt $global:defaultJobWaitTimeout)
+
+        If ($timeoutStopwatch.Elapsed.Seconds -gt $global:defaultJobWaitTimeout) {
+            log -Severity Error -Message "[UpgradeVMPublicIP] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration." -terminateOnError
+        }
+
+        # VMs must share an availability set or the backend must be a single VM with no availability set ('NO_AVAILABILITY_SET')
+        If (($VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique).count -gt 1 -or ($VMAvailabilitySets.availabilitySetId | Where-Object {$_ -eq 'NO_AVAILABILITY_SET'}).count -gt 1) {
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in different or no Availability Sets: '$($VMAvailabilitySets.availabilitySetId -join ',')'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
+        }
+        Else {
+            log -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers share '$(($VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique).count)' availability set"
+        }
+    }
+
 
     log -Message "[Test-SupportedMultiLBScenario] Multi-LB configuration is valid for migration"
 }
