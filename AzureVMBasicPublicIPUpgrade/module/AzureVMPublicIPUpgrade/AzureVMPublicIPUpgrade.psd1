@@ -12,7 +12,7 @@
 RootModule = 'AzureVMPublicIPUpgrade'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.0.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@ Author = 'FastTrack for Azure - Matthew Bratschun'
 CompanyName = 'Microsoft'
 
 # Copyright statement for this module
-Copyright = '(c) 2023 Microsoft. All rights reserved.'
+Copyright = '(c) 2024 Microsoft. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Upgrades all public IP addresses attached to a VM to Standard SKU.'
@@ -51,7 +51,7 @@ Description = 'Upgrades all public IP addresses attached to a VM to Standard SKU
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
-# RequiredModules = @()
+RequiredModules = @('Az.Compute','Az.Network','Az.Resources','Az.Accounts')
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
