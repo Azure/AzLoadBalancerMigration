@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  #annotations:
+  #  service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  name: my-service
+  namespace: default
+spec:
+  ports:
+  - protocol: TCP
+    port: 60000
+  type: LoadBalancer
+  

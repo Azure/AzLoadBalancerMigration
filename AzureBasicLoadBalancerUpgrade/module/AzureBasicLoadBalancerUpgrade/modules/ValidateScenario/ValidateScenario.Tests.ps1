@@ -157,7 +157,7 @@ Describe "ValidateScenario" {
   }
 
   Context "Input Parameters" {
-    It "Should fail is an invalid Load Balancer name is supplied" {
+    It "Should fail if an invalid Load Balancer name is supplied" {
       $errMsg = "Cannot validate argument on parameter 'StdLoadBalancerName'.*"
       { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName '_' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
     }
@@ -168,34 +168,51 @@ Describe "ValidateScenario" {
     }
   }
 
-  Context "VMSS in BackendPools" {
-    It "Should fail if the backend pool ip configuration does not contain 'VirtualMachineScaleSet'" {
-      $BasicLoadBalancer.BackendAddressPools[0].BackendIpConfigurations[0].Id = "/subscriptions/b2375b5f-8dab-4436-b87c-32bc7fdce5d0/resourceGroups/rg-001-basic-lb-int-single-fe/providers/Microsoft.Compute/banana/vmss-01/virtualMachines/0/networkInterfaces/vmss-01-nic-01configuration-0/ipConfigurations/ipconfig1"
-      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*Basic Load Balancer has backend pools that is not virtualMachineScaleSets, exiting"
+  Context "Basic LoadBalancer used in AKS cluster" {
+    It "Should fail if the basic load balancer is used as an external LB by an AKS cluster (LB is named 'kubernetes')" {
+      $BasicLoadBalancer.Name = 'kubernetes'
+      $errMsg = "*is used by an AKS cluster & cannot be migrated*"
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
+    }
+
+    It "Should fail if the basic load balancer is used an an internal LB by an AKS cluster (LB is named 'kubernetes-internal')" {
+      $BasicLoadBalancer.Name = 'kubernetes-internal'
+      $errMsg = "*is used by an AKS cluster & cannot be migrated*"
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
+    }
+
+    It "Should fail if the basic load balancer is used an an internal LB by an AKS cluster (Azure System managed Tags)" {
+      $BasicLoadBalancer
+      $errMsg = "*is used by an AKS cluster & cannot be migrated*"
+      $BasicLoadBalancer.Tag.Add('aks-managed-cluster-name','mycluster')
+      $BasicLoadBalancer.Tag.Add('aks-managed-cluster-rg','mycluster-rg')
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
     }
   }
 
-  Context "Empty BackendPools" {
-    It "Should fail if the backend pool(s) have no membership" {
-      $BasicLoadBalancer.BackendAddressPools[0].BackendIpConfigurations = @()
-      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*Basic Load Balancer has backend pools have no membership, exiting"
+  Context "VMSS in BackendPools" {
+    It "Should fail if the backend pool ip configuration does not contain 'VirtualMachineScaleSet'" {
+      $errMsg = '*Basic Load Balancer backend pools can contain only VMs or VMSSes*'
+      $BasicLoadBalancer.BackendAddressPools[0].BackendIpConfigurations[0].Id = "/subscriptions/b2375b5f-8dab-4436-b87c-32bc7fdce5d0/resourceGroups/rg-001-basic-lb-int-single-fe/providers/Microsoft.Compute/banana/vmss-01/virtualMachines/0/networkInterfaces/vmss-01-nic-01configuration-0/ipConfigurations/ipconfig1"
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -ExpectedMessage $errMsg
     }
   }
 
   Context "LoadBalancingRules" {
     It "Should fail if no LoadBalancingRules exist on the load balancer" {
-      $BasicLoadBalancer.LoadBalancingRules = $null
-      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*Load balancer 'lb-basic-01' has no front end configurations, so there is nothing to migrate!"
+      $errMsg = "*Load balancer 'lb-basic-01' has no front end configurations, so there is nothing to migrate*"
+      $BasicLoadBalancer.LoadBalancingRules = @()
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
     }
   }
 
   Context "Public Ip Prefix" {
     It "Should fail if the Public IP has an IPPrefix" {
+      $errMsg = "*FrontEndIPConfiguration[0] is assigned a public IP prefix*"
       $ipPrefix = [Microsoft.Azure.Commands.Network.Models.PSResourceId]::new()
       $ipPrefix.Id = "/subscriptions/b2375b5f-8dab-4436-b87c-32bc7fdce5d0/resourceGroups/rg-001-basic-lb-int-single-fe/providers/Microsoft.Compute/banana/vmss-01/virtualMachines/0/networkInterfaces/vmss-01-nic-01configuration-0/ipConfigurations/ipconfig1"
       $BasicLoadBalancer.FrontendIpConfigurations[0].PublicIPPrefix = $ipPrefix
-      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage "*FrontEndIPConfiguration*"
+      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
     }
   }
-
 }
