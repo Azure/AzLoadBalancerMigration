@@ -131,6 +131,13 @@ Function Test-SupportedMigrationScenario {
     }
     log -Message "[Test-SupportedMigrationScenario] Source load balancer SKU is type Basic"
 
+    # determine whether the basic load balancer is attached to an AKS cluster
+    log -Message "[Test-SupportedMigrationScenario] Determining whether basic load balancer is used by an AKS cluster"
+    If (($BasicLoadBalancer.Name -eq 'kubernetes' -or $BasicLoadBalancer.Name -eq 'kubernetes-internal') -or ($BasicLoadBalancer.Tag.ContainsKey('aks-managed-cluster-name'))) {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($BasicLoadBalancer.Name)' is used by an AKS cluster & cannot be migrated. Documentation link: 'https://learn.microsoft.com/en-us/azure/aks/load-balancer-standard?#moving-from-a-basic-sku-load-balancer-to-standard-sku'"
+        return
+    }
+
     # Detecting if there are any backend pools that is not virtualMachineScaleSets or virtualMachines
     $backendType = _GetScenarioBackendType -BasicLoadBalancer $BasicLoadBalancer
     $scenario.BackendType = $backendType
