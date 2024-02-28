@@ -198,16 +198,6 @@ Describe "ValidateScenario" {
     }
   }
 
-  Context "Empty BackendPools" {
-    It "Should fail if the backend pool(s) have no membership" {
-      $errMsg = '*Basic Load Balancer backend pools are empty*'
-      $BasicLoadBalancer.Probes = $null
-      $BasicLoadBalancer.BackendAddressPools = $null
-      $BasicLoadBalancer.LoadBalancingRules = $null
-      { Test-SupportedMigrationScenario -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancerName 'std-lb-01' -ErrorAction Stop } | Should -Throw -ExpectedMessage $errMsg
-    }
-  }
-
   Context "LoadBalancingRules" {
     It "Should fail if no LoadBalancingRules exist on the load balancer" {
       $errMsg = "*Load balancer 'lb-basic-01' has no front end configurations, so there is nothing to migrate*"

@@ -1,7 +1,6 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
-Import-Module Az.Network
 
 function _GetScenarioBackendType {
     param(
@@ -69,7 +68,7 @@ function _GetScenarioBackendType {
         $backendType = 'VMSS'
     }
     ElseIf ([string]::IsNullOrEmpty($backendMemberTypes[0])) {
-        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty"
+        log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty"
         $backendType = 'Empty'
     }
     Else {
