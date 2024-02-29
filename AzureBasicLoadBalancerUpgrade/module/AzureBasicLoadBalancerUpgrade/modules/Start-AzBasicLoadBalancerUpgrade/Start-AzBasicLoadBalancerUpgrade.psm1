@@ -173,6 +173,7 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $false)][switch] $outputMigrationValiationObj,
         [Parameter(Mandatory = $false)][int32] $defaultJobWaitTimeout = (New-Timespan -Minutes 10).TotalSeconds,
         [Parameter(Mandatory = $false)][switch] $force,
+        [Parameter(Mandatory = $false)][switch] $skipDowntimeWarning,
         [Parameter(Mandatory = $false)][switch] $Pre
     )
 
@@ -192,6 +193,40 @@ function Start-AzBasicLoadBalancerUpgrade {
     # validate backup path is directory
     If (!(Test-Path -Path $RecoveryBackupPath -PathType Container )) {
         Write-Error "The path '$recoveryBackupPath' specified with parameter recoveryBackupPath must exist and be a valid directory." -terminateOnError
+    }
+
+    # warn user about application downtime
+    If (((!$skipDowntimeWarning) -and !$force) -and !(Test-Path -Path (Join-Path -Path $RecoveryBackupPath -ChildPath 'Start-AzBasicLoadBalancerUpgrade.log'))) {
+        $message = "This operation will cause downtime for the application(s) using the Basic Load Balancer--usually a few minutes--see https://aka.ms/BasicLBMigrateDowntime. Are you sure you want to continue? [y/N]"
+        $result = Read-Host -Prompt $message
+        If ($result -ne 'y' -and $result -ne 'yes') {
+            Write-Host "Operation cancelled by user"
+            return
+        }
+        Else {
+            Write-Host -ForegroundColor Green "`nSpecify parameter ``-confirm `$false`` to skip this prompt in the future`n"
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    # check module version in PowerShell Gallery for updates
+    try {
+        $ErrorActionPreference = 'Stop'
+        
+        $latestModule = Find-Module AzureBasicLoadBalancerUpgrade -Repository PSGallery
+        $loadedModule = Get-Module -Name AzureBasicLoadBalancerUpgrade
+
+        If ($latestModule.Version -gt $loadedModule.Version) {
+            Write-Warning "A newer version of the AzureBasicLoadBalancerUpgrade module is available. Using the latest version is recommended. Exit the script and run 'Update-Module AzureBasicLoadBalancerUpgrade' to update the module from '$($loadedModule.Version)' to '$($latestModule.Version)'."
+
+            For ($i = 15; $i -gt 0; $i--) {
+                Write-Host "Press CTRL+C to exit the script. Script will continue with the current verion in $i seconds..."
+                Start-Sleep -Seconds 1
+            }
+        }
+    }
+    catch {
+        Write-Host "Failed to check for module updates. Continuing with installed version... Error: $_"
     }
 
     log -Message "############################## Initializing Start-AzBasicLoadBalancerUpgrade ##############################"
