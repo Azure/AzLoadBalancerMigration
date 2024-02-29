@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.5'
+    ModuleVersion = '2.4.6'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix VMSS state file parameter always required in recovery'
+            ReleaseNotes = 'Block AKS upgrades; prompt for downtime; version check'
 
             # Prerelease string of this module
             # Prerelease = ''
