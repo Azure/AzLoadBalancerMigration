@@ -133,7 +133,7 @@ Function Test-SupportedMigrationScenario {
 
     # determine whether the basic load balancer is attached to an AKS cluster
     log -Message "[Test-SupportedMigrationScenario] Determining whether basic load balancer is used by an AKS cluster"
-    If (($BasicLoadBalancer.Name -eq 'kubernetes' -or $BasicLoadBalancer.Name -eq 'kubernetes-internal') -or ($BasicLoadBalancer.Tag.ContainsKey('aks-managed-cluster-name'))) {
+    If (($BasicLoadBalancer.Name -eq 'kubernetes' -or $BasicLoadBalancer.Name -eq 'kubernetes-internal') -or ($BasicLoadBalancer.Tag.Keys -contains 'aks-managed-cluster-name')) {
         log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer resource '$($BasicLoadBalancer.Name)' is used by an AKS cluster & cannot be migrated. Documentation link: 'https://learn.microsoft.com/en-us/azure/aks/load-balancer-standard?#moving-from-a-basic-sku-load-balancer-to-standard-sku'"
         return
     }
@@ -385,7 +385,12 @@ Function Test-SupportedMigrationScenario {
                 }
                 Else {      
                     # add VM resources to array for later validation
-                    $basicLBVMs += Get-AzVM -ResourceId $nic.VirtualMachine.id
+                    try{
+                        $basicLBVMs += Get-AzVM -ResourceId $nic.VirtualMachine.id -ErrorAction Stop
+                    }
+                    catch {
+                        log -terminateOnError -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Error getting VM from NIC '$($nic.id)'. Error: $($_.Exception.Message)"
+                    }
 
                     # add VM nics to array for later validation
                     $basicLBVMNics += $nic

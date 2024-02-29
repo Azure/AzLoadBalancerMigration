@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.6'
+    ModuleVersion = '2.4.7'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Block AKS upgrades; prompt for downtime; version check'
+            ReleaseNotes = 'Block AKS upgrades; prompt for downtime; version check; [fixed error in AKS check]'
 
             # Prerelease string of this module
             # Prerelease = ''
