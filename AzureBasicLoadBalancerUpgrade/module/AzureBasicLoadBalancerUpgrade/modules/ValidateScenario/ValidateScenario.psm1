@@ -310,10 +310,10 @@ Function Test-SupportedMigrationScenario {
             }
 
             If (!$vmssVMsHavePublicIPs -and $scenario.ExternalOrInternal -eq 'Internal') {
-                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmss.Name)'"
+                $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMSS instances do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB. VMSS: '$($vmss.Name)'"
                 log -Message $message -Severity 'Warning'
 
-                Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action post-migration. Either add Public IPs to each VMSS instance (see: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine) or assign a NAT Gateway to the VMSS instances' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+                Write-Host "In order for your VMSS instances to access the internet, you'll need to take additional action before or after migration. To address this pre-migration, either add a secondary external Basic SKU Load Balancer with no inbound rules to your VMSS or add Public IPs to each VMSS instance (see:https://learn.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-networking#public-ipv4-per-virtual-machine). Post-migration, a NAT Gateway can be added to the VMSSS' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)--if an interim external Load Balancer or instance-level public IP addresses were added pre-migration they can be removed once the NAT Gateway is deployed." -ForegroundColor Yellow
                 If (!$force.IsPresent) {
                     $response = $null
                     while ($response -ne 'y' -and $response -ne 'n') {
@@ -322,6 +322,9 @@ Function Test-SupportedMigrationScenario {
                     If ($response -eq 'n') {
                         $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
                         log -Message $message -Severity 'Error' -terminateOnError
+                    }
+                    Else {
+                        log -Message "[Test-SupportedMigrationScenario] User chose to continue with validation or migration"
                     }
                 }
                 Else {
@@ -498,7 +501,7 @@ Function Test-SupportedMigrationScenario {
             $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
             log -Message $message -Severity 'Warning'
 
-            Write-Host "In order for your VMs to access the internet, you'll need to take additional action before or after migration. Either add Public IPs to each VM, assign a NAT Gateway to the VM subnet, or route internet traffic through an NVA (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)." -ForegroundColor Yellow
+            Write-Host "In order for your VMs to access the internet, you'll need to take additional action before or after migration. To address this pre-migration, either add a secondary external Basic SKU Load Balancer with no inbound rules to your backend VMs or add Public IPs to each VM. Post-migration, a NAT Gateway can be added to the VMs' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)--if an interim external Load Balancer or instance-level public IP addresses were added pre-migration they can be removed once the NAT Gateway is deployed." -ForegroundColor Yellow
             If (!$force.IsPresent) {
                 $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
@@ -507,6 +510,9 @@ Function Test-SupportedMigrationScenario {
                 If ($response -eq 'n') {
                     $message = "[Test-SupportedMigrationScenario] User chose to exit the module"
                     log -Message $message -Severity 'Error' -terminateOnError
+                }
+                Else {
+                    log -Message "[Test-SupportedMigrationScenario] User chose to continue with validation or migration"
                 }
             }
             Else {
