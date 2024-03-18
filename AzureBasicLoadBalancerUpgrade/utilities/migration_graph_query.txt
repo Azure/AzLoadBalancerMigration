@@ -1,6 +1,6 @@
 resources
 | where type == 'microsoft.network/loadbalancers' and sku.name == 'Basic'
-| project fes = properties.frontendIPConfigurations, bes = properties.backendAddressPools,['id']
+| project fes = properties.frontendIPConfigurations, bes = properties.backendAddressPools,['id'],['tags']
 | extend backendPoolCount = array_length(bes)
 | extend internalOrExternal = iff(isnotempty(fes),iff(isnotempty(fes[0].properties.privateIPAddress),'Internal','External'),'None')
     | join kind=leftouter hint.strategy=shuffle (
@@ -43,33 +43,25 @@ resources
 | mv-expand subnetId = subnetIds
 | extend subnetId = tostring(subnetId)
 | project-away vmNICSubnetIds, vmssSubnetIds, subnetIds
-| join kind = leftouter (
-    resources
-    | where type == 'microsoft.network/virtualnetworks'
-    | mv-expand subnet = properties.subnets
-    | extend subnetHasNatGW = isnotnull(subnet.properties.natGateway.Id)
-    | extend subnetHasRouteTable = isnotnull(subnet.properties.routeTable.id)
-    | extend subnetId = tostring(subnet.id)
-    | project subnetHasNatGW, subnetHasRouteTable,subnetId
-) on subnetId
 | extend backendType = iff(isnotempty(bes),iff(isnotempty(nicLoadBalancerId),'VMs',iff(isnotempty(vmssLoadBalancerId),'VMSS','Empty')),'Empty')
 | extend lbHasIPv6PublicIP = iff(isnotempty(publicIPv6LBId),true,false)
-| project-away fes, bes, nicLoadBalancerId, vmssLoadBalancerId, publicIPv6LBId, subnetId, subnetId1
-| summarize backendSubnetsHaveNATGWs = make_set(subnetHasNatGW) by id, backendPoolCount, internalOrExternal, allVMNicsHaveNSGs, allVMSSNicsHaveNSGs, publicIpCount,vmssHasPublicIPConfig,subnetHasRouteTable,backendType,lbHasIPv6PublicIP
-| extend allBackendSubnetsHaveNATGWs = set_has_element(backendSubnetsHaveNATGWs,False)
-| summarize backendSubnetsHaveRouteTables = make_set(subnetHasRouteTable) by id, backendPoolCount, internalOrExternal, allVMNicsHaveNSGs, allVMSSNicsHaveNSGs, publicIpCount,vmssHasPublicIPConfig,allBackendSubnetsHaveNATGWs,backendType,lbHasIPv6PublicIP
-| extend allBackendSubnetsHaveRouteTables = set_has_element(backendSubnetsHaveRouteTables, False)
-| project-away backendSubnetsHaveRouteTables
+| project-away fes, bes, nicLoadBalancerId, vmssLoadBalancerId, publicIPv6LBId, subnetId
 | extend vmsHavePublicIPs = iff(publicIpCount > 0,true,false)
 | extend vmssHasPublicIPs = iff(isnotempty(vmssHasPublicIPConfig),vmssHasPublicIPConfig,false)
-| extend warningCount = 0
-| extend warningCount = warningCount + iff(vmssHasPublicIPs,1,0) // vmss public IPs will change AND will require NSGs for access
-| extend warningCount = warningCount + iff(vmsHavePublicIPs,1,0) // VM public IPs will require NSG
-| extend warningCount = warningCount + iff((internalOrExternal == 'Internal' and not(vmsHavePublicIPs)),1,0) // VMs will not have outbound access (need to check natgw or nva route)
-| extend warningCount = warningCount + iff((internalOrExternal == 'Internal' and not(vmssHasPublicIPs)),1,0) // VMSS will not have outbound access (need to check natgw or nva route)
-| extend warningCount = warningCount + iff((internalOrExternal == 'External' and backendPoolCount > 1),1,0) // outbound rules will not be created automatically
-| extend warningCount = warningCount + iff(((vmsHavePublicIPs or internalOrExternal == 'External') and not(allVMNicsHaveNSGs)),1,0)
-| extend warningCount = warningCount + iff(((vmssHasPublicIPs or internalOrExternal == 'External') and not(allVMSSNicsHaveNSGs)),1,0)
-| extend warningCount = warningCount + iff((internalOrExternal == 'External' and not(allBackendSubnetsHaveNATGWs or allBackendSubnetsHaveRouteTables)),1,0)
-| extend errorCount = 0
-| extend errorCount = errorCount + iff(lbHasIPv6PublicIP,1,0)
+| extend warnings = dynamic([])
+| extend errors = dynamic([])
+| extend warnings = iff(vmssHasPublicIPs,array_concat(warnings,dynamic(['VMSS instances have Public IPs: VMSS Public IPs will change during migration','VMSS instances have Public IPs: NSGs will be required for internet access through VMSS instance public IPs once upgraded to Standard SKU'])),warnings)
+| extend warnings = iff(vmsHavePublicIPs,array_concat(warnings,dynamic(['VMs have Public IPs: NSGs will be required for internet access through VM public IPs once upgraded to Standard SKU'])),warnings)
+| extend warnings = iff((internalOrExternal == 'Internal' and not(vmsHavePublicIPs)),array_concat(warnings,dynamic(['Internal Load Balancer: LB is internal and VMs do not have Public IPs. Unless internet traffic is already  being routed through an NVA, VMs will have no internet connectivity post-migration without additional action.'])),warnings)
+| extend warnings = iff((internalOrExternal == 'Internal' and not(vmssHasPublicIPs)),array_concat(warnings,dynamic(['Internal Load Balancer: LB is internal and VMSS instances do not have Public IPs. Unless internet traffic is already being routed through an NVA, VMSS instances will have no internet connectivity post-migration without additional action.'])),warnings)
+| extend warnings = iff((internalOrExternal == 'External' and backendPoolCount > 1),array_concat(warnings,dynamic(['External Load Balancer: LB is external and has multiple backend pools. Outbound rules will not be created automatically.'])),warnings)
+| extend warnings = iff(((vmsHavePublicIPs or internalOrExternal == 'External') and not(allVMNicsHaveNSGs)),array_concat(warnings,dynamic(['VMs Missing NSGs: Not all VM NICs or subnets have associated NSGs. An NSG will be created to allow load balanced traffic, but it is preferred that you create and associate an NSG before starting the migration.'])),warnings)
+| extend warnings = iff(((vmssHasPublicIPs or internalOrExternal == 'External') and not(allVMSSNicsHaveNSGs)),array_concat(warnings,dynamic(['VMSS Missing NSGs: Not all VMSS NICs or subnets have associated NSGs. An NSG will be created to allow load balanced traffic, but it is preferred that you create and associate an NSG before starting the migration.'])),warnings)
+| extend warnings = iff((bag_keys(tags) contains 'resourceType' and tags['resourceType'] == 'Service Fabric'),array_concat(warnings,dynamic(['Service Fabric LB: LB appears to be in front of a Service Fabric Cluster. Unmanaged SF clusters may take an hour or more to migrate; managed are not supported'])),warnings)
+| extend warningCount = array_length(warnings)
+| extend errors = iff((internalOrExternal == 'External' and lbHasIPv6PublicIP),array_concat(errors,dynamic(['External Load Balancer has IPv6: LB is external and has an IPv6 Public IP. Basic SKU IPv6 public IPs cannot be upgraded to Standard SKU'])),errors)
+| extend errors = iff((id matches regex @'/(kubernetes|kubernetes-internal)^' or (bag_keys(tags) contains 'aks-managed-cluster-name')),array_concat(errors,dynamic(['AKS Load Balancer: Load balancer appears to be in front of a Kubernetes cluster, which is not supported for migration'])),errors)
+| extend errorCount = array_length(errors)
+| project id, internalOrExternal,warnings,errors,warningCount,errorCount
+| sort by errorCount,warningCount
+| project-away errorCount,warningCount
