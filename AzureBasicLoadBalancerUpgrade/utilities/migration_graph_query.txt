@@ -1,6 +1,6 @@
 resources
 | where type == 'microsoft.network/loadbalancers' and sku.name == 'Basic'
-| project fes = properties.frontendIPConfigurations, bes = properties.backendAddressPools,['id'],['tags']
+| project fes = properties.frontendIPConfigurations, bes = properties.backendAddressPools,['id'],['tags'],subscriptionId,resourceGroup
 | extend backendPoolCount = array_length(bes)
 | extend internalOrExternal = iff(isnotempty(fes),iff(isnotempty(fes[0].properties.privateIPAddress),'Internal','External'),'None')
     | join kind=leftouter hint.strategy=shuffle (
@@ -62,6 +62,6 @@ resources
 | extend errors = iff((internalOrExternal == 'External' and lbHasIPv6PublicIP),array_concat(errors,dynamic(['External Load Balancer has IPv6: LB is external and has an IPv6 Public IP. Basic SKU IPv6 public IPs cannot be upgraded to Standard SKU'])),errors)
 | extend errors = iff((id matches regex @'/(kubernetes|kubernetes-internal)^' or (bag_keys(tags) contains 'aks-managed-cluster-name')),array_concat(errors,dynamic(['AKS Load Balancer: Load balancer appears to be in front of a Kubernetes cluster, which is not supported for migration'])),errors)
 | extend errorCount = array_length(errors)
-| project id, internalOrExternal,warnings,errors,warningCount,errorCount
+| project id,internalOrExternal,warnings,errors,warningCount,errorCount,subscriptionId,resourceGroup
 | sort by errorCount,warningCount
 | project-away errorCount,warningCount
