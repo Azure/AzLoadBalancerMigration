@@ -176,7 +176,7 @@ param maxUnhealthyUpgradedInstancePercent int = 20
 param pauseTimeBetweenBatches string = 'PT0S'
 
 @description('Optional. Indicates whether OS upgrades should automatically be applied to scale set instances in a rolling fashion when a newer version of the OS image becomes available. Default value is false. If this is set to true for Windows based scale sets, enableAutomaticUpdates is automatically set to false and cannot be set to true.')
-param enableAutomaticOSUpgrade bool = false
+param enableAutomaticOSUpgrade bool = true
 
 @description('Optional. Whether OS image rollback feature should be disabled.')
 param disableAutomaticRollback bool = false
