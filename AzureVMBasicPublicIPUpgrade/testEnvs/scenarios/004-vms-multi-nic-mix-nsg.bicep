@@ -57,6 +57,9 @@ module nsg '../modules/Microsoft.Network/networkSecurityGroups/deploy.bicep' = {
     name: 'nsg-01'
     location: location
   }
+  dependsOn: [
+    rg
+  ]
 }
 
 module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
@@ -64,6 +67,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   name: 'vm-01'
   params: {
     adminUsername: 'admin-vm'
+    name: 'vm-01'
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
     location: location
     imageReference: {
