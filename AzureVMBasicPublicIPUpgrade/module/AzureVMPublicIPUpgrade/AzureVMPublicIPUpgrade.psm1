@@ -236,6 +236,16 @@ Function Start-VMPublicIPUpgrade {
                 Add-LogEntry "VM '$($VM.Name)' is not associated with a load balancer."
             }
 
+            # confirm VM is not a member of an Availability Set 
+            Add-LogEntry "Checking that VM '$($VM.Name)' is not a member of an Availability Set..."
+            If ($VM.AvailabilitySetReference) {
+                Add-LogEntry "VM '$($VM.Name)' is a member of an Availability Set. Availability Sets cannot have VMs with different Public IP address SKUs, requiring all Public IPs to be upgraded at the same time, which this script does not support. Skipping upgrade..." WARNING
+                return
+            }
+            Else {
+                Add-LogEntry "VM '$($VM.Name)' is not a member of an Availability Set."
+            }
+
             # confirm that each NIC with a public IP address associated has a Network Security Group
             Add-LogEntry "Checking that VM '$($VM.Name)' has a Network Security Group associated with each NIC..."
         
