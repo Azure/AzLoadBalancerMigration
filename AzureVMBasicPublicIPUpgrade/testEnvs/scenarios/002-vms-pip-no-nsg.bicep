@@ -55,6 +55,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   name: 'vm-01'
   params: {
     adminUsername: 'admin-vm'
+    name: 'vm-01'
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
     location: location
     imageReference: {

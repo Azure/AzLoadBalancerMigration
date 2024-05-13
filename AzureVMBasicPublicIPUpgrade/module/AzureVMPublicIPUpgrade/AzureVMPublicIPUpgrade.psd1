@@ -12,7 +12,7 @@
 RootModule = 'AzureVMPublicIPUpgrade'
 
 # Version number of this module.
-ModuleVersion = '1.0.1'
+ModuleVersion = '1.0.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'Added AvailablitySet warning and skip'
 
         # Prerelease string of this module
         # Prerelease = ''
