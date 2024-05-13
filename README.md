@@ -18,6 +18,10 @@ This module migrates NAT Pools to NAT Rules on a Standard SKU Load Balancer. See
 
 This module upgrades Public IPs attached to the specified VM from Basic SKU to Standard SKU. See [Azure VM Public IP Upgrade](AzureVMBasicPublicIPUpgrade/README.md)
 
+## Azure Availability Set Public IP Address Upgrade
+
+This module upgrades Public IPs attached to all VMs in the specified Availability Set from Basic SKU to Standard SKU. See [Azure Availability Set Public IP Upgrade](AzureAvSetBasicPublicIPUpgrade/README.md)
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
