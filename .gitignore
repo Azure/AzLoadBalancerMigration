@@ -1,7 +1,7 @@
 *.json
 *.log
 *.csv
-!019-vmss-multi-be-ipconfigs.json
+019-vmss-multi-be-ipconfigs.json
 !008-basic-lb-nat-pool.json
 !AzureLoadBalancerNATPoolMigration/testEnvs/scenarios/*.json
 !AzureBasicLoadBalancerUpgrade/testEnvs/scenarios/*.json
