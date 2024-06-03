@@ -176,7 +176,7 @@ param maxUnhealthyUpgradedInstancePercent int = 20
 param pauseTimeBetweenBatches string = 'PT0S'
 
 @description('Optional. Indicates whether OS upgrades should automatically be applied to scale set instances in a rolling fashion when a newer version of the OS image becomes available. Default value is false. If this is set to true for Windows based scale sets, enableAutomaticUpdates is automatically set to false and cannot be set to true.')
-param enableAutomaticOSUpgrade bool = true
+param enableAutomaticOSUpgrade bool = false
 
 @description('Optional. Whether OS image rollback feature should be disabled.')
 param disableAutomaticRollback bool = false
@@ -338,7 +338,7 @@ var identity = identityType != 'None' ? {
 
 var enableReferencedModulesTelemetry = false
 
-resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
+/* resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
   properties: {
     mode: 'Incremental'
@@ -348,7 +348,7 @@ resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (ena
       resources: []
     }
   }
-}
+} */
 
 resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2022-03-01' = {
   name: name
