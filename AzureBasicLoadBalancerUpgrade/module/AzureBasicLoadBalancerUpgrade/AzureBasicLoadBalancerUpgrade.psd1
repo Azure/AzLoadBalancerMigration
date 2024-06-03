@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.9'
+    ModuleVersion = '2.4.10'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Add secondary external LB outbound option'
+            ReleaseNotes = 'Fixed recovery parameter sets'
 
             # Prerelease string of this module
             # Prerelease = ''
