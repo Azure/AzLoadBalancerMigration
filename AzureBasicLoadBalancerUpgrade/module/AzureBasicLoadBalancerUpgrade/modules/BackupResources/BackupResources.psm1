@@ -117,6 +117,9 @@ Function BackupVmss {
             $options.MaxDepth = 64
 
             [System.Text.Json.JsonSerializer]::Serialize($vmss, [Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet], $options) | Out-File -FilePath $outputFilePathVSS
+
+            $message = "[BackupVmss] JSON backup VMSS to file '$outputFilePathVSS' Completed"
+            log -Message $message -Severity Information
         }
         catch {
             # catch issue where PowerShell Desktop cannot serialize complex objects in VM extensions
