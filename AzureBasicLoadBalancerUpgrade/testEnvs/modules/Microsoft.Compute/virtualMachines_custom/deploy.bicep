@@ -677,7 +677,7 @@ module vm_azureDiskEncryptionExtension 'extensions/deploy.bicep' = if (extension
   ]
 }
 
-module vm_backup '../../Microsoft.RecoveryServices/vaults/protectionContainers/protectedItems/deploy.bicep' = if (!empty(backupVaultName)) {
+/* module vm_backup '../../Microsoft.RecoveryServices/vaults/protectionContainers/protectedItems/deploy.bicep' = if (!empty(backupVaultName)) {
   name: '${uniqueString(deployment().name, location)}-VM-Backup'
   params: {
     name: 'vm;iaasvmcontainerv2;${resourceGroup().name};${vm.name}'
@@ -699,7 +699,7 @@ module vm_backup '../../Microsoft.RecoveryServices/vaults/protectionContainers/p
     vm_desiredStateConfigurationExtension
     vm_customScriptExtension
   ]
-}
+} */
 
 resource vm_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${vm.name}-${lock}-lock'
