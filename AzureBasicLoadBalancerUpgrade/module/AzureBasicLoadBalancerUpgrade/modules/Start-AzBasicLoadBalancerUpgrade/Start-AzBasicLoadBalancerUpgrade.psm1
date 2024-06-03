@@ -151,21 +151,22 @@ function Start-AzBasicLoadBalancerUpgrade {
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName, 
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $BasicLoadBalancerName,
         [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
-        [Parameter(Mandatory = $True, ParameterSetName = 'ByJsonVm')][string] 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][string]$FailedMigrationRetryFilePathLB,
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][string] $FailedMigrationRetryFilePathVMSS,
+        [Parameter(Mandatory = $True, ParameterSetName = 'VMRecovery')][string] 
+        [Parameter(Mandatory = $True, ParameterSetName = 'VmssRecovery')][string]$FailedMigrationRetryFilePathLB,
+        [Parameter(Mandatory = $True, ParameterSetName = 'VmssRecovery')][string] $FailedMigrationRetryFilePathVMSS,
         [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')][string]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][string]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByObject')][string]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVm')][string] 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][string] $StandardLoadBalancerName,
+        [Parameter(Mandatory = $false, ParameterSetName = 'VMRecovery')][string] 
+        [Parameter(Mandatory = $false, ParameterSetName = 'VmssRecovery')][string] $StandardLoadBalancerName,
         [Parameter(Mandatory = $false)][string] $RecoveryBackupPath = $pwd,
         [Parameter(Mandatory = $false)][switch] $FollowLog,
         [Parameter(Mandatory = $false)][switch] $validateScenarioOnly,
         [Parameter(Mandatory = $True, ParameterSetName = 'MultiLB')][psobject[]] $multiLBConfig, # @(@{basicLoadBalancer=<[Microsoft.Azure.Commands.Network.Models.PSLoadBalancer]>[;standardLoadBalancerName='lb-standard-01']})
         [Parameter(Mandatory = $false, ParameterSetName = 'ByName')][switch]
         [Parameter(Mandatory = $false, ParameterSetName = 'ByObject')][switch]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByJsonVmss')][switch] 
+        [Parameter(Mandatory = $false, ParameterSetName = 'VmssRecovery')][switch]
+        [Parameter(Mandatory = $false, ParameterSetName = 'VMRecovery')][switch] 
         [Parameter(Mandatory = $false, ParameterSetName = 'MultiLB')][switch] 
         [Parameter(Mandatory = $false, ParameterSetName = 'ValidateCompletedMigration')][switch]$skipUpgradeNATPoolsToNATRules,
         [Parameter(Mandatory = $true, ParameterSetName = 'ValidateCompletedMigration')][switch] $validateCompletedMigration,
