@@ -18,7 +18,7 @@ function _HardCopyObject {
     return , [System.Collections.Generic.List[Microsoft.Azure.Management.Compute.Models.SubResource]]$cgenericListSubResource
 }
 
-function _MigrateHealthProbe{
+function _MigrateHealthProbe {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer,
@@ -29,13 +29,13 @@ function _MigrateHealthProbe{
     log -Message "[_MigrateHealthProbe] Migrating Health Probes"
     try {
         $refHealthProbe = $refVmss.VirtualMachineProfile.NetworkProfile.HealthProbe
-        if(![string]::IsNullOrEmpty($refHealthProbe)){
+        if (![string]::IsNullOrEmpty($refHealthProbe)) {
             $refProbeName = $refHealthProbe.Id.Split('/')[-1]
             log -Message "[_MigrateHealthProbe] Health Probes found in reference VMSS $($refProbeName)"
-            $refProbeId = ($StdLoadBalancer.Probes | Where-Object{$_.Name -eq $refProbeName}).id
+            $refProbeId = ($StdLoadBalancer.Probes | Where-Object { $_.Name -eq $refProbeName }).id
             $vmss.VirtualMachineProfile.NetworkProfile.HealthProbe = $refProbeId
         }
-        else{
+        else {
             log -Message "[_MigrateHealthProbe] Health Probes not found in reference VMSS $($refVmss.Name)"
         }
     }
@@ -46,7 +46,7 @@ function _MigrateHealthProbe{
     log -Message "[_MigrateHealthProbe] Migrating Health Probes completed"
 }
 
-function _RestoreUpgradePolicyMode{
+function _RestoreUpgradePolicyMode {
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $vmss,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Compute.Automation.Models.PSVirtualMachineScaleSet] $refVmss
@@ -97,11 +97,11 @@ function _MigrateNetworkInterfaceConfigurationsVmss {
                 $genericListSubResource.AddRange($ipConfiguration.LoadBalancerBackendAddressPools)
             }
 
-            foreach($BackendAddressPool in $BasicLoadBalancer.BackendAddressPools){
-                foreach($BackendIpConfiguration in $BackendAddressPool.BackendIpConfigurations){
+            foreach ($BackendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
+                foreach ($BackendIpConfiguration in $BackendAddressPool.BackendIpConfigurations) {
                     $lbBeNicName = $BackendIpConfiguration.Id.Split('/')[-3]
                     $lbBeipConfigName = $BackendIpConfiguration.Id.Split('/')[-1]
-                    if($lbBeNicName -eq $networkInterfaceConfiguration.Name -and $lbBeipConfigName -eq $ipConfiguration.Name){
+                    if ($lbBeNicName -eq $networkInterfaceConfiguration.Name -and $lbBeipConfigName -eq $ipConfiguration.Name) {
                         try {
                             $subResource = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
                             $subResource.Id = ($StdLoadBalancer.BackendAddressPools | Where-Object { $_.Name -eq $BackendAddressPool.Name }).Id
@@ -189,48 +189,61 @@ function BackendPoolMigrationVM {
     log -Message "[BackendPoolMigrationVM] Adding original VMs to the new Standard Load Balancer backend pools"
 
     # build table of NICs and their ipconfigs and associate them to backend pools
-    $backendPoolNicTable = @{}
-    ForEach ($BackendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
-        $backendPoolList = New-Object System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool]
-
-        ForEach ($BackendIpConfiguration in $BackendAddressPool.BackendIpConfigurations) {
+    $backendPoolNicsAssociationArray = @()
+    ForEach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
+        ForEach ($BackendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {
             $lbBeNicId = ($BackendIpConfiguration.Id -split '/ipConfigurations/')[0]
             $ipConfigName = ($BackendIpConfiguration.Id -split '/ipConfigurations/')[1]
 
-            # create empty array for this Nic ID if it doesn't exist
-            If (!$backendPoolNicTable[$lbBeNicId]) {
-                $backendPoolNicTable[$lbBeNicId] = @(@{ipConfigs = @{} })
-            }
-            If (!$backendPoolNicTable[$lbBeNicId].ipConfigs[$ipConfigName]) {
-                $backendPoolNicTable[$lbBeNicId].ipConfigs[$ipConfigName] = @{backendPools = $backendPoolList }
+            $nicRow = [PSCustomObject]@{
+                nicId         = $lbBeNicId
+                ipConfigName  = $ipConfigName
+                backendPoolId = $StdLoadBalancer.BackendAddressPools | Where-Object { $_.Name -eq $backendAddressPool.Name } | Select-Object -ExpandProperty Id
             }
 
-            $backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool 
-            $backendPoolObj.id = $StdLoadBalancer.BackendAddressPools | Where-Object { $_.Name -eq $BackendAddressPool.Name } | Select-Object -ExpandProperty Id
-            $backendPoolNicTable[$lbBeNicId].ipConfigs[$ipConfigName].backendPools.add($backendPoolObj)
+            $backendPoolNicsAssociationArray += $nicRow
         }
     }
 
     # loop though nics and associate ipconfigs to backend pools
     $jobs = @()
-    ForEach ($nicRecord in $backendPoolNicTable.GetEnumerator()) {
+    ForEach ($nicRecordGroup in ($backendPoolNicsAssociationArray | Group-Object -Property nicId)) {
+        $nicName = ($nicRecordGroup.Name -split '/networkInterfaces/')[1]
 
-        log -Message "[BackendPoolMigrationVM] Adding ipconfigs on NIC $($nicRecord.Name.split('/')[-1]) to backend pools"
-
+        log -Message "[BackendPoolMigrationVM] Adding ipconfigs on NIC '$($nicName)' to backend pools"
         try {
-            $nic = Get-AzNetworkInterface -ResourceId $nicRecord.Name
+            log -Message "[BackendPoolMigrationVM] Getting NIC '$($nicRecordGroup.Name)'"
+            $nic = Get-AzNetworkInterface -ResourceId $nicRecordGroup.Name
         }
         catch {
-            $message = "[BackendPoolMigrationVmss] An error occured getting the Network Interface '$($nicRecord.Name)'. Check that the NIC exists. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. Error: $_"
+            $message = "[BackendPoolMigrationVM] An error occured getting the Network Interface '$($nicRecordGroup.Name)'. Check that the NIC exists. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. Error: $_"
             log 'Error' $message -terminateOnError
         }
 
-        $nic = Get-AzNetworkInterface -ResourceId $nicRecord.Name
+        ForEach ($ipconfigGroup in ($nicRecordGroup.Group | Group-Object -Property ipConfigName)) {
+            $ipConfigName = $ipconfigGroup.Name
 
-        ForEach ($nicIPConfig in $nic.IpConfigurations) {
-            $nicIPConfig.LoadBalancerBackendAddressPools += $backendPoolNicTable[$nicRecord.Name].ipConfigs[$nicIPConfig.Name].backendPools
+            try {
+                log -Message "[BackendPoolMigrationVM] Getting IP Config '$($ipConfigName)' on NIC '$($nicName)'"
+                $ipConfig = Get-AzNetworkInterfaceIpConfig -NetworkInterface $nic -Name $ipConfigName
+
+                ForEach ($backendPoolEntry in $ipconfigGroup.Group) {
+                    $backendPoolObj = new-object Microsoft.Azure.Commands.Network.Models.PSBackendAddressPool 
+
+                    log -Message "[BackendPoolMigrationVM] Getting Backend Pool '$($backendPoolEntry.backendPoolId.split('/')[-1])' on Standard Load Balancer and adding to IP Config '$($ipConfigName)'" -Severity Debug
+                    $backendPoolObj.id = $StdLoadBalancer.BackendAddressPools | Where-Object { $_.Name -eq $backendPoolEntry.backendPoolId.split('/')[-1] } | Select-Object -ExpandProperty Id
+
+                    log -Message "[BackendPoolMigrationVM] Adding backend pool '$($backendPoolEntry.backendPoolId)' to NIC '$($nicName)' IP Config '$($ipConfigName)'" -Severity "Debug"
+                    $ipConfig.LoadBalancerBackendAddressPools.Add($backendPoolObj)
+                }
+            }
+            catch {
+                $message = "[BackendPoolMigrationVM] An error occured adding the backend pools to the Network Interface '$($nic.Name)' IP Configuration '$($ipConfigName)'. To recover, address the cause of the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. Error: $_"
+                log 'Error' $message -terminateOnError
+            }
         }
 
+        log -Message "[BackendPoolMigrationVM] Setting NIC '$($nic.Name)' with updated IP Configurations as a job" -Severity "Debug"
         $jobs += Set-AzNetworkInterface -NetworkInterface $nic -AsJob
     }
 

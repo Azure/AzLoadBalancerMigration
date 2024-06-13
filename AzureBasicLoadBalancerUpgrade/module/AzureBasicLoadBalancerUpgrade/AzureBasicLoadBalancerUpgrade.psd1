@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.10'
+    ModuleVersion = '2.4.11'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fixed recovery parameter sets'
+            ReleaseNotes = 'Fix https://github.com/Azure/AzLoadBalancerMigration/issues/124'
 
             # Prerelease string of this module
             # Prerelease = ''
