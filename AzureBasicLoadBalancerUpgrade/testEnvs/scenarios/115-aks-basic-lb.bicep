@@ -39,7 +39,7 @@ module aks '../modules/aks/aks.bicep' = {
   name: 'aks-module'
   scope: resourceGroup(resourceGroupName)
   params: {
-    k8sVersion: '1.28.3'
+    k8sVersion: '1.29'
     location: location
     subnetId: virtualNetworks.outputs.subnetResourceIds[0]
     vmSize: vmSize

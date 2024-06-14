@@ -659,20 +659,20 @@ Function Test-SupportedMultiLBScenario {
         $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         do {        
             If (!$waitingForARG) {
-                log -Message "[UpgradeVMPublicIP] Querying Resource Graph for availability sets of VMs in load balancers backend pools"
+                log -Message "[Test-SupportedMultiLBScenario] Querying Resource Graph for availability sets of VMs in load balancers backend pools"
             }
             Else {
-                log -Message "[UpgradeVMPublicIP] Waiting 15 seconds before querying ARG again (total wait time up to 15 minutes before failure)..."
+                log -Message "[Test-SupportedMultiLBScenario] Waiting 15 seconds before querying ARG again (total wait time up to 15 minutes before failure)..."
                 Start-Sleep 15
             }
 
             $VMAvailabilitySets = Search-AzGraph -Query $graphQuery
 
             $waitingForARG = $true
-        } while ($VMPIPRecords.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Seconds -lt $global:defaultJobWaitTimeout)
+        } while ($VMAvailabilitySets.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Seconds -lt $global:defaultJobWaitTimeout)
 
         If ($timeoutStopwatch.Elapsed.Seconds -gt $global:defaultJobWaitTimeout) {
-            log -Severity Error -Message "[UpgradeVMPublicIP] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration." -terminateOnError
+            log -Severity Error -Message "[Test-SupportedMultiLBScenario] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration." -terminateOnError
         }
 
         # VMs must share an availability set or the backend must be a single VM with no availability set ('NO_AVAILABILITY_SET')
