@@ -119,6 +119,7 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
   name: 'vm-01'
   params: {
     adminUsername: 'admin-vm'
+    name: 'vm-01'
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
     availabilitySetResourceId: availabilitySet.outputs.resourceId
     location: location
@@ -162,7 +163,9 @@ module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = 
   name: 'vm-02'
   params: {
     adminUsername: 'admin-vm'
+    name: 'vm-02'
     adminPassword: '${uniqueString(randomGuid)}rpP@340'
+    availabilitySetResourceId: availabilitySet.outputs.resourceId
     location: location
     imageReference: {
       offer: 'WindowsServer'
