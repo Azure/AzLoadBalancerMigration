@@ -1,0 +1,34 @@
+parameters:
+- name: resourceGroupName
+  displayName: ResourceGroupName
+  type: string
+- name: basicLoadBalancerName
+  displayName: basicLoadBalancerName
+  type: string
+
+trigger: none
+
+pool:
+  vmImage: windows-latest
+
+steps:
+- task: AzurePowerShell@5
+  inputs:
+    azureSubscription: '<YOUR_SERVICE_CONNECTION_NAME>'
+    ScriptType: 'InlineScript'
+    Inline: |
+      # installing the Az.ResourceGraph module. a copy could instead be placed in your repo to avoid the installation, which can be slow
+      Write-Host "Installing Az.resourceGraph module"
+      Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+      Install-Module Az.ResourceGraph -Scope CurrentUser -Force -Confirm:$false
+
+      Write-Host "Importing the Az.ResourceGraph"
+      Import-Module Az.ResourceGraph
+      
+      # this step assumes you have a copy of the AzureBasicLoadBalancerUpgrade module in your repo's localModules directory. alternatively, you could use the Install-Module command as above
+      Write-Host "Importing AzureBasicLoadBalancerUpgrade module"
+      Import-Module ./localModules/AzureBasicLoadBalancerUpgrade
+
+      Start-AzBasicLoadBalancerUpgrade -ResourceGroupName ${{ parameters.resourceGroupName }} -BasicLoadBalancerName ${{ parameters.basicLoadBalancerName}} -FollowLog -Force
+    azurePowerShellVersion: 'LatestVersion'
+    pwsh: true
