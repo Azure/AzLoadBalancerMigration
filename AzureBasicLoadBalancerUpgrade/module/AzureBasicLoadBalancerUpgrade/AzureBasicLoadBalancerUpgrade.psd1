@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.11'
+    ModuleVersion = '2.4.12'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix https://github.com/Azure/AzLoadBalancerMigration/issues/124'
+            ReleaseNotes = 'Fix ARG timeout in multi-lb VM scenario validation'
 
             # Prerelease string of this module
             # Prerelease = ''
