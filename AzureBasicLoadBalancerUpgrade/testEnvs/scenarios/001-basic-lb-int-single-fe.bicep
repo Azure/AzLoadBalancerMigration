@@ -55,7 +55,7 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
       }
     ]
     inboundNatRules: []
-    loadBalancerSku: 'Basic'
+    loadBalancerSku: 'Standard'
     loadBalancingRules: [
       {
         backendAddressPoolName: 'be-01'
@@ -104,6 +104,10 @@ module virtualMachineScaleSets '../modules/Microsoft.Compute/virtualMachineScale
   name: 'vmss-01'
   scope: resourceGroup(resourceGroupName)
   params: {
+    availabilityZones: [1,2,3]
+    scaleSetFaultDomain: 1
+    singlePlacementGroup: false
+    zoneBalance: true
     location: location
     // Required parameters
     encryptionAtHost: false

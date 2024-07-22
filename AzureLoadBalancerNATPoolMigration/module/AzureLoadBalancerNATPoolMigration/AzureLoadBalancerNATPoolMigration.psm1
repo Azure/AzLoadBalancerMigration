@@ -37,7 +37,8 @@ Function Start-AzNATPoolMigration {
     param(
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $ResourceGroupName,
         [Parameter(Mandatory = $True, ParameterSetName = 'ByName')][string] $LoadBalancerName,
-        [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $LoadBalancer
+        [Parameter(Mandatory = $True, ValueFromPipeline, ParameterSetName = 'ByObject')][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $LoadBalancer,
+        [Parameter(Mandatory = $false)][switch] $reuseBackendPools # specify if existing backend pools should be reused
     )
 
     Function Wait-VMSSInstanceUpdate {
@@ -77,6 +78,41 @@ Function Start-AzNATPoolMigration {
     # check load balancer has inbound nat pools
     If ($LoadBalancer.InboundNatPools.count -lt 1) {
         Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any Inbound NAT Pools to migrate"
+    }
+
+    # check whether existing backend pools membership aligns to nat pools if -reuseBackendPools specified
+    If ($reuseBackendPools) {
+        $backendPools = $LoadBalancer.BackendAddressPools
+
+        # nat pool to backend pool mapping dictionary
+        $natPoolToBEPMap = @{} # { natPoolId = backendPoolId, ... }
+
+        # build dictionary of VMSS objects for later comparisons
+        $backendVMSSObjects = @{}
+        Foreach ($backendVMSSId in ($backendPools.BackendIPConfigurations.id | ForEach-Object { ($_ -split '/virtualMachines/')[0] } | Select-Object -Unique)) {
+            $backendVMSSObjects[$backendVMSSId] = Get-AzResource -ResourceId $backendVMSSId | Get-AzVmss
+        }
+
+        # check whether each inbound nat pool has a backend pool with all its same members
+        :natPools Foreach ($inboundNATPool in $LoadBalancer.InboundNatPools) {
+            :backendPools Foreach ($backendPool in $backendPools) {
+                $backendVMSSes = $backendPool.BackendIPConfigurations | ForEach-Object { ($_.id -split '/virtualMachines/')[0] }
+
+                ForEach ($backendVMSS in $backendVMSSes) {
+                    If ($backendVMSSObjects[$backendVMSS].VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipConfigurations.loadBalancerInboundNatPools.id -notcontains $inboundNATPool.id) {
+                        # backend pool does not have the same membership as the NAT Pool
+                        Write-Verbose "Backend Pool '$($backendPool.Name)' does not have the same membership as NAT Pool '$($inboundNATPool.Name)'--VMSS '$($backendVMSS)' is missing."
+                        continue :backendPools
+                    }
+                    Else {
+                        Write-Verbose "Backend Pool '$($backendPool.Name)' may have the same membership as NAT Pool '$($inboundNATPool.Name)'--VMSS '$($backendVMSS)' is present."
+                    }
+                }
+
+                $natPoolToBEPMap[$inboundNATPool.id] = $backendPool.id
+                continue :natPools
+            }
+        }
     }
 
     # create a hard copy of NAT Pool configs for later reference
