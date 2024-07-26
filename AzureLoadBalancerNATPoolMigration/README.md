@@ -12,7 +12,7 @@ NAT Rules provide the same functionality as NAT Pools, but have the following ad
 
 ## Migration Process
 
-The migration process will create a new Backend Pool for each Inbound NAT Pool existing on the target Load Balancer. A corresponding NAT Rule will be created for each NAT Pool and associated with the new Backend Pool. Existing Backend Pool membership will be retained. 
+The migration process will create a new backend pool for each migrated NAT Pool by default. Alternatively, specify `-reuseBackendPools` to instead reuse existing backend pools if the is a backend pool with the same membership as the NAT Pool (if not, a new one will be created). Backend pools and NAT Rule associations can be updated post migration to match your preference.
 
 > [!IMPORTANT]
 > The migration process removes the Virtual Machine Scale Set(s) from the NAT Pools before associating the Virtual Machine Scale Set(s) with the new NAT Rules. This requires an update to the Virtual Machine Scale Set(s) model, which may cause a brief downtime while instances are upgraded with the model.
@@ -52,6 +52,11 @@ Install-Module -Name AzureLoadBalancerNATPoolMigration -Scope CurrentUser -Repos
 #### Example: pass a Load Balancer from the pipeline
    ```azurepowershell
    Get-AzLoadBalancer -ResourceGroupName -ResourceGroupName <loadBalancerResourceGroupName> -Name <LoadBalancerName> | Start-AzNATPoolMigration
+   ```
+
+#### Example: reuse existing backend pools with membership matching NAT pools
+   ```azurepowershell
+   Start-AzNATPoolMigration -ResourceGroupName <loadBalancerResourceGroupName> -LoadBalancerName <LoadBalancerName> -reuseBackendPools
    ```
 
 ## Common Questions

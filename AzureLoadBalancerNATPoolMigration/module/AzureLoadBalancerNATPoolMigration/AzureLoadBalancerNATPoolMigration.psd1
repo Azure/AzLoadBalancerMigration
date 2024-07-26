@@ -12,7 +12,7 @@
 RootModule = 'AzureLoadBalancerNATPoolMigration'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '2.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@ Author = 'Matthew Bratschun at FastTrack for Azure'
 CompanyName = 'Microsoft'
 
 # Copyright statement for this module
-Copyright = '(c) 2023 Microsoft. All rights reserved.'
+Copyright = '(c) 2024 Microsoft. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Migrates an Azure Standard Load Balancer Inbound NAT Pools to Inbound NAT Rules'
@@ -51,7 +51,7 @@ Description = 'Migrates an Azure Standard Load Balancer Inbound NAT Pools to Inb
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
-# RequiredModules = @()
+RequiredModules = @('Az.Compute','Az.Network','Az.Resources','Az.Accounts','Az.ResourceGraph')
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
@@ -108,10 +108,11 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Added support for LBs without associated VMSS'
+        ReleaseNotes = 'Added -reuseBackendPools parameter to allow reuse of existing backend pools
+                        Added requiredModules to PowerShell module manifest to ensure they are available during load'
 
         # Prerelease string of this module
-        # Prerelease = ''
+        Prerelease = 'beta'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         # RequireLicenseAcceptance = $false
