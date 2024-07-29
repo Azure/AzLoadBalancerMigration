@@ -78,14 +78,14 @@ Function Start-AzNATPoolMigration {
 
         $vmssRecords = Search-ResourceGraph -Query $graphQuery 
 
-        Write-Host "Found '$($VMSSRecords.count)' unique VMSSes associated with the Load Balancer's Backend Pools and NAT Rules."
+        Write-Debug "Found '$($VMSSRecords.count)' unique VMSSes associated with the Load Balancer's Backend Pools and NAT Rules."
 
         # check whether each inbound nat pool has a backend pool with all its same members
         Foreach ($inboundNATPool in $LoadBalancer.InboundNatPools) {
-            Write-Host "Checking if NAT Pool '$($inboundNATPool.Name)' has aligned backend pool"
+            Write-Debug "Checking if NAT Pool '$($inboundNATPool.Name)' has aligned backend pool"
 
             $natPoolVMSSes = $VMSSRecords | Where-Object { $_.nicConfigs.properties.ipConfigurations.properties.loadBalancerInboundNatPools.id -contains $inboundNATPool.id }
-            Write-Host "Found '$($natPoolVMSSes.count)' VMSSes associated with NAT Pool '$($inboundNATPool.Name)'"
+            Write-Debug "Found '$($natPoolVMSSes.count)' VMSSes associated with NAT Pool '$($inboundNATPool.Name)'"
 
             # get a list of all IP configurations that belong to the NAT Pool
             $natPoolIPConfigs = @()
@@ -103,7 +103,7 @@ Function Start-AzNATPoolMigration {
                 }
             }
 
-            Write-Host "Found '$($natPoolIPConfigs.count)' IP Configurations associated with NAT Pool '$($inboundNATPool.Name)'"
+            Write-Debug "Found '$($natPoolIPConfigs.count)' IP Configurations associated with NAT Pool '$($inboundNATPool.Name)'"
 
             # check whether every IP config is a member of the same backend pool
             $ipConfigNatAndBackendPools = @{}
@@ -121,20 +121,20 @@ Function Start-AzNATPoolMigration {
 
             # create a list of all backend pools associated with the VMSS IP Configurations which are also associated with the NAT Pool
             $backendPoolIds = $ipConfigNatAndBackendPools.GetEnumerator() | Select-Object -Unique -Property Value | ForEach-Object { $_.Value }
-            Write-Host "Found '$($backendPoolIds.count)' unique Backend Pools associated with IP configs also associated with NAT Pool '$($inboundNATPool.Name)'"
+            Write-Debug "Found '$($backendPoolIds.count)' unique Backend Pools associated with IP configs also associated with NAT Pool '$($inboundNATPool.Name)'"
 
             ForEach ($backendPoolId in $backendPoolIds) {
-                Write-Host "Checking if Backend Pool '$($backendPoolId.split('/')[-1])' has aligned backend pools by IP Configurations"
+                Write-Debug "Checking if Backend Pool '$($backendPoolId.split('/')[-1])' has aligned backend pools by IP Configurations"
 
                 If ($ipConfigNatAndBackendPools.GetEnumerator().Where({ $_.Value -notcontains $backendPoolId })) {
-                    Write-Host "Candidate backend pool '$($backendPoolId.split('/')[-1])' is not a member of all NAT Pool IP Configurations for NAT Pool '$($inboundNATPool.Name)'"
+                    Write-Debug "Candidate backend pool '$($backendPoolId.split('/')[-1])' is not a member of all NAT Pool IP Configurations for NAT Pool '$($inboundNATPool.Name)'"
                 }
                 Else {
                     # associate the first backend pool that has all the same members as the NAT Pool with the nat pool id
-                    Write-Host "Candidate backend pool '$($backendPoolId.split('/')[-1])' contains all of NAT Pool IP Configurations for NAT Pool '$($inboundNATPool.Name)'"
+                    Write-Host "Candidate backend pool '$($backendPoolId.split('/')[-1])' contains all of NAT Pool IP Configurations for NAT Pool '$($inboundNATPool.Name)'; it will be reused."
                     $natPoolToBEPMap[$inboundNATPool.id] = $backendPoolId
 
-                    Write-Host "Skipping checking additional backend pools for NAT Pool '$($inboundNATPool.Name)'"
+                    Write-Debug "Skipping checking additional backend pools for NAT Pool '$($inboundNATPool.Name)'"
                     continue
                 }
             }            
@@ -161,8 +161,6 @@ Function Start-AzNATPoolMigration {
     
             $queryResult = Search-AzGraph -Query $graphQuery @optionalParams
             $queryResults += $queryResult.Data
-    
-            Write-Host "Skip token: '$($queryResult.skipToken)'"
         } while ($queryResult.SkipToken)
 
         return $queryResults
@@ -170,7 +168,9 @@ Function Start-AzNATPoolMigration {
 
     $ErrorActionPreference = 'Stop'
 
-    # get load balanacer if not passed through pipeline
+    Write-Host "Starting NAT Pool Migration..."
+
+    # get load balancer if not passed through pipeline
     try {
         if ($PSCmdlet.ParameterSetName -eq 'ByName') {
             $LoadBalancer = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
@@ -179,6 +179,8 @@ Function Start-AzNATPoolMigration {
     catch {
         Write-Error "Failed to find Load Balancer '$LoadBalancerName' in Resource Group '$ResourceGroupName'. Ensure that the name values are correct and that you have appropriate permissions."
     }
+
+    Write-Host "Validating and preparing Load Balancer '$($LoadBalancer.Name)' for NAT Pool Migration..."
 
     # check load balancer sku
     If ($LoadBalancer.sku.name -ne 'Standard') {
@@ -218,9 +220,9 @@ Function Start-AzNATPoolMigration {
         | project id
 "@
 
-    $vmssIds = Search-ResourceGraph -Query $graphQuery 
+    $vmssIds = Search-ResourceGraph -Query $graphQuery | Select-Object -ExpandProperty id | Sort-Object -Unique
 
-    Write-Host "Found '$($vmssIds.count)' unique VMSSes associated with the Load Balancer's NAT Pools."
+    Write-Debug "Found '$($vmssIds.count)' unique VMSSes associated with the Load Balancer's NAT Pools."
 
     If ([string]::IsNullOrEmpty($vmssIds)) {
         Write-Host "Load Balancer '$($loadBalancer.Name)' does not have any VMSSes associated with its NAT Pools."
@@ -244,6 +246,8 @@ Function Start-AzNATPoolMigration {
         }
     }
 
+    Write-Host "Starting Load Balancer NAT Pool migration..."
+
     If (![string]::IsNullOrEmpty($vmssIds)) {
         # remove each vmss model's ipconfig from the load balancer's inbound nat pool
         Write-Host "Removing the NAT Pool from the VMSS model ipConfigs."
@@ -254,7 +258,7 @@ Function Start-AzNATPoolMigration {
                     ForEach ($ipConfig in $nicConfig.ipConfigurations) {
                         If ($ipConfig.loadBalancerInboundNatPools.id -contains $inboundNATPool.id) {
 
-                            Write-Host "Removing NAT Pool '$($inboundNATPool.id)' from VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)'"
+                            Write-Host "Removing NAT Pool '$($inboundNATPool.id.split('/')[-1])' from VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)'"
                             $ipConfigParams = @{vmssId = $vmssItem.vmss.id; nicName = $nicConfig.Name; ipconfigName = $ipConfig.Name; inboundNatPoolId = $inboundNatPool.id }
                             $ipConfigNatPoolMap += $ipConfigParams
                             $ipConfig.loadBalancerInboundNatPools = $ipConfig.loadBalancerInboundNatPools | Where-Object { $_.id -ne $inboundNATPool.Id }
@@ -275,10 +279,10 @@ Function Start-AzNATPoolMigration {
             $vmssModelUpdateRemoveNATPoolJobs += $job
         }
 
-        Write-Host "Waiting for VMSS model to update to remove the NAT Pool references..."
+        Write-Host "Start waiting for VMSS model to update to remove the NAT Pool references..."
         While ($vmssModelUpdateRemoveNATPoolJobs.State -contains 'Running') {
             Start-Sleep -Seconds 15
-            Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')]Waiting for VMSS model update jobs to complete..."
+            Write-Host "`tWaiting for VMSS model update jobs to complete..."
         } 
         
         $vmssModelUpdateRemoveNATPoolJobs | Foreach-Object {
@@ -395,7 +399,7 @@ Function Start-AzNATPoolMigration {
                         $backendPoolObj = New-Object Microsoft.Azure.Management.Compute.Models.SubResource
                         $backendPoolObj.id = $natPoolToBEPMap[$ipconfigRecord.inboundNatPoolId]
 
-                        Write-Host "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id)'"
+                        Write-Host "Adding VMSS '$($vmssItem.vmss.Name)' NIC '$($nicConfig.Name)' ipConfig '$($ipConfig.Name)' to new backend pool '$($backendPoolObj.id.split('/')[-1])'"
                         $backendPoolList.Add($backendPoolObj)
 
                         $ipConfig.LoadBalancerBackendAddressPools = $backendPoolList
@@ -415,10 +419,10 @@ Function Start-AzNATPoolMigration {
             $vmssModelUpdateAddBackendPoolJobs += $job
         }
 
-        Write-Host "Waiting for VMSS model to update to include the new Backend Pools..."
+        Write-Host "Start waiting for VMSS model to update to include the new Backend Pools..."
         While ($vmssModelUpdateAddBackendPoolJobs.State -contains 'Running') {
             Start-Sleep -Seconds 15
-            Write-Host "`t[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:sszz')] Waiting for VMSS model update jobs to complete..."
+            Write-Host "`tWaiting for VMSS model update jobs to complete..."
         } 
     
         $vmssModelUpdateAddBackendPoolJobs | Foreach-Object {
@@ -456,6 +460,8 @@ Function Start-AzNATPoolMigration {
             }
         }
     }
+
+    Write-Host "NAT Pool Migration complete."
 }
 
 Export-ModuleMember -Function Start-AzNATPoolMigration 
