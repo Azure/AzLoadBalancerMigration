@@ -136,26 +136,17 @@ $jobs = @()
 ForEach ($resourceGroupSuffixI in $resourceGroupSuffix) {
     foreach ($template in $filteredTemplates) {
         $rgTemplateName = "rg-{0}{1}-{2}" -f $template.BaseName.split('-')[0], $resourceGroupSuffixI, $template.BaseName.split('-', 2)[1]
-        if ($template.FullName -like "*.bicep") {
-            $params = @{
-                Name                    = "vmss-lb-deployment-$((get-date).tofiletime())"
-                TemplateFile            = $template.FullName
-                TemplateParameterObject = @{
-                    Location          = $Location
-                    ResourceGroupName = $rgTemplateName
-                }
-            }
 
-            $job = New-AzSubscriptionDeployment -Location $location @params -AsJob
-            $job.Name = "rg-$($template.BaseName)"
-            $jobs += $job
-        }
 
-        elseif ($template.Name -like "019*.json") {
+        if ($template.Name -like "*.bicep") {
 
             $params = @{
                 Name         = "vmss-lb-deployment-$((get-date).tofiletime())"
                 TemplateFile = $template.FullName
+                TemplateParameterObject = @{
+                    Location          = $Location
+                    ResourceGroupName = $rgTemplateName
+                }
             }
             $null = New-AzResourceGroup -Name $rgTemplateName -Location $Location -Force -ErrorAction SilentlyContinue
             $jobs += New-AzResourceGroupDeployment -ResourceGroupName $rgTemplateName @params -AsJob
