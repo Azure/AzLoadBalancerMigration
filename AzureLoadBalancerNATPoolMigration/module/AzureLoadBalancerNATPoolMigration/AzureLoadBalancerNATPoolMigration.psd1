@@ -12,7 +12,7 @@
 RootModule = 'AzureLoadBalancerNATPoolMigration'
 
 # Version number of this module.
-ModuleVersion = '2.0.1'
+ModuleVersion = '2.0.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -108,8 +108,9 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Added -reuseBackendPools parameter to allow reuse of existing backend pools
-                        Added requiredModules to PowerShell module manifest to ensure they are available during load
+        ReleaseNotes = 'Added -backendPoolReuseStrategy parameter to enable options for backend pool reuse
+                        Added -manualBackendPoolMapping parameter to enable manual backend pool mapping
+                        Added -validateOnly to just run pre-checks and pool mapping then exit
                         Fixed issue when IP config belongs to multiple NAT Pools'
 
         # Prerelease string of this module

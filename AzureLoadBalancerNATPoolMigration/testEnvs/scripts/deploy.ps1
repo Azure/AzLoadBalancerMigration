@@ -63,25 +63,11 @@ if ($RunMigration.IsPresent -and $null -ne $filteredTemplates) {
         param($RGName)
         Write-Output $RGName
         $pwd
-        Import-Module ../../module/AzureBasicLoadBalancerUpgrade  -Force
-        $path = "$env:HOMEPATH/temp/AzLoadBalancerMigration/$RGName"
+        Import-Module ../../module/AzureLoadBalancerNATPoolMigration  -Force
+        $path = "$env:HOMEPATH/temp/AzureLoadBalancerNATPoolMigration/$RGName"
         New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
         Set-Location $path
-        Start-AzBasicLoadBalancerUpgrade -ResourceGroupName $RGName -BasicLoadBalancerName lb-basic-01 -StandardLoadBalancerName lb-standard-01 -Pre -Force -outputMigrationValiationObj -skipUpgradeNATPoolsToNATRules:$skipUpgradeNATPoolsToNATRules
-    }
-
-    $scriptBlockMultiLB = {
-        param($RGName)
-        Write-Output $RGName
-        $pwd
-        Import-Module ../../module\AzureBasicLoadBalancerUpgrade  -Force
-        $path = "$env:HOMEPATH/temp/AzLoadBalancerMigration/$RGName"
-        New-Item -ItemType Directory -Path $path -ErrorAction SilentlyContinue
-        Set-Location $path
-
-        $multiLBConfig = @()
-        get-AzLoadBalancer -ResourceGroupName $RGName | ? {$_.sku.name -eq 'basic'} | select -First 2 | %{ $multiLBConfig += @{BasicLoadBalancer=$_;StandardLoadBalancerName=$_.name.replace('basic','standard')}}
-        Start-AzBasicLoadBalancerUpgrade -MultiLBConfig $multiLBConfig -Pre -Force -outputMigrationValiationObj -skipUpgradeNATPoolsToNATRules:$skipUpgradeNATPoolsToNATRules
+        start-AzNATPoolMigration -ResourceGroupName $RGName -LoadBalancerName lb-standard-01
     }
 
     $rgNamesToMigrate = $filteredTemplates | ForEach-Object { 
