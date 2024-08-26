@@ -1,10 +1,11 @@
 # Migrate from Inbound NAT Pools to NAT Rules
 
-Azure Load Balancer NAT Pools are the legacy approach for automatically assigning Load Balancer front end ports to each instance in a Virtual Machine Scale Set. NAT Rules on Standard SKU Load Balancers have replaced this functionality with an approach that is both easier to manage and faster to configure. 
+Azure Load Balancer NAT Pools are the legacy approach for automatically assigning Load Balancer front end ports to each instance in a Virtual Machine Scale Set. NAT Rules on Standard SKU Load Balancers have replaced this functionality with an approach that is both easier to manage and faster to configure.
 
 ## Why Migrate to NAT Rules?
 
 NAT Rules provide the same functionality as NAT Pools, but have the following advantages:
+
 * NAT Rules can be managed using the Portal
 * NAT Rules can leverage Backend Pools, simplifying configuration
 * NAT Rules configuration changes apply more quickly than NAT Pools
@@ -12,18 +13,18 @@ NAT Rules provide the same functionality as NAT Pools, but have the following ad
 
 ## Migration Process
 
-The migration process will create a new backend pool for each migrated NAT Pool by default. Alternatively, specify `-reuseBackendPools` to instead reuse existing backend pools if the is a backend pool with the same membership as the NAT Pool (if not, a new one will be created). Backend pools and NAT Rule associations can be updated post migration to match your preference.
+The migration process will reuse existing backend pools with membership matching the NAT Pools to be migrated; if no matching backend pool is found, the script will exit (without making changes). Alternatively, use the  `-backendPoolReuseStrategy` parameter to either always create new backend pools (`NoReuse`) or create a new backend pool if a matching one doesn't exist (`OptionalFirstMatch`). Backend pools and NAT Rule associations can be updated post migration to match your preference.
 
 > [!IMPORTANT]
-> The migration process removes the Virtual Machine Scale Set(s) from the NAT Pools before associating the Virtual Machine Scale Set(s) with the new NAT Rules. This requires an update to the Virtual Machine Scale Set(s) model, which may cause a brief downtime while instances are upgraded with the model.
+> The migration process removes the Virtual Machine Scale Set(s) from the NAT Pools before associating the Virtual Machine Scale Set(s) with the new NAT Rules. This requires an update to the Virtual Machine Scale Set(s) model and DNAT ports will be unavailable during the migration.
 
 > [!NOTE]
-> Frontend port mapping to Virtual Machine Scale Set instances may change with the move to NAT Rules, especially in situations where a single NAT Pool has multiple associated Virtual Machine Scale Sets. The new port assignment will align sequentially to instance ID numbers; when there are multiple Virtual Machine Scale Sets, ports will be assigned to all instances in one scale set, then the next, continuing. 
+> Frontend port mapping to Virtual Machine Scale Set instances may change with the move to NAT Rules, especially in situations where a single NAT Pool has multiple associated Virtual Machine Scale Sets. The new port assignment will align sequentially to instance ID numbers; when there are multiple Virtual Machine Scale Sets, ports will be assigned to all instances in one scale set, then the next, continuing.
 
 > [!NOTE]
-> Service Fabric Clusters take significantly longer to update the Virtual Machine Scale Set model (up to an hour). 
+> Service Fabric Clusters take significantly longer to update the Virtual Machine Scale Set model (up to an hour).
 
-### Prerequisites 
+### Prerequisites
 
 * In order to migrate a Load Balancer's NAT Pools to NAT Rules, the Load Balancer SKU must be 'Standard'. To automate this upgrade process, see the steps provided in [Upgrade a basic load balancer used with Virtual Machine Scale Sets](upgrade-basic-standard-virtual-machine-scale-sets.md).
 * Virtual Machine Scale Sets associated with the target Load Balancer must use either a 'Manual' or 'Automatic' upgrade policy--'Rolling' upgrade policy is not supported. For more information, see [Virtual Machine Scale Sets Upgrade Policies](../virtual-machine-scale-sets/virtual-machine-scale-sets-upgrade-scale-set.md#how-to-bring-vms-up-to-date-with-the-latest-scale-set-model)
@@ -42,21 +43,30 @@ Install-Module -Name AzureLoadBalancerNATPoolMigration -Scope CurrentUser -Repos
 
 1. Connect to Azure with `Connect-AzAccount`
 1. Find the target Load Balancer for the NAT Rules upgrade and note its name and Resource Group name
-1. Run the migration command
+1. Run the migration command, using the following examples for guidance
 
-#### Example: specify the Load Balancer name and Resource Group name
+#### Example: validate a migration scenario, planning to reuse existing backend pools
+
+   ```azurepowershell
+   Start-AzNATPoolMigration -ResourceGroupName <loadBalancerResourceGroupName> -LoadBalancerName <LoadBalancerName> -validateOnly
+   ```
+
+#### Example: specify the Load Balancer name and Resource Group name, reusing existing backend pools
+
    ```azurepowershell
    Start-AzNATPoolMigration -ResourceGroupName <loadBalancerResourceGroupName> -LoadBalancerName <LoadBalancerName>
    ```
 
-#### Example: pass a Load Balancer from the pipeline
+#### Example: pass a Load Balancer from the pipeline, always creating new backend pools
+
    ```azurepowershell
-   Get-AzLoadBalancer -ResourceGroupName -ResourceGroupName <loadBalancerResourceGroupName> -Name <LoadBalancerName> | Start-AzNATPoolMigration
+   Get-AzLoadBalancer -ResourceGroupName <loadBalancerResourceGroupName> -Name <LoadBalancerName> | Start-AzNATPoolMigration -backendPoolReuseStrategy NoReuse
    ```
 
-#### Example: reuse existing backend pools with membership matching NAT pools
+#### Example: reuse existing backend pools with membership matching NAT pools or create a new one if a match does not exist
+
    ```azurepowershell
-   Start-AzNATPoolMigration -ResourceGroupName <loadBalancerResourceGroupName> -LoadBalancerName <LoadBalancerName> -reuseBackendPools
+   Start-AzNATPoolMigration -ResourceGroupName <loadBalancerResourceGroupName> -LoadBalancerName <LoadBalancerName> -backendPoolReuseStrategy OptionalFirstMatch
    ```
 
 ## Common Questions

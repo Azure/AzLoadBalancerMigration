@@ -4,14 +4,13 @@ Function Start-AzNATPoolMigration {
 .SYNOPSIS
     Migrates an Azure Standard Load Balancer's Inbound NAT Pools to Inbound NAT Rules
 .DESCRIPTION
-    This script creates a new NAT Rule for each NAT Pool, then adds a new Backend Pool with membership corresponding to the NAT Pool's original membership. 
-
-    For every NAT Pool, a new NAT Rule and backend pool will be created on the Load Balancer. Names will follow these patterns:
+    For every NAT Pool, a new NAT Rule will be created on the Load Balancer. Depending on the backendPoolReuseStrategy, a new backend pool may be created or existing pools may be reused. 
+    
+    Names will follow these patterns:
         natrule_migrated_<inboundNATPool Name>
         be_migrated_<inboundNATPool Name>
 
-    The script reassociated NAT Pool VMSSes with the new NAT Rules, requiring multiple updates to the VMSS model and instance upgrades, which may cause service disruption during the migration. 
-
+    The script reassociates NAT Pool VMSSes with the new NAT Rules, requiring multiple updates to the VMSS model and instance upgrades. DNAT ports will be offline during the migration process.
     Backend port mapping for pool members will not necessarily be the same for NAT Pools with multiple associated VMSSes. 
 
 .PARAMETER backendPoolReuseStrategy
@@ -29,6 +28,9 @@ Function Start-AzNATPoolMigration {
     Use this parameter to override the backend pool reuse strategy and manually map the new NAT Rules created for NAT Pools to Backend Pools. The hashtable should be in the format:
         @{ 'natPoolId' = 'backendPoolId'; ... }
 
+.PARAMETER validateOnly
+    Use this switch to only validate the Load Balancer and VMSS configurations. The script will not create any new NAT Rules or update VMSS models.
+
 .NOTES
     Please report issues at: https://github.com/Azure/AzLoadBalancerMigration/issues
 
@@ -36,13 +38,21 @@ Function Start-AzNATPoolMigration {
     https://github.com/Azure/AzLoadBalancerMigration
     
 .EXAMPLE
-    Import-Module AzureLoadBalancerNATPoolMigration
-    Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb
+    Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -ResourceGroupName rg-natpoollb
     
-    # Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules. 
+    # Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules, reusing existing backend pools with membership matching the NAT Pool membership.
 
 .EXAMPLE
-    Import-Module AzureLoadBalancerNATPoolMigration
+    Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb -backendPoolReuseStrategy 'NoReuse'
+
+    # Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules, creating a new backend pool for each NAT Pool.
+
+.EXAMPLE
+    Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb -backendPoolReuseStrategy 'OptionalFirstMatch'
+
+    # Migrates all NAT Pools on Load Balance 'lb-standard-01' to new NAT Rules, reusing existing backend pools with membership matching the NAT Pool membership. If no matching backend pool is found, a new backend pool will be created.
+
+.EXAMPLE
     $lb = Get-AzLoadBalancer | ? name -eq 'my-standard-lb-01'
     $lb | Start-AzNatPoolMigration -LoadBalancerName lb-standard-01 -verbose -ResourceGroupName rg-natpoollb
     
@@ -78,18 +88,18 @@ Function Start-AzNATPoolMigration {
             Wait-VMSSInstanceUpdate -vmss $vmss
         }
     }
-Function Get-NATToBackendPoolMap {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $LoadBalancer,
-        [Parameter(Mandatory = $True)][hashtable] $natPoolToBEPMap,
-        [Parameter(Mandatory = $True)][string] $backendPoolReuseStrategy
-    )
+    Function Get-NATToBackendPoolMap {
+        [CmdletBinding()]
+        param (
+            [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $LoadBalancer,
+            [Parameter(Mandatory = $True)][hashtable] $natPoolToBEPMap,
+            [Parameter(Mandatory = $True)][string] $backendPoolReuseStrategy
+        )
 
-    Write-Verbose "Getting NAT Pool to Backend Pool mapping for Load Balancer '$($LoadBalancer.Name)'..."
+        Write-Verbose "Getting NAT Pool to Backend Pool mapping for Load Balancer '$($LoadBalancer.Name)'..."
     
-    # get all ip configurations associated with the load balancer backend address pools
-    $backendPoolIpConfigQuery = @"
+        # get all Vm and VMSS ip configurations associated with the load balancer backend address pools
+        $backendPoolIpConfigQuery = @"
         resources
         | where id =~ '$($LoadBalancer.id)' 
         | project id,backendPools = properties.backendAddressPools
@@ -121,10 +131,10 @@ Function Get-NATToBackendPoolMap {
         | summarize backendPoolMembers = make_set(ipConfigId) by backendPoolId,loadBalancerId
 "@
 
-    $backendPoolIpConfigs = Search-ResourceGraph -graphQuery $backendPoolIpConfigQuery
+        $backendPoolIpConfigs = Search-ResourceGraph -graphQuery $backendPoolIpConfigQuery
 
-    # get all ip configurations associated with the load balancer inbound nat pools
-    $natPoolIpConfigQuery = @"
+        # get all VMSS ip configurations associated with the load balancer inbound nat pools
+        $natPoolIpConfigQuery = @"
         resources
         | where id =~ '$($LoadBalancer.id)' 
         | project id,natPools = properties.inboundNatPools
@@ -147,60 +157,62 @@ Function Get-NATToBackendPoolMap {
         | summarize natPoolVMSSMembers = make_set(constructedIpConfigId) by natPoolId,loadBalancerId,vmssId
 "@
 
-    $natPoolIpConfigs = Search-ResourceGraph -graphQuery $natPoolIpConfigQuery
+        $natPoolIpConfigs = Search-ResourceGraph -graphQuery $natPoolIpConfigQuery
 
-    If ($backendPoolReuseStrategy -eq 'NoReuse') {
-        Write-Verbose "Skipping backend pool reuse check. Backend pools will not be reused (unless manual mapping specifies)."
+        If ($backendPoolReuseStrategy -eq 'NoReuse') {
+            Write-Verbose "Skipping backend pool reuse check. Backend pools will not be reused (unless manual mapping specifies)."
 
+            ForEach ($natPoolIpConfig in $natPoolIpConfigs) {
+                if (!$natPoolToBEPMap[$natPoolIpConfig.natPoolId]) {
+
+                    # add a null entry for each nat pool to indicate that a new backend pool should be created
+                    $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $null
+                }
+            }
+
+            return $natPoolToBEPMap
+        }
+
+        # check for backend pools with the same membership as each nat pool
         ForEach ($natPoolIpConfig in $natPoolIpConfigs) {
-            if (!$natPoolToBEPMap[$natPoolIpConfig.natPoolId]) {
-                $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $null
-            }
-        }
+            Write-Verbose "Checking NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])' for matching backend pools..."
 
-        return $natPoolToBEPMap
-    }
-
-    # check for backend pools with the same membership as each nat pool
-    ForEach ($natPoolIpConfig in $natPoolIpConfigs) {
-        Write-Verbose "Checking NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])' for matching backend pools..."
-
-        If ($natPoolToBEPMap[$natPoolIpConfig.natPoolId]) {
-            Write-Verbose "Backend Pool already mapped for NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])' using manual config. Skipping comparison."
-            continue
-        }
-
-        ForEach ($backendPoolIpConfig in $backendPoolIpConfigs) {
-            If ($backendPoolIpConfig.backendPoolMembers.count -eq $natPoolIpConfig.natPoolVMSSMembers.count) {
-                $natMembersNotInBackendPool = [string[]][Linq.Enumerable]::Except([string[]]$natPoolIpConfig.natPoolVMSSMembers, [string[]]$backendPoolIpConfig.backendPoolMembers)
-
-                Write-Verbose "natMembersNotInBackendPool: $($natMembersNotInBackendPool -join ',')"
-            }
-            Else {
-                Write-Verbose "'$($backendPoolIpConfig.backendPoolId.split('/')[-1])' has a different number of members. Skipping comparison."
+            If ($natPoolToBEPMap[$natPoolIpConfig.natPoolId]) {
+                Write-Verbose "Backend Pool already mapped for NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])' using manual config. Skipping comparison."
                 continue
             }
 
-            If ($natMembersNotInBackendPool.count -eq 0) {
-                If (-NOT [string]::IsNullOrEmpty($natPoolToBEPMap[$natPoolIpConfig.natPoolId])) {
-                    Write-Warning "Multiple backend pools have the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Backend pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' will be used for this NAT pool."
+            ForEach ($backendPoolIpConfig in $backendPoolIpConfigs) {
+                If ($backendPoolIpConfig.backendPoolMembers.count -eq $natPoolIpConfig.natPoolVMSSMembers.count) {
+                    $natMembersNotInBackendPool = [string[]][Linq.Enumerable]::Except([string[]]$natPoolIpConfig.natPoolVMSSMembers, [string[]]$backendPoolIpConfig.backendPoolMembers)
+
+                    Write-Verbose "natMembersNotInBackendPool: $($natMembersNotInBackendPool -join ',')"
+                }
+                Else {
+                    Write-Verbose "'$($backendPoolIpConfig.backendPoolId.split('/')[-1])' has a different number of members. Skipping comparison."
+                    continue
                 }
 
-                Write-Verbose "Backend pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' has the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Reusing backend pool."
-                $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $backendPoolIpConfig.backendPoolId
-            }
-            Else {
-                Write-Verbose "Backend Pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' does not have the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Different members: $comparison. Skipping."
-                continue
+                If ($natMembersNotInBackendPool.count -eq 0) {
+                    If (-NOT [string]::IsNullOrEmpty($natPoolToBEPMap[$natPoolIpConfig.natPoolId])) {
+                        Write-Warning "Multiple backend pools have the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Backend pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' will be used for this NAT pool."
+                    }
+
+                    Write-Verbose "Backend pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' has the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Reusing backend pool."
+                    $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $backendPoolIpConfig.backendPoolId
+                }
+                Else {
+                    Write-Verbose "Backend Pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' does not have the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Different members: $comparison. Skipping."
+                    continue
+                }
             }
         }
+
+        Write-Verbose "natPoolToBEPMap: $($natPoolToBEPMap | ConvertTo-Json -Depth 3)"
+
+        return $natPoolToBEPMap
+
     }
-
-    Write-Verbose "natPoolToBEPMap: $($natPoolToBEPMap | ConvertTo-Json -Depth 3)"
-
-    return $natPoolToBEPMap
-
-}
     Function Search-ResourceGraph {
         param (
             [Parameter(Mandatory = $True)][string] $graphQuery
@@ -250,16 +262,16 @@ Function Get-NATToBackendPoolMap {
         Write-Error "Load Balancer '$($loadBalancer.Name)' does not have any Inbound NAT Pools to migrate"
     }
 
-    # check whether existing backend pools membership aligns to nat pools if -reuseBackendPools specified
+    # check whether existing backend pools membership aligns to nat pools
     ##  nat pool to backend pool mapping dictionary - this is used later in the script to reuse backend pools for nat rules
-    $natPoolToBEPMap = @{} + $manualBackendPoolMap # { natPoolId = backendPoolId; ... }
+    $natPoolToBEPMap = @{} + $manualBackendPoolMap # @{ natPoolId = backendPoolId; ... }
     $natPoolToBEPMap = Get-NATToBackendPoolMap -LoadBalancer $LoadBalancer -natPoolToBEPMap $natPoolToBEPMap -backendPoolReuseStrategy $backendPoolReuseStrategy
 
     Write-Host "NAT Pool to Backend Pool mapping/alignment:"
     $natPoolToBEPMap.GetEnumerator() | ForEach-Object {
         $natPoolName = $_.Key.split('/')[-1]
         If ($null -eq $_.Value) {
-            $bePoolName = "NEW: {0}{1}" -f 'be_migrated_',$_.Key.split('/')[-1]
+            $bePoolName = "NEW: {0}{1}" -f 'be_migrated_', $_.Key.split('/')[-1]
         }
         Else {
             $bePoolName = $_.Value.split('/')[-1]
