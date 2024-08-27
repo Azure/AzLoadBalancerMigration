@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 7.0
+.VERSION 7.5
 
 .GUID 803f6271-accf-413f-83b9-4388aba6c849
 
@@ -11,7 +11,7 @@
 
 .COPYRIGHT Microsoft Corporation. All rights reserved.
 
-.TAGS Azure Az LoadBalancer AzNetworking
+.TAGS
 
 .LICENSEURI
 
@@ -25,7 +25,7 @@
 
 .EXTERNALSCRIPTDEPENDENCIES
 
-.RELEASENOTES
+.RELEASENOTES Deprecation notice
 
 
 .PRIVATEDATA
@@ -35,7 +35,8 @@
 <# 
  
 .DESCRIPTION
-This script will help you create a Standard SKU Public load balancer with the same configuration as your Basic SKU load balancer.
+***DEPRECATED***
+This script has been replaced with the AzureBasicLoadBalancerUpgrade module. Please use the AzureBasicLoadBalancerUpgrade module for all future upgrades of Azure Load Balancers. See: https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell
      
 .PARAMETER oldRgName
 Name of ResourceGroup of Basic Public Load Balancer, like "microsoft_rg1"
