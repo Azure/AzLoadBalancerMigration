@@ -19,12 +19,12 @@ Function Start-AzAvSetPublicIPUpgrade {
         The script exports the Public IP address and IP configuration associations to a CSV file before beginning the upgrade process. In the event
         of a failure during the upgrade, this file can be used to retry the migration and attach public IPs with the appropriate IP configuration.
         To initate a recovery, follow these steps:
-            1. Review the log 'PublicIPUpgrade.log' file to determine which VM was in process during the failure
+            1. Review the log 'AvSetPublicIPUpgrade.log' file to determine which VM was in process during the failure
             2. Determine if the script failed due to a configuration issue that needs to be addressed before retrying the migration. If so, address the error. 
             2. Get the name and resource group or full ID of the Av Set to recover (e.g. '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/availabilitySets/avset-01')
             3. Execute the script with the following syntax:
 
-            ./Start-AzAvSetPublicIPUpgrade.ps1 -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailiabilitySetName avset-01 -ResourceGroupName rg-01
+            ./Start-AzAvSetPublicIPUpgrade.ps1 -RecoverFromFile ./AvSetPublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailiabilitySetName avset-01 -ResourceGroupName rg-01
             
             4. The script will attempt to re-execute each step the migration. 
     .NOTES
@@ -48,7 +48,7 @@ Function Start-AzAvSetPublicIPUpgrade {
         # Attempt upgrade of every AV Set the user has access to. VMs without Public IPs, which are already upgraded, or which do not have NSGs will be skipped. 
 
     .EXAMPLE
-        Start-AzAvSetPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailabilitySetName myAvSet -ResourceGroup rg-myrg
+        Start-AzAvSetPublicIPUpgrade -RecoverFromFile ./AvSetPublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailabilitySetName myAvSet -ResourceGroup rg-myrg
         # Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file.
 
     .EXAMPLE
@@ -100,12 +100,12 @@ Function Start-AzAvSetPublicIPUpgrade {
         # recovery log file path - log Public IP address and IP configuration associations for recovery purposes
         [Parameter(Mandatory = $false)]
         [string]
-        $recoveryLogFilePath = "PublicIPUpgrade_Recovery_$(Get-Date -Format 'yyyy-MM-dd-HH-mm').csv",
+        $recoveryLogFilePath = "AvSetPublicIPUpgrade_Recovery_$(Get-Date -Format 'yyyy-MM-dd-HH-mm').csv",
 
         # log file path
         [Parameter(Mandatory = $false)]
         [string]
-        $logFilePath = "PublicIPUpgrade.log",
+        $logFilePath = "AvSetPublicIPUpgrade.log",
 
         # skip check for NSG association, migrate anyway - Basic Public IPs allow inbound traffic without an NSG, but Standard Public IPs require an NSG. Migrating without an NSG will break inbound traffic flows!    
         [Parameter(Mandatory = $false)]

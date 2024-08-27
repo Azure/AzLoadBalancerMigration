@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 5.0.2
+.VERSION 5.0.3
 
 .GUID 836ca1ab-93b7-49a3-b1d1-b257601da1dd
 
@@ -36,7 +36,9 @@ Removing unused variable
 <#
   
 .DESCRIPTION
-This script will help you create a Standard SKU Internal load balancer with the same configuration as your Basic SKU load balancer.
+***DEPRECATED***
+This script has been replaced with the AzureBasicLoadBalancerUpgrade module. Please use the AzureBasicLoadBalancerUpgrade module for all future upgrades of Azure Load Balancers. See: https://learn.microsoft.com/en-us/azure/load-balancer/upgrade-basic-standard-with-powershell
+  
      
 .PARAMETER rgName
 Name of ResourceGroup of Basic Internal Load Balancer and the Standard Internal Load Balancer, like "microsoft_rg1"
