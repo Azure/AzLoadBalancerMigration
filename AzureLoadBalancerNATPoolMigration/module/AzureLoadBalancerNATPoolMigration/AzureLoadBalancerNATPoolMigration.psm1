@@ -175,34 +175,42 @@ Function Start-AzNATPoolMigration {
 
         # check for backend pools with the same membership as each nat pool
         ForEach ($natPoolIpConfig in $natPoolIpConfigs) {
-            Write-Verbose "Checking NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])' for matching backend pools..."
+            $natPoolName = $natPoolIpConfig.natPoolId.split('/')[-1]
+            Write-Verbose "Checking NAT Pool '$natPoolName' for matching backend pools..."
 
             If ($natPoolToBEPMap[$natPoolIpConfig.natPoolId]) {
-                Write-Verbose "Backend Pool already mapped for NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])' using manual config. Skipping comparison."
+                Write-Verbose "Backend Pool already mapped for NAT Pool '$natPoolName' using manual config. Skipping comparison."
                 continue
             }
+            Else {
+                $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $null
+            }
 
+            $natPoolMembersCount = $natPoolIpConfig.natPoolVMSSMembers.count
             ForEach ($backendPoolIpConfig in $backendPoolIpConfigs) {
-                If ($backendPoolIpConfig.backendPoolMembers.count -eq $natPoolIpConfig.natPoolVMSSMembers.count) {
+                $backendPoolName = $backendPoolIpConfig.backendPoolId.split('/')[-1]
+                $backendPoolMembersCount = $backendPoolIpConfig.backendPoolMembers.count
+
+                If ($backendPoolMembersCount -eq $natPoolMembersCount) {
                     $natMembersNotInBackendPool = [string[]][Linq.Enumerable]::Except([string[]]$natPoolIpConfig.natPoolVMSSMembers, [string[]]$backendPoolIpConfig.backendPoolMembers)
 
                     Write-Verbose "natMembersNotInBackendPool: $($natMembersNotInBackendPool -join ',')"
                 }
                 Else {
-                    Write-Verbose "'$($backendPoolIpConfig.backendPoolId.split('/')[-1])' has a different number of members. Skipping comparison."
+                    Write-Verbose "'$backendPoolName' has a different number of members ('$backendPoolMembersCount' to NAT pool '$natPoolName' '$natPoolMembersCount'). Skipping comparison."
                     continue
                 }
 
                 If ($natMembersNotInBackendPool.count -eq 0) {
                     If (-NOT [string]::IsNullOrEmpty($natPoolToBEPMap[$natPoolIpConfig.natPoolId])) {
-                        Write-Warning "Multiple backend pools have the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Backend pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' will be used for this NAT pool."
+                        Write-Warning "Multiple backend pools have the same membership as NAT Pool '$natPoolName'. Backend pool '$backendPoolName' will be used for this NAT pool."
                     }
 
-                    Write-Verbose "Backend pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' has the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Reusing backend pool."
+                    Write-Verbose "Backend pool '$backendPoolName' has the same membership as NAT Pool '$natPoolName'. Reusing backend pool."
                     $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $backendPoolIpConfig.backendPoolId
                 }
                 Else {
-                    Write-Verbose "Backend Pool '$($backendPoolIpConfig.backendPoolId.split('/')[-1])' does not have the same membership as NAT Pool '$($natPoolIpConfig.natPoolId.split('/')[-1])'. Different members: $comparison. Skipping."
+                    Write-Verbose "Backend Pool '$backendPoolName' does not have the same membership as NAT Pool '$natPoolName'. Different members: $comparison. Skipping."
                     continue
                 }
             }
@@ -267,6 +275,18 @@ Function Start-AzNATPoolMigration {
     $natPoolToBEPMap = @{} + $manualBackendPoolMap # @{ natPoolId = backendPoolId; ... }
     $natPoolToBEPMap = Get-NATToBackendPoolMap -LoadBalancer $LoadBalancer -natPoolToBEPMap $natPoolToBEPMap -backendPoolReuseStrategy $backendPoolReuseStrategy
 
+    switch ($backendPoolReuseStrategy) {
+        'FirstMatch' {
+            Write-Host "Using 'FirstMatch' (the default) backend pool reuse strategy. The first matching backend pool will be used for each NAT Pool. If no matching backend pool is found, the script will exit. Switch to one of the other -backendPoolReuseStrategy options ('NoReuse' or 'OptionalFirstMatch') or create a new backend pool and try again."
+        }
+        'OptionalFirstMatch' {
+            Write-Host "Using 'OptionalFirstMatch' backend pool reuse strategy. The first matching backend pool will be used for each NAT Pool. If no matching backend pool is found, a new backend pool will be created."
+        }
+        'NoReuse' {
+            Write-Host "Using 'NoReuse' backend pool reuse strategy. A new backend pool will be created for each NAT Pool."
+        }
+    }
+
     Write-Host "NAT Pool to Backend Pool mapping/alignment:"
     $natPoolToBEPMap.GetEnumerator() | ForEach-Object {
         $natPoolName = $_.Key.split('/')[-1]
@@ -279,29 +299,21 @@ Function Start-AzNATPoolMigration {
         Write-Host "`tNAT Pool: '$natPoolName' -> Backend Pool: '$bePoolName'"
     }
 
-    switch ($backendPoolReuseStrategy) {
-        'FirstMatch' {
-            Write-Host "Using 'FirstMatch' (the default) backend pool reuse strategy. The first matching backend pool will be used for each NAT Pool."
-
-            $missingMatch = $false
-            ForEach ($natPool in $natPoolToBEPMap.GetEnumerator()) {
-                If ([string]::IsNullOrEmpty($natPool.Value)) {
-                    $missingMatch = $true
-                    Write-Error "No matching backend pool found for NAT Pool '$($natPool.Key.split('/')[-1])'. Either create a new backend pool with the same membership as the NAT Pool or switch to -backendPoolReuseStrategy 'OptionalFirstMatch' or 'NoReuse'." -ErrorAction Continue
-                }
-            }
-
-            If ($missingMatch) {
-                return
+    # check for NAT pools without a matching backend pool when using default FirstMatch strategy
+    if ($backendPoolReuseStrategy -eq 'FirstMatch') {
+        $missingMatch = $false
+        ForEach ($natPool in $natPoolToBEPMap.GetEnumerator()) {
+            If ([string]::IsNullOrEmpty($natPool.Value)) {
+                $missingMatch = $true
+                Write-Error "No matching backend pool found for NAT Pool '$($natPool.Key.split('/')[-1])'. Either create a new backend pool with the same membership as the NAT Pool or switch to -backendPoolReuseStrategy 'OptionalFirstMatch' or 'NoReuse'." -ErrorAction Continue
             }
         }
-        'OptionalFirstMatch' {
-            Write-Host "Using 'OptionalFirstMatch' backend pool reuse strategy. The first matching backend pool will be used for each NAT Pool. If no matching backend pool is found, a new backend pool will be created."
-        }
-        'NoReuse' {
-            Write-Host "Using 'NoReuse' backend pool reuse strategy. A new backend pool will be created for each NAT Pool."
+
+        If ($missingMatch) {
+            return
         }
     }
+
 
     If ($validateOnly) {
         Write-Host "Validation complete. Exiting due to -validateOnly paramater."
