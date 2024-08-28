@@ -105,30 +105,30 @@ Function Start-AzNATPoolMigration {
         | project id,backendPools = properties.backendAddressPools
         | mv-expand backendPool = backendPools
         | extend backendPoolId = tostring(backendPool.id)
-        | project backendPoolId,loadBalancerId=id
-        | join ( 
+        | project backendPoolId=tolower(backendPoolId),loadBalancerId=id
+        | join kind=leftouter ( 
         resources
-        | where type == 'microsoft.compute/virtualmachinescalesets'
-        | project id,nicConfigs = properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations
-        | where nicConfigs has '$($LoadBalancer.id)'
-        | mv-expand nicConfig = nicConfigs
-        | mv-expand ipConfig = nicConfig.properties.ipConfigurations
-        | extend constructedIpConfigId = strcat(id,'/_nicConfigs/_',nicConfig.name,'/_ipConfig/_',ipConfig.name)
-        | mv-expand associatedBackendPool = ipConfig.properties.loadBalancerBackendAddressPools
-        | extend backendPoolId = tostring(associatedBackendPool.id)
-        | project vmssId=id,backendPoolId,ipConfigId=tostring(constructedIpConfigId)
-        | union ( 
-            resources
-            | where type == 'microsoft.network/networkinterfaces'
-            | where properties.ipConfigurations has '$($LoadBalancer.id)'
-            | mv-expand ipConfig = properties.ipConfigurations
+            | where type =~ 'microsoft.compute/virtualmachinescalesets'
+            | project id,nicConfigs = properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations
+            | where nicConfigs has '$($LoadBalancer.id)'
+            | mv-expand nicConfig = nicConfigs
+            | mv-expand ipConfig = nicConfig.properties.ipConfigurations
+            | extend constructedIpConfigId = strcat(id,'/_nicConfigs/_',nicConfig.name,'/_ipConfig/_',ipConfig.name)
             | mv-expand associatedBackendPool = ipConfig.properties.loadBalancerBackendAddressPools
-            | extend backendPoolId = tostring(associatedBackendPool.id)
-            | project nicId=id,backendPoolId,ipConfigId=tostring(ipConfig.id)
-            )
+            | extend backendPoolId = trim(' ',tolower(tostring(associatedBackendPool.id)))
+            | project vmssId=id,backendPoolId,ipConfigId=tostring(constructedIpConfigId)
+            | union ( 
+                resources
+                | where type =~ 'microsoft.network/networkinterfaces'
+                | where properties.ipConfigurations has '$($LoadBalancer.id)'
+                | mv-expand ipConfig = properties.ipConfigurations
+                | mv-expand associatedBackendPool = ipConfig.properties.loadBalancerBackendAddressPools
+                | extend backendPoolId = trim(' ',tolower(tostring(associatedBackendPool.id)))
+                | project nicId=id,backendPoolId,ipConfigId=tostring(ipConfig.id)
+                )
         ) on backendPoolId
         | project-away backendPoolId1
-        | summarize backendPoolMembers = make_set(ipConfigId) by backendPoolId,loadBalancerId
+        | summarize backendPoolMembers = make_set_if(ipConfigId, notempty(ipConfigId)) by backendPoolId,loadBalancerId
 "@
 
         $backendPoolIpConfigs = Search-ResourceGraph -graphQuery $backendPoolIpConfigQuery
@@ -139,9 +139,9 @@ Function Start-AzNATPoolMigration {
         | where id =~ '$($LoadBalancer.id)' 
         | project id,natPools = properties.inboundNatPools
         | mv-expand natPool = natPools
-        | extend natPoolId = tostring(natPool.id)
+        | extend natPoolId = tolower(tostring(natPool.id))
         | project natPoolId,loadBalancerId=id
-        | join ( 
+        | join kind=leftouter ( 
             resources
             | where type == 'microsoft.compute/virtualmachinescalesets'
             | project id,nicConfigs = properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations
@@ -150,11 +150,11 @@ Function Start-AzNATPoolMigration {
             | mv-expand ipConfig = nicConfig.properties.ipConfigurations
             | extend constructedIpConfigId = strcat(id,'/_nicConfigs/_',nicConfig.name,'/_ipConfig/_',ipConfig.name)
             | mv-expand associatedNatPool = ipConfig.properties.loadBalancerInboundNatPools
-            | extend natPoolId = tostring(associatedNatPool.id)
+            | extend natPoolId = trim(' ',tolower(tostring(associatedNatPool.id)))
             | project vmssId=id,natPoolId,constructedIpConfigId
             ) on natPoolId
         | project-away natPoolId1
-        | summarize natPoolVMSSMembers = make_set(constructedIpConfigId) by natPoolId,loadBalancerId,vmssId
+        | summarize natPoolVMSSMembers = make_set_if(constructedIpConfigId, notempty(constructedIpConfigId)) by natPoolId, loadBalancerId, vmssId
 "@
 
         $natPoolIpConfigs = Search-ResourceGraph -graphQuery $natPoolIpConfigQuery
@@ -194,10 +194,10 @@ Function Start-AzNATPoolMigration {
                 If ($backendPoolMembersCount -eq $natPoolMembersCount) {
                     $natMembersNotInBackendPool = [string[]][Linq.Enumerable]::Except([string[]]$natPoolIpConfig.natPoolVMSSMembers, [string[]]$backendPoolIpConfig.backendPoolMembers)
 
-                    Write-Verbose "natMembersNotInBackendPool: $($natMembersNotInBackendPool -join ',')"
+                    Write-Debug "natMembersNotInBackendPool: $($natMembersNotInBackendPool -join ',')"
                 }
                 Else {
-                    Write-Verbose "'$backendPoolName' has a different number of members ('$backendPoolMembersCount' to NAT pool '$natPoolName' '$natPoolMembersCount'). Skipping comparison."
+                    Write-Debug "'$backendPoolName' has a different number of members ('$backendPoolMembersCount' to NAT pool '$natPoolName' '$natPoolMembersCount'). Skipping comparison."
                     continue
                 }
 
@@ -210,7 +210,7 @@ Function Start-AzNATPoolMigration {
                     $natPoolToBEPMap[$natPoolIpConfig.natPoolId] = $backendPoolIpConfig.backendPoolId
                 }
                 Else {
-                    Write-Verbose "Backend Pool '$backendPoolName' does not have the same membership as NAT Pool '$natPoolName'. Different members: $comparison. Skipping."
+                    Write-Debug "Backend Pool '$backendPoolName' does not have the same membership as NAT Pool '$natPoolName'. Skipping."
                     continue
                 }
             }
