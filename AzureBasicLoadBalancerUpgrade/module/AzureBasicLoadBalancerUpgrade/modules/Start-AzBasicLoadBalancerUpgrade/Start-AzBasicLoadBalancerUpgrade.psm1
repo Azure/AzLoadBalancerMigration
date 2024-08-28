@@ -54,7 +54,8 @@ Use in combination with -validateCompletedMigration to validate a completed migr
     Name of the new Standard Load Balancer. If not specified, the name of the Basic load balancer will be reused.
 
 .PARAMETER skipUpgradeNATPoolsToNATRules
-    If specified, the migration will skip upgrading NAT Pools to NAT Rules. NAT Rules are more managable and functional than NAT Pools, while providing the same functionality
+    If specified, the migration will skip upgrading NAT Pools to NAT Rules. NAT Rules are more managable and functional than NAT Pools, while providing the same capabilities. This module migrates NAT Pools to NAT Rules by default, creating a new backend pool for each NAT rule
+    To have more control on backend pools, specify -skipUpgradeNATPoolsToNATRules, then use the AzureLoadBalancerNATPoolMigration module to update NAT Pools on the new Standard LB see: https://learn.microsoft.com/azure/load-balancer/load-balancer-nat-pool-migration.
 
 .PARAMETER MultiLBConfig
     Array of objects containing the basic load balancer and standard load balancer name to migrate. Use this parameter to migrate multiple load balancers with shared backend pool members. Optionally, specify a new standard load balancer name for each basic load balancers.
