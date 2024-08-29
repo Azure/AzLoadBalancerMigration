@@ -24,7 +24,7 @@ Function Start-AzAvSetPublicIPUpgrade {
             2. Get the name and resource group or full ID of the Av Set to recover (e.g. '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Compute/availabilitySets/avset-01')
             3. Execute the script with the following syntax:
 
-            ./Start-AzAvSetPublicIPUpgrade.ps1 -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailiabilitySetName avset-01 -ResourceGroupName rg-01
+            ./Start-AzAvSetPublicIPUpgrade.ps1 -RecoverFromFile ./AvSetPublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailiabilitySetName avset-01 -ResourceGroupName rg-01
             
             4. The script will attempt to re-execute each step the migration. 
     .NOTES
@@ -248,6 +248,16 @@ Function Start-AzAvSetPublicIPUpgrade {
                     Add-LogEntry "VM '$($VM.vmObject.Name)' is not associated with a load balancer."
                 }
 
+                # check that public IPs are IPv4, as IPv6 can't be set to static
+                Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' has IPv4 public IP addresses..."
+                If ($VM.publicIPs.publicIPAddressVersion -contains 'IPv6') {
+                    Add-LogEntry "Public IP addresses for VM '$($VM.vmObject.Name)' are IPv6. IPv6 Public IP addresses cannot be set to static. Skipping upgrade." WARNING
+                    return
+                }
+                Else {
+                    Add-LogEntry "Public IP addresses for VM '$($VM.vmObject.Name)' are IPv4."
+                }
+
                 # confirm that each NIC with a public IP address associated has a Network Security Group
                 Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' has a Network Security Group associated with each NIC..."
         
@@ -274,7 +284,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                             $ipconfigSubnetNSGs += @{
                                 ipConfigId   = $ipconfig.id 
                                 subnetId     = $ipconfig.Subnet.Id
-                                subnetHasNSG = $true
+                                subnetHasNSG = $true # <-----------------------
                                 subnetNSGID  = $VMNICSubnets[$ipconfig.Subnet.id].NetworkSecurityGroup.id
                                 nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
                                 nicNSGId     = $vmNIC.NetworkSecurityGroup.id
@@ -286,7 +296,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                             $ipconfigSubnetNSGs += @{
                                 ipConfigId   = $ipconfig.id 
                                 subnetId     = $ipconfig.Subnet.Id
-                                subnetHasNSG = $false
+                                subnetHasNSG = $false # <-----------------------
                                 subnetNSGId  = $null
                                 nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
                                 nicNSGId     = $vmNIC.NetworkSecurityGroup.id
@@ -343,7 +353,7 @@ Function Start-AzAvSetPublicIPUpgrade {
 
                 Add-LogEntry "Building recovery objects for VM '$($vmRecoveryItem.VMId.split('/')[-1])' based on recovery file '$($recoverFromFile)'..."
                 $VM = @{
-                    VM = Get-AzVM -ResourceId $vmRecoveryItem.VMId
+                    vmObject = Get-AzVM -ResourceId $vmRecoveryItem.VMId
                     publicIPIDs = $vmRecoveryItem.PublicIPID
                     vmNICs = @()
                     vmNICsById = @{}
