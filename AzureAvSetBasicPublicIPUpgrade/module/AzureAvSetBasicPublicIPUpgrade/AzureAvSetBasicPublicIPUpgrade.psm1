@@ -52,19 +52,9 @@ Function Start-AzAvSetPublicIPUpgrade {
         # Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file.
 
     .EXAMPLE
-        $AvSets = Get-AzAvailabilitySet -ResourceGroupName rg-*-prod
-        ForEach ($avset in $AvSets) {
-            Start-Job -Name $avset.Name -ScriptBlock {
-                $params = @{
-                    availabilitySetName = $args[0].Name
-                    resourceGroupName = $args[0].ResourceGroupName
-                    logFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade.log'
-                    recoveryLogFilePath = '{0}{1}' -f $args[0].Name,'name_PublicIPUpgrade_recovery.csv'
-                }
-                Start-AvSetPublicIPUpgrade.ps1 @params -WhatIf
-            } -ArgumentList $avset -InitializationScript {Import-Module Az.Accounts, Az.Compute, Az.Network, Az.Resources}
-        }
-        # Upgrade all AvSetss in Resource Groups with '-prod' in the name, using PowerShell jobs to run the script in parallel.
+        Get-AzAvailabilitySet -ResourceGroupName rg-*-prod | Start-AvSetPublicIPUpgrade -WhatIf
+
+        # Test upgrade on all AvSetss in Resource Groups with '-prod' in the name
 #>
 
     param (
@@ -100,12 +90,12 @@ Function Start-AzAvSetPublicIPUpgrade {
         # recovery log file path - log Public IP address and IP configuration associations for recovery purposes
         [Parameter(Mandatory = $false)]
         [string]
-        $recoveryLogFilePath = "PublicIPUpgrade_Recovery_$(Get-Date -Format 'yyyy-MM-dd-HH-mm').csv",
+        $recoveryLogFilePath = "AvSetPublicIPUpgrade_Recovery_$(Get-Date -Format 'yyyy-MM-dd-HH-mm').csv",
 
         # log file path
         [Parameter(Mandatory = $false)]
         [string]
-        $logFilePath = "PublicIPUpgrade.log",
+        $logFilePath = "AvSetPublicIPUpgrade.log",
 
         # skip check for NSG association, migrate anyway - Basic Public IPs allow inbound traffic without an NSG, but Standard Public IPs require an NSG. Migrating without an NSG will break inbound traffic flows!    
         [Parameter(Mandatory = $false)]
@@ -148,7 +138,7 @@ Function Start-AzAvSetPublicIPUpgrade {
         If ($WhatIf) { $ErrorActionPreference = 'Continue' }
         Else { $ErrorActionPreference = 'Stop' }
         
-        Add-LogEntry "####### Starting Availability Set Public IP Upgrade process... #######"
+        Add-LogEntry "####### Starting Availability Set Public IP Upgrade validation process #######"
 
         # prompt to continue if -Confirm is $false or -WhatIf are not specified
         If (!$WhatIf -and $confirm) {
@@ -181,6 +171,9 @@ Function Start-AzAvSetPublicIPUpgrade {
             Add-LogEntry "Getting Availability Set with resource ID '$($availabilitySetResourceId)'..."
             $AvSet = Get-AzResource -ResourceId $availabilitySetResourceId | Get-AzAvailabilitySet
         }
+        Else {
+            $AvSet = $availabilitySet
+        }
 
         Add-LogEntry "Processing Availability Set '$($AvSet.Name)', id: $($AvSet.Id)..."
         # validate scenario
@@ -198,18 +191,18 @@ Function Start-AzAvSetPublicIPUpgrade {
         # create array of VM objects
         $avSet.VirtualMachinesReferences.Id | ForEach-Object {
             $VM = $_ | Get-AzVM
-            $VMs += @{VM = $VM; vmNICs = @(); publicIPs = @(); publicIPIPConfigAssociations = @() } 
+            $VMs += @{vmObject = $VM; vmNICs = @(); publicIPs = @(); publicIPIPConfigAssociations = @() } 
         }
 
         If ($PSCmdlet.ParameterSetName -notin 'Recovery-ByName', 'Recovery-ById') {
             ForEach ($VM in $VMs) {
-                Add-LogEntry "Validating VM '$($VM.VM.Name)' in Availability Set '$($AvSet.Name)'..."
+                Add-LogEntry "Validating VM '$($VM.vmObject.Name)' in Availability Set '$($AvSet.Name)'..."
 
                 # confirm VM has public IPs attached, build dictionary of public IPs and ip configurations
-                Add-LogEntry "Checking that VM '$($VM.VM.Name)' has public IP addresses attached..."
+                Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' has public IP addresses attached..."
 
                 ## get NICs with public IPs attached
-                $VM.vmNICs = $VM.VM.NetworkProfile.NetworkInterfaces | Get-AzResource | Get-AzNetworkInterface | Where-Object { $_.IpConfigurations.PublicIPAddress }
+                $VM.vmNICs = $VM.vmObject.NetworkProfile.NetworkInterfaces | Get-AzResource | Get-AzNetworkInterface | Where-Object { $_.IpConfigurations.PublicIPAddress }
 
                 ## build ipconfig/public IP table
                 $publicIPIDs = @()
@@ -227,36 +220,36 @@ Function Start-AzAvSetPublicIPUpgrade {
                 }
 
                 If ($VM.publicIPIPConfigAssociations.count -lt 1) {
-                    Add-LogEntry "VM '$($VM.VM.Name)' does not have any public IP addresses attached. Skipping upgrade." -severity WARNING
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' does not have any public IP addresses attached. Skipping upgrade." -severity WARNING
                     return
                 }
                 Else {
-                    Add-LogEntry "VM '$($VM.VM.Name)' has $($VM.publicIPIPConfigAssociations.count) public IP addresses attached."
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' has $($VM.publicIPIPConfigAssociations.count) public IP addresses attached."
                 }
     
                 # confirm public IPs are Basic SKU (VM should only have one SKU)
-                Add-LogEntry "Checking that VM '$($VM.VM.Name)' has Basic SKU public IP addresses..."
+                Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' has Basic SKU public IP addresses..."
                 $VM.publicIPs = $publicIPIDs | ForEach-Object { Get-AzResource -ResourceId $_ | Get-AzPublicIpAddress }
                 If (( $publicIPSKUs = $VM.publicIPs.Sku.Name | Get-Unique) -ne @('Basic')) {
-                    Add-LogEntry "Public IP address SKUs for VM '$($VM.VM.Name)' are not Basic. SKUs are: '$($publicIPSKUs -join ',')'. Skipping upgrade." WARNING
+                    Add-LogEntry "Public IP address SKUs for VM '$($VM.vmObject.Name)' are not Basic. SKUs are: '$($publicIPSKUs -join ',')'. Skipping upgrade." WARNING
                     return
                 }
                 Else {
-                    Add-LogEntry "Public IP address SKUs for VM '$($VM.VM.Name)' are Basic."
+                    Add-LogEntry "Public IP address SKUs for VM '$($VM.vmObject.Name)' are Basic."
                 }
 
                 # confirm VM is not associated with a load balancer
-                Add-LogEntry "Checking that VM '$($VM.VM.Name)' is not associated with a load balancer..."
-                If ($VM.VMNICs.IpConfigurations.LoadBalancerBackendAddressPools -or $VM.VMNICs.IpConfigurations.LoadBalancerInboundNatRules) {
-                    Add-LogEntry "VM '$($VM.VM.Name)' is associated with a load balancer. The Load Balancer cannot be a different SKU from the VM's Public IP address(s) and must be upgraded simultaneously. See: https://learn.microsoft.com/azure/load-balancer/load-balancer-basic-upgrade-guidance" ERROR
+                Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' is not associated with a load balancer..."
+                If ($VM.vmNICs.IpConfigurations.LoadBalancerBackendAddressPools -or $VM.vmNICs.IpConfigurations.LoadBalancerInboundNatRules) {
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' is associated with a load balancer. The Load Balancer cannot be a different SKU from the VM's Public IP address(s) and must be upgraded simultaneously. See: https://learn.microsoft.com/azure/load-balancer/load-balancer-basic-upgrade-guidance" ERROR
                     return
                 }
                 Else {
-                    Add-LogEntry "VM '$($VM.VM.Name)' is not associated with a load balancer."
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' is not associated with a load balancer."
                 }
 
                 # confirm that each NIC with a public IP address associated has a Network Security Group
-                Add-LogEntry "Checking that VM '$($VM.VM.Name)' has a Network Security Group associated with each NIC..."
+                Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' has a Network Security Group associated with each NIC..."
         
                 ## build hash of subnets associated with VM NICs
                 $VMNICSubnets = @{}
@@ -271,48 +264,58 @@ Function Start-AzAvSetPublicIPUpgrade {
                 $nicsMissingNSGs = 0
                 $ipConfigNSGReport = @()
                 ForEach ($vmNIC in $VM.vmNICs) {
+                    Add-LogEntry "Checking NIC '$($vmNIC.Name)' for associated Network Security Group..."
+
                     $ipconfigSubnetsWithoutNSGs = 0
                     $ipconfigSubnetNSGs = @()
-                    ForEach ($ipconfig in $VM.vmNIC.IpConfigurations) {
+                    ForEach ($ipconfig in $vmNIC.IpConfigurations) {
                         If ($VMNICSubnets[$ipconfig.Subnet.id].NetworkSecurityGroup) {
+                            Add-LogEntry "NIC '$($vmNIC.Name)' has a Network Security Group associated with subnet '$($VMNICSubnets[$ipconfig.Subnet.id].Name)'."
                             $ipconfigSubnetNSGs += @{
                                 ipConfigId   = $ipconfig.id 
                                 subnetId     = $ipconfig.Subnet.Id
                                 subnetHasNSG = $true
                                 subnetNSGID  = $VMNICSubnets[$ipconfig.Subnet.id].NetworkSecurityGroup.id
                                 nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
-                                nicNSGId     = $VM.vmNIC.NetworkSecurityGroup.id
+                                nicNSGId     = $vmNIC.NetworkSecurityGroup.id
                             }
                         }
                         Else {
+                            Add-LogEntry "NIC '$($vmNIC.Name)' does not have a Network Security Group associated with subnet '$($VMNICSubnets[$ipconfig.Subnet.id].Name)'."
                             $ipconfigSubnetsWithoutNSGs++
                             $ipconfigSubnetNSGs += @{
                                 ipConfigId   = $ipconfig.id 
                                 subnetId     = $ipconfig.Subnet.Id
                                 subnetHasNSG = $false
                                 subnetNSGId  = ''
-                                nicHasNSG    = $null -ne $VM.vmNIC.NetworkSecurityGroup
-                                nicNSGId     = $VM.vmNIC.NetworkSecurityGroup.id
+                                nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
+                                nicNSGId     = $vmNIC.NetworkSecurityGroup.id
                             }
                         }
                     }
 
-                    If ($ipconfigSubnetsWithoutNSGs -gt 0 -and !$VM.vmNIC.NetworkSecurityGroup) {
-                        $ipCOnfigNSGReport += $ipconfigSubnetNSGs
+                    If ($ipconfigSubnetsWithoutNSGs -gt 0 -and !$vmNIC.NetworkSecurityGroup) {
+                        $ipConfigNSGReport += $ipconfigSubnetNSGs
                         $nicsMissingNSGs++
                     }
                 }
 
                 If ($nicsMissingNSGs -gt 0) {
-                    Add-LogEntry "VM '$($VM.VM.Name)' has associated Public IP Addresses, but IP Configurations where neither the NIC nor Subnet have an associated Network Security Group. Standard SKU Public IPs are secure by default, meaning no inbound traffic is allowed unless an NSG explicitly permits it, whereas a Basic SKU Public IP allows all traffic by default. See: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku." WARNING
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' has associated Public IP Addresses, but IP Configurations where neither the NIC nor Subnet have an associated Network Security Group. Standard SKU Public IPs are secure by default, meaning no inbound traffic is allowed unless an NSG explicitly permits it, whereas a Basic SKU Public IP allows all traffic by default. See: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku." WARNING
                     Add-LogEntry "IP Configs Missing NGSs Report: $($ipConfigNSGReport | ConvertTo-Json -Depth 3)" WARNING
             
                     While ($promptResponse -notmatch '[yYnN]' -and !$ignoreMissingNSG -and !$skipVMMissingNSG) {
-                        $promptResponse = Read-Host "Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n)"
+                        If ($WhatIf) {
+                            Add-LogEntry "SKIPPED PROMPT: 'Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n):' **Assuming 'n' because -WhatIf was specified**" WARNING
+                            $promptResponse = 'n'
+                        }
+                        Else {
+                            $promptResponse = Read-Host "Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n)"
+                        }
                     }
             
                     If ($promptResponse -match '[nN]' -or $skipVMMissingNSG) {
-                        Add-LogEntry "Skipping migrating this VM due to missing NSG..." -severity WARNING
+                        Add-LogEntry "Skipping migrating this Availability Set due to VM '$($VM.vmObject.Name)' missing NSG..." -severity WARNING
                         return
                     }
                     ElseIf ($ignoreMissingNSG) {
@@ -323,7 +326,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                     }
                 }
                 Else {
-                    Add-LogEntry "VM '$($VM.VM.Name)' has a Network Security Group associated with each NIC or subnet."
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' has a Network Security Group associated with each NIC or subnet."
                 }
         
             }
@@ -375,20 +378,20 @@ Function Start-AzAvSetPublicIPUpgrade {
         # start prepare upgrade process
         Add-LogEntry "####### Starting prepare upgrade process... #######"
         ForEach ($VM in $VMs) {
-            Add-LogEntry "Backing up config for VM '$($VM.VM.Name)' to '$recoveryLogFilePath'.."
+            Add-LogEntry "Backing up config for VM '$($VM.vmObject.Name)' to '$recoveryLogFilePath'.."
             # export recovery data and add public ip object to association object
             ForEach ($publicIP in $VM.publicIPs) {
                 $VM.publicIPIPConfigAssociations | Where-Object { $_.publicIPId -eq $publicIP.id } | ForEach-Object { 
                     $_.publicIPAddress = $VM.publicIP.IpAddress
                     $_.publicIP = $publicIP 
             
-                    Add-Content -Path $recoveryLogFilePath -Value ('{0},{1},{2},{3},{4}' -f $publicIP.IPAddress, $_.publicIPId, $_.ipConfig.id, $VM.VM.Id, $AvSet.id) -Force
+                    Add-Content -Path $recoveryLogFilePath -Value ('{0},{1},{2},{3},{4}' -f $publicIP.IPAddress, $_.publicIPId, $_.ipConfig.id, $VM.vmObject.Id, $AvSet.id) -Force
                 }
             }
         }
 
         ForEach ($VM in $VMs) {
-            Add-LogEntry "--> Preparing VM '$($VM.VM.Name)' for upgrade..."
+            Add-LogEntry "--> Preparing VM '$($VM.vmObject.Name)' for upgrade..."
             try {
                 # set all public IPs to static assignment
                 Add-LogEntry "Setting all public IP addresses to static assignment..."
@@ -420,11 +423,11 @@ Function Start-AzAvSetPublicIPUpgrade {
                         }
 
                         If (!$WhatIf) {
-                            Add-LogEntry "Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.VM.Name)', NIC '$($nic.Name)'..."
+                            Add-LogEntry "Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.vmObject.Name)', NIC '$($nic.Name)'..."
                             Set-AzNetworkInterfaceIpConfig -NetworkInterface $nic -Name $ipConfig.Name -PublicIpAddress $null | Out-Null
                         }
                         Else {
-                            Add-LogEntry "WhatIf: Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.VM.Name)', NIC '$($nic.Name)'..."
+                            Add-LogEntry "WhatIf: Disassociating public IP address '$($ipConfig.PublicIpAddress.Id)' from VM '$($VM.vmObject.Name)', NIC '$($nic.Name)'..."
                         }
                     }
 
@@ -443,9 +446,9 @@ Function Start-AzAvSetPublicIPUpgrade {
         }
 
         #start upgrade process
-        Add-LogEntry "####### Starting upgrade process... #######"
+        Add-LogEntry "####### Starting upgrade process #######"
         ForEach ($VM in $VMs) {
-            Add-LogEntry "--> Starting upgrade process for VM '$($VM.VM.Name)'..."
+            Add-LogEntry "--> Starting upgrade process for VM '$($VM.vmObject.Name)'..."
             try {
                 # upgrade all public IP addresses
                 Add-LogEntry "Upgrading all public IP addresses to Standard SKU..."
@@ -470,9 +473,9 @@ Function Start-AzAvSetPublicIPUpgrade {
 
                 try {
                     Foreach ($nic in $VM.vmNICs) {
-                        Add-LogEntry "Reassociating public IP addresses to VM '$($VM.VM.Name)', NIC '$($nic.Name)'..."
+                        Add-LogEntry "Reassociating public IP addresses to VM '$($VM.vmObject.Name)', NIC '$($nic.Name)'..."
                         ForEach ($association in ($VM.publicIPIPConfigAssociations | Where-Object { $_.ipconfig.Id -like "$($nic.Id)/*" })) {
-                            Add-LogEntry "Reassociating public IP address '$($association.publicIPId)' to VM '$($VM.VM.Name)', NIC '$($nic.Name)', IpConfig '$($association.ipconfig.Name)'..."
+                            Add-LogEntry "Reassociating public IP address '$($association.publicIPId)' to VM '$($VM.vmObject.Name)', NIC '$($nic.Name)', IpConfig '$($association.ipconfig.Name)'..."
                             Set-AzNetworkInterfaceIpConfig -NetworkInterface $nic -Name $association.ipConfig.Name -PublicIpAddress $association.publicIP | Out-Null
                         }
 
@@ -490,7 +493,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                 }
             }
 
-            Add-LogEntry "Upgrade of VM '$($VM.VM.Name)' complete.'"
+            Add-LogEntry "Upgrade of VM '$($VM.vmObject.Name)' complete.'"
         }
 
         Add-LogEntry "Upgrade of Availability Set '$($AvSet.Name)' complete.'"
