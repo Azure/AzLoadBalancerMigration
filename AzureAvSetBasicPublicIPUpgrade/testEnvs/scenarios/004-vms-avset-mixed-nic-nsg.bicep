@@ -146,7 +146,7 @@ module vm2 '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = 
               publicIpNameSuffix: '-pip-01'
             }
             skuName: 'Basic'
-            //networkSecurityGroup: nsg.outputs.resourceId
+            networkSecurityGroup: nsg.outputs.resourceId
           }
         ]
         nicSuffix: 'nic'

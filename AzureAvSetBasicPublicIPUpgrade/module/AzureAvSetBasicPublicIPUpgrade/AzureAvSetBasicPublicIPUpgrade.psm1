@@ -13,7 +13,7 @@ Function Start-AzAvSetPublicIPUpgrade {
 
         Because Standard SKU Public IPs require an associated Network Security Group, the script will prompt to proceed if a VM is processed where
         both the NIC and subnet do not have an NSG associated with them. If the script is run with the '-ignoreMissingNSG' parameter, the script will
-        not prompt and will continue with the upgrade process; if -skipVMMissingNSG is specified, the script will skip upgrading that VM.
+        not prompt and will continue with the upgrade process; if -SkipAVSetMissingNSG is specified, the script will skip upgrading that VM.
 
         Recovering from a failure:
         The script exports the Public IP address and IP configuration associations to a CSV file before beginning the upgrade process. In the event
@@ -44,7 +44,7 @@ Function Start-AzAvSetPublicIPUpgrade {
         # Evaluate upgrading a single Av Set, without making any changes
 
     .EXAMPLE
-        Get-AzAvailabilitySet -ResourceGroupName 'myRG' | Start-AzAvSetPublicIPUpgrade -skipVMMissingNSG
+        Get-AzAvailabilitySet -ResourceGroupName 'myRG' | Start-AzAvSetPublicIPUpgrade -SkipAVSetMissingNSG
         # Attempt upgrade of every AV Set the user has access to. VMs without Public IPs, which are already upgraded, or which do not have NSGs will be skipped. 
 
     .EXAMPLE
@@ -102,10 +102,10 @@ Function Start-AzAvSetPublicIPUpgrade {
         [switch]
         $ignoreMissingNSG,
 
-        # skip VMs missing NSGs - if a VM is missing an NSG, skip migrating it
+        # skip Availabiltiy Sets where VMs are missing NSGs - if a VM is missing an NSG, skip migrating all VMs in the Availability Set
         [Parameter(Mandatory = $false)]
         [switch]
-        $skipVMMissingNSG,
+        $SkipAVSetMissingNSG,
 
         # prompt for confirmation to migrate IPs
         [Parameter(Mandatory = $false)]
@@ -287,7 +287,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                                 ipConfigId   = $ipconfig.id 
                                 subnetId     = $ipconfig.Subnet.Id
                                 subnetHasNSG = $false
-                                subnetNSGId  = ''
+                                subnetNSGId  = $null
                                 nicHasNSG    = $null -ne $vmNIC.NetworkSecurityGroup
                                 nicNSGId     = $vmNIC.NetworkSecurityGroup.id
                             }
@@ -304,7 +304,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                     Add-LogEntry "VM '$($VM.vmObject.Name)' has associated Public IP Addresses, but IP Configurations where neither the NIC nor Subnet have an associated Network Security Group. Standard SKU Public IPs are secure by default, meaning no inbound traffic is allowed unless an NSG explicitly permits it, whereas a Basic SKU Public IP allows all traffic by default. See: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku." WARNING
                     Add-LogEntry "IP Configs Missing NGSs Report: $($ipConfigNSGReport | ConvertTo-Json -Depth 3)" WARNING
             
-                    While ($promptResponse -notmatch '[yYnN]' -and !$ignoreMissingNSG -and !$skipVMMissingNSG) {
+                    While ($promptResponse -notmatch '[yYnN]' -and !$ignoreMissingNSG -and !$SkipAVSetMissingNSG) {
                         If ($WhatIf) {
                             Add-LogEntry "SKIPPED PROMPT: 'Do you want to proceed with upgrading this VM's Public IP address without an NSG? (y/n):' **Assuming 'n' because -WhatIf was specified**" WARNING
                             $promptResponse = 'n'
@@ -314,7 +314,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                         }
                     }
             
-                    If ($promptResponse -match '[nN]' -or $skipVMMissingNSG) {
+                    If ($promptResponse -match '[nN]' -or $SkipAVSetMissingNSG) {
                         Add-LogEntry "Skipping migrating this Availability Set due to VM '$($VM.vmObject.Name)' missing NSG..." -severity WARNING
                         return
                     }
