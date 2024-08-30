@@ -8,7 +8,7 @@ Because the Public IP allocation is set to 'Static' before detaching from the VM
 even in the event of a script failure. For added peace of mind, the module double-checks that the Public IP allocation method is 'Static' 
 prior to detaching the Public IP from the VMs. 
 
-The module logs all upgrade activity to a file named `PublicIPUpgrade.log`, created in the same location where the module was executed (by default). 
+The module logs all upgrade activity to a file named `AvSetPublicIPUpgrade.log`, created in the same location where the module was executed (by default). 
 
 ## Unsupported Scenarios
 
@@ -64,14 +64,14 @@ The Azure Powershell module must be installed. See [Install the latest Az PowerS
 
 ### Recovering from a Failed Migration
 
-When a migration fails due to a transient issue, such as a network outage or client system crash, the migration can be re-run to configure the Availability Set VMs and Public IPs in the goal state. At execution, the script outputs a recovery log file which is used to ensure the Av Set is properly reconfigured. Review the log file `PublicIPUpgrade.log` created in the location where the script was executed.
+When a migration fails due to a transient issue, such as a network outage or client system crash, the migration can be re-run to configure the Availability Set VMs and Public IPs in the goal state. At execution, the script outputs a recovery log file which is used to ensure the Av Set is properly reconfigured. Review the log file `AvSetPublicIPUpgrade.log` created in the location where the script was executed.
 
-To recover from a failed upgrade, pass the recovery log file path to the script with the `-recoverFromFile` parameter and identify the VM to recover with the `-AvailabilitySetName` and `-ResourceGroup` or `-AvailabilitySetResourceID` parameters. 
+To recover from a failed upgrade, pass the recovery log file path to the script with the `-recoverFromFile` parameter and identify the Availability Set to recover with the `-AvailabilitySetName` and `-ResourceGroup` or `-AvailabilitySetResourceID` parameters. 
 
 **EXAMPLE: Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file**
 
 ```powershell
-    Start-AvSetPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailabilitySetName myAvSet -ResourceGroup -rg-myrg
+    Start-AvSetPublicIPUpgrade -RecoverFromFile ./AvSetPublicIPUpgrade_Recovery_2020-01-01-00-00.csv -AvailabilitySetName myAvSet -ResourceGroup -rg-myrg
 ```
 
 ## Frequently Asked Questions
@@ -84,10 +84,10 @@ The time it takes to upgrade an Availability Set's VM's Public IPs will depend o
 
 It is not possible to downgrade a Public IP address from Standard to Basic, so our recommendation is to fail-forward and address the issue with the Standard SKU IPs.
 
-### Can I test a migration before executing? 
+### Can I test a migration before executing?
 
 There is no way to evaluate upgrading a Public IP without completing the action. This script includes a `-whatif` parameter, which checks that your Availability Set will support the upgrade and walks through the steps without taking action. 
 
-### Does this script support Zonal Basic SKU Public IPs? 
+### Does this script support Zonal Basic SKU Public IPs?
 
 Yes, the process of upgrading a Zonal Basic SKU Public IP to a Zonal Standard SKU Public IP is the same as a Regional Public IP.
