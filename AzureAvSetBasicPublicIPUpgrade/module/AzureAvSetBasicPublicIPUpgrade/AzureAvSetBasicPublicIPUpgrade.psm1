@@ -241,14 +241,14 @@ Function Start-AzAvSetPublicIPUpgrade {
                 # confirm VM is not associated with a load balancer
                 Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' is not associated with a load balancer..."
                 If ($VM.vmNICs.IpConfigurations.LoadBalancerBackendAddressPools -or $VM.vmNICs.IpConfigurations.LoadBalancerInboundNatRules) {
-                    Add-LogEntry "VM '$($VM.vmObject.Name)' is associated with a load balancer. The Load Balancer cannot be a different SKU from the VM's Public IP address(s) and must be upgraded simultaneously. See: https://learn.microsoft.com/azure/load-balancer/load-balancer-basic-upgrade-guidance" ERROR
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' is associated with a load balancer. The Load Balancer cannot be a different SKU from the VMs' Public IP address(s) and must be upgraded simultaneously. See: https://learn.microsoft.com/azure/load-balancer/load-balancer-basic-upgrade-guidance" ERROR
                     return
                 }
                 Else {
                     Add-LogEntry "VM '$($VM.vmObject.Name)' is not associated with a load balancer."
                 }
 
-                # check that public IPs are IPv4, as IPv6 can't be set to static
+                # check that public IPs are IPv4, as IPv6 can't be set to static [it is not currently possible to create a Basic SKU IPv6 Public IP]
                 Add-LogEntry "Checking that VM '$($VM.vmObject.Name)' has IPv4 public IP addresses..."
                 If ($VM.publicIPs.publicIPAddressVersion -contains 'IPv6') {
                     Add-LogEntry "Public IP addresses for VM '$($VM.vmObject.Name)' are IPv6. IPv6 Public IP addresses cannot be set to static. Skipping upgrade." WARNING
@@ -332,7 +332,7 @@ Function Start-AzAvSetPublicIPUpgrade {
                         Add-LogEntry "Skipping NSG check because -ignoreMissingNSG was specified" WARNING
                     }
                     Else {
-                        Add-LogEntry "Continuing with script..."
+                        Add-LogEntry "Continuing with script, ignoring missing NSGs..."
                     }
                 }
                 Else {
