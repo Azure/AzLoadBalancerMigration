@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Added NAT pool migration parameter note'
+            ReleaseNotes = 'Added support to retain AutomaticOSUpgrade setting when App Health extension is used instead of health probe.'
 
             # Prerelease string of this module
             # Prerelease = ''
