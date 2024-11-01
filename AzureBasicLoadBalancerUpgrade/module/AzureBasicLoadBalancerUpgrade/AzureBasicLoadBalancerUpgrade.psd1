@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.14-beta'
+    ModuleVersion = '2.4.14'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@
             ReleaseNotes = 'Added support to retain AutomaticOSUpgrade setting when App Health extension is used instead of health probe.'
 
             # Prerelease string of this module
-            # Prerelease = ''
+            Prerelease = 'beta'
 
             # Flag to indicate whether the module requires explicit user acceptance for install/update/save
             # RequireLicenseAcceptance = $false
