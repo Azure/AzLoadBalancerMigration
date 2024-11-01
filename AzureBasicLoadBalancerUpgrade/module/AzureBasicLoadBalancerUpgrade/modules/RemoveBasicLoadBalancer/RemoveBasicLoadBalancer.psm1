@@ -19,9 +19,6 @@ function RemoveBasicLoadBalancer {
         log -Message "[RemoveBasicLoadBalancerFromVmss] Building VMSS object from Basic Load Balancer $($BasicLoadBalancer.Name)"
         $vmss = GetVmssFromBasicLoadBalancer -BasicLoadBalancer $BasicLoadBalancer
 
-        log -Message "[RemoveBasicLoadBalancerFromVmss] Cleaning healthProbe from NetworkProfile of VMSS $($vmss.Name)"
-        $vmss.VirtualMachineProfile.NetworkProfile.healthProbe = $null
-
         log -Message "[RemoveBasicLoadBalancerFromVmss] Checking Upgrade Policy Mode of VMSS $($vmss.Name)"
         if ($vmss.UpgradePolicy.Mode -eq "Rolling") {
             log -Message "[RemoveBasicLoadBalancerFromVmss] Upgrade Policy Mode of VMSS $($vmss.Name) is Rolling"
@@ -32,9 +29,19 @@ function RemoveBasicLoadBalancer {
         log -Message "[RemoveBasicLoadBalancerFromVmss] Checking Automatic OS Upgrade policy of VMSS $($vmss.Name)"
         if ($vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade -eq $true) {
             log -Message "[RemoveBasicLoadBalancerFromVmss] Automatic OS Upgrade policy of VMSS $($vmss.Name) is enabled"
-            log -Message "[RemoveBasicLoadBalancerFromVmss] Disabling Automatic OS Upgrade policy of VMSS $($vmss.Name)--will be reset to 'true' following the LB upgrade."
-            $vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade = $false
+
+            If ($null -ne $vmss.VirtualMachineProfile.NetworkProfile.healthProbe) {
+                log -Message "[RemoveBasicLoadBalancerFromVmss] VMSS is using LB-based health probe. EnableAutomaticOSUpgrade cannot be true if neither health probe or application health extension exists and the health probe will be removed during migration, so enableAutomaticOSUpgrade will be set to false and reverted post-migration."
+                $vmss.upgradePolicy.AutomaticOSUpgradePolicy.enableAutomaticOSUpgrade = $false
+            }
+            ElseIf ($vmss.VirtualMachineProfile.ExtensionProfile.Extensions.Type -contains 'ApplicationHealthLinux' -or 
+                $vmss.VirtualMachineProfile.ExtensionProfile.Extensions.Type -contains 'ApplicationHealthWindows') {
+                log -Message "[RemoveBasicLoadBalancerFromVmss] VMSS is using Application Health Extension, so enableAutomaticOSUpgrade can remain enabled."
+            }
         }
+
+        log -Message "[RemoveBasicLoadBalancerFromVmss] Cleaning healthProbe from NetworkProfile of VMSS $($vmss.Name)"
+        $vmss.VirtualMachineProfile.NetworkProfile.healthProbe = $null
 
         log -Message "[RemoveBasicLoadBalancerFromVmss] Cleaning LoadBalancerBackendAddressPools from Basic Load Balancer $($BasicLoadBalancer.Name)"
         foreach ($networkInterfaceConfiguration in $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {

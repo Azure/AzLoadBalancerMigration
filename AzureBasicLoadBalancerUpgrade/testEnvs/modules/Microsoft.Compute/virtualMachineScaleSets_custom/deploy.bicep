@@ -288,6 +288,10 @@ param publicIpDiagnosticSettingsName string = '${name}-diagnosticSettings'
 @description('Health probe ID for Rolling upgrade')
 param healthProbeId string = ''
 
+param extensionAppHealth object = {
+  enabled: false
+}
+
 var diagnosticsMetrics = [for metric in diagnosticMetricsToEnable: {
   category: metric
   timeGrain: null
@@ -454,6 +458,25 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2022-03-01' = {
       evictionPolicy: enableEvictionPolicy ? 'Deallocate' : null
       billingProfile: !empty(vmPriority) && !empty(maxPriceForLowPriorityVm) ? json('{"maxPrice":"${maxPriceForLowPriorityVm}"}') : null
       scheduledEventsProfile: scheduledEventsProfile
+      extensionProfile: (extensionAppHealth.enabled) ? {
+        extensions: [
+          {
+            name: 'HealthExtension'
+            properties: {
+              publisher: 'Microsoft.ManagedServices'
+              type: 'ApplicationHealthWindows'
+              autoUpgradeMinorVersion: true
+              typeHandlerVersion: '1.0'
+              settings: {
+                protocol: 'tcp'
+                port: 3389
+                intervalInSeconds: 5
+                numberOfProbes: 1
+              }
+            }
+          }
+        ]
+      } : null
     }
     overprovision: overprovision
     doNotRunExtensionsOnOverprovisionedVMs: doNotRunExtensionsOnOverprovisionedVMs
@@ -614,6 +637,27 @@ module vmss_azureDiskEncryptionExtension 'extensions/deploy.bicep' = if (extensi
     vmss_microsoftMonitoringAgentExtension
   ]
 }
+
+// module vmss_ApplicationHealthExtension 'extensions/deploy.bicep' = if (extensionAppHealth.enabled) {
+//   name: '${uniqueString(deployment().name, location)}-VMSS-AppHealthExtension'
+//   params: {
+//     virtualMachineScaleSetName: vmss.name
+//     name: 'health'
+//     publisher: 'Microsoft.ManagedServices'
+//     type: 'ApplicationHealthWindows'
+//     typeHandlerVersion: '1.0'
+//     autoUpgradeMinorVersion: true
+//     enableAutomaticUpgrade: true
+//     settings: {
+//       protocol: 'tcp'
+//       port: 3389
+//     }
+//     enableDefaultTelemetry: enableReferencedModulesTelemetry
+//   }
+//   dependsOn: [
+//     vmss_desiredStateConfigurationExtension
+//   ]
+// }
 
 resource vmss_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock)) {
   name: '${vmss.name}-${lock}-lock'
