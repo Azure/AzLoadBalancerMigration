@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.13'
+    ModuleVersion = '2.4.14-beta'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
