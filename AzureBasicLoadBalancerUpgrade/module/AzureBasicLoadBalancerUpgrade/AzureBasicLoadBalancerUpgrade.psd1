@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.13'
+    ModuleVersion = '2.4.14'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,10 +107,10 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Added NAT pool migration parameter note'
+            ReleaseNotes = 'Added support to retain AutomaticOSUpgrade setting when App Health extension is used instead of health probe.'
 
             # Prerelease string of this module
-            # Prerelease = ''
+            # Prerelease = 'beta'
 
             # Flag to indicate whether the module requires explicit user acceptance for install/update/save
             # RequireLicenseAcceptance = $false
