@@ -407,8 +407,16 @@ Function Test-SupportedMigrationScenario {
         ## compare nic backend pool memberships to basicLBBackendIds
         try {
             $nicBackendPoolMembershipsIds = @()
+
             $nicBackendPoolMembershipsIds += $basicLBVMNics.IpConfigurations.loadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
-            $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
+
+            If ([string]::IsNullOrEmpty($basicLBBackendIds)) {
+                # handle LBs with no backend pools
+                log -Message "[Test-SupportedMigrationScenario] No Basic Load Balancer backend pool IDs provided, so all NIC backend pool IDs must be on another LB (if any)." -Severity Debug
+            }
+            Else {
+                $differentMembership = Compare-Object -ReferenceObject $nicBackendPoolMembershipsIds -DifferenceObject $basicLBBackendIds
+            }
         }
         catch {
             $message = "[Test-SupportedMigrationScenario] Error comparing NIC backend pool memberships ($($nicBackendPoolMembershipsIds -join ',')) to basicLBBackendIds ($($basicLBBackendIds -join ',')). Error: $($_.Exception.Message)"
