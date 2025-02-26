@@ -58,7 +58,7 @@ function RemoveBasicLoadBalancer {
             Update-Vmss -Vmss $vmss
         }
         catch {
-            $message = "[RemoveBasicLoadBalancerFromVmss] An error occured while updating VMSS '$($vmss.Name)' in resource group '$($vmss.ResourceGroupName)' to remove it from a backend pool on load balancer '$($BasicLoadBalancer.Name)'. Follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
+            $message = "[RemoveBasicLoadBalancerFromVmss] An error occurred while updating VMSS '$($vmss.Name)' in resource group '$($vmss.ResourceGroupName)' to remove it from a backend pool on load balancer '$($BasicLoadBalancer.Name)'. Follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
             log 'Error' $message -terminateOnError
         }
 
@@ -72,7 +72,7 @@ function RemoveBasicLoadBalancer {
         Remove-AzLoadBalancer -ResourceGroupName $BasicLoadBalancer.ResourceGroupName -Name $BasicLoadBalancer.Name -Force -ErrorAction Stop > $null
     }
     Catch {
-        $message = "[RemoveBasicLoadBalancer] A failure occured when attempting to delete the basic load balancer '$($BasicLoadBalancer.Name)'. The script cannot continue as the front end addresses will not be available to reassign to the new Standard load balancer if the Basic LB has not been removed. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
+        $message = "[RemoveBasicLoadBalancer] A failure occurred when attempting to delete the basic load balancer '$($BasicLoadBalancer.Name)'. The script cannot continue as the front end addresses will not be available to reassign to the new Standard load balancer if the Basic LB has not been removed. To recover address the following error, then follow the steps at https://aka.ms/basiclbupgradefailure to retry the migration. `nError message: $_"
         log 'Error' $message -terminateOnError
     }
     log -Message "[RemoveBasicLoadBalancer] Removal of Basic Loadbalancer $($BasicLoadBalancer.Name) Completed"
