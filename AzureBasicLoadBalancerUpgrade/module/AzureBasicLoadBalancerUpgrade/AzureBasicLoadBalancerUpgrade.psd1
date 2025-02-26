@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.15'
+    ModuleVersion = '2.4.20'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -21,13 +21,13 @@
     GUID = 'd6a9de52-b84f-40c3-b4c8-81fab6e3ec99'
 
     # Author of this module
-    Author = 'FastTrack for Azure'
+    Author = 'Matthew Bratschun'
 
     # Company or vendor of this module
     CompanyName = 'Microsoft'
 
     # Copyright statement for this module
-    Copyright = '(c) 2023 Microsoft. All rights reserved.'
+    Copyright = '(c) 2025 Microsoft. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'This module will migrate a Basic SKU load balancer connected to a Virtual Machine Scaleset or Virtual Machines to a Standard SKU load balancer, preserving the existing configuration and functionality.'
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix bug when comparing backend pool membership on empty LBs.'
+            ReleaseNotes = 'Fix bug where load balancing rule without probe would cause migration to fail.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
