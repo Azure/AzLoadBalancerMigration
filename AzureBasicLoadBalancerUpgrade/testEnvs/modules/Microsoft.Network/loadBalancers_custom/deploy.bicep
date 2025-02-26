@@ -104,9 +104,9 @@ var loadBalancingRulesVar = [for loadBalancingRule in loadBalancingRules: {
     frontendPort: loadBalancingRule.frontendPort
     idleTimeoutInMinutes: contains(loadBalancingRule, 'idleTimeoutInMinutes') ? loadBalancingRule.idleTimeoutInMinutes : 4
     loadDistribution: contains(loadBalancingRule, 'loadDistribution') ? loadBalancingRule.loadDistribution : 'Default'
-    probe: {
+    probe: (loadBalancingRule.?probeName != null) ? {
       id: '${az.resourceId('Microsoft.Network/loadBalancers', name)}/probes/${loadBalancingRule.probeName}'
-    }
+    } : null
     protocol: contains(loadBalancingRule, 'protocol') ? loadBalancingRule.protocol : 'Tcp'
   }
 }]

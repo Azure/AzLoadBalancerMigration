@@ -11,6 +11,15 @@ function LoadBalancingRulesMigration {
     foreach ($loadBalancingRule in $loadBalancingRules) {
         log -Message "[LoadBalancingRulesMigration] Adding LoadBalancing Rule $($loadBalancingRule.Name) to Standard Load Balancer"
 
+        # set $probe if LBR has probe
+        if ($loadBalancingRule.Probe -ne $null) {
+            $probeName = ($loadBalancingRule.Probe.Id).split('/')[-1]
+            $probe = Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name $probeName
+        }
+        else {
+            $probe = $null
+        }
+
         try {
             $ErrorActionPreference = 'Stop'
             $loadBalancingRuleConfig = @{
@@ -25,7 +34,7 @@ function LoadBalancingRulesMigration {
                 EnableTcpReset          = $loadBalancingRule.EnableTcpReset
                 FrontendIPConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.FrontendIpConfiguration.Id).split('/')[-1])
                 BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
-                Probe                   = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
+                Probe                   = $probe
             }
             $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
         }
