@@ -81,19 +81,10 @@ module loadbalancer '../modules/Microsoft.Network/loadBalancers_custom/deploy.bi
         idleTimeoutInMinutes: 4
         loadDistribution: 'Default'
         name: 'rule-01'
-        probeName: 'probe-01'
         protocol: 'Tcp'
       }
     ]
-    probes: [
-      {
-        intervalInSeconds: 5
-        name: 'probe-01'
-        numberOfProbes: 2
-        port: '80'
-        protocol: 'Tcp'
-      }
-    ]
+    probes: []
   }
   dependsOn: [
     rg
