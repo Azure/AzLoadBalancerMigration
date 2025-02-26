@@ -44,7 +44,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackendPoolMigration/Backe
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/BackupResources/BackupResources.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/GetVmssFromBasicLoadBalancer/GetVmssFromBasicLoadBalancer.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/InboundNatPoolsMigration/InboundNatPoolsMigration.psd1")
-Import-Module ((Split-Path $PSScriptRoot -Parent) + "/LoadBalacingRulesMigration/LoadBalacingRulesMigration.psd1")
+Import-Module ((Split-Path $PSScriptRoot -Parent) + "/LoadBalancingRulesMigration/LoadBalancingRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/NatRulesMigration/NatRulesMigration.psd1")
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/NsgCreation/NsgCreation.psd1")
@@ -142,7 +142,7 @@ function PublicLBMigrationVmss {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((8 / 14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     Write-Progress -Status "Creating Outbound Rules for SNAT" -PercentComplete ((9 / 14) * 100) @progressParams
@@ -221,7 +221,7 @@ function InternalLBMigrationVmss {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((9/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((10/14) * 100) @progressParams
@@ -298,7 +298,7 @@ function RestoreExternalLBMigrationVmss {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((8/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     Write-Progress -Status "Creating Outbound Rules for SNAT" -PercentComplete ((9/14) * 100) @progressParams
@@ -383,7 +383,7 @@ function RestoreInternalLBMigrationVmss {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((7/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
@@ -453,7 +453,7 @@ function PublicLBMigrationVM {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((6 / 14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     Write-Progress -Status "Creating Outbound Rules for SNAT" -PercentComplete ((7 / 14) * 100) @progressParams
@@ -527,7 +527,7 @@ function InternalLBMigrationVM {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((6 / 14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((7 / 14) * 100) @progressParams
@@ -592,7 +592,7 @@ function RestoreExternalLBMigrationVM {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((6 / 14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     Write-Progress -Status "Creating Outbound Rules for SNAT" -PercentComplete ((7 / 14) * 100) @progressParams
@@ -661,7 +661,7 @@ function RestoreInternalLBMigrationVM {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((5 / 14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((6 / 14) * 100) @progressParams
@@ -723,7 +723,7 @@ function PublicLBMigrationEmpty {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((5/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     Write-Progress -Status "Creating Outbound Rules for SNAT" -PercentComplete ((6/14) * 100) @progressParams
@@ -785,7 +785,7 @@ function InternalLBMigrationEmpty {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((7/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((8/14) * 100) @progressParams
@@ -846,7 +846,7 @@ function RestoreExternalLBMigrationEmpty {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((6/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Creating Outbound Rules for SNAT
     Write-Progress -Status "Creating Outbound Rules for SNAT" -PercentComplete ((7/14) * 100) @progressParams
@@ -907,7 +907,7 @@ function RestoreInternalLBMigrationEmpty {
 
     # Migration of Load Balancing Rules
     Write-Progress -Status "Migrating Load Balancing Rules" -PercentComplete ((5/14) * 100) @progressParams
-    LoadBalacingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
+    LoadBalancingRulesMigration -BasicLoadBalancer $BasicLoadBalancer -StdLoadBalancer $StdLoadBalancer
 
     # Migration of NAT Rules
     Write-Progress -Status "Migrating NAT Rules" -PercentComplete ((6/14) * 100) @progressParams

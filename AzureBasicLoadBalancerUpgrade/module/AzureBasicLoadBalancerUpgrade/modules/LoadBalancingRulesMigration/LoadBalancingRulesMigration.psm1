@@ -1,15 +1,24 @@
 # Load Modules
 Import-Module ((Split-Path $PSScriptRoot -Parent) + "/Log/Log.psd1")
-function LoadBalacingRulesMigration {
+function LoadBalancingRulesMigration {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $BasicLoadBalancer,
         [Parameter(Mandatory = $True)][Microsoft.Azure.Commands.Network.Models.PSLoadBalancer] $StdLoadBalancer
     )
-    log -Message "[LoadBalacingRulesMigration] Initiating LoadBalacing Rules Migration"
+    log -Message "[LoadBalancingRulesMigration] Initiating LoadBalancing Rules Migration"
     $loadBalancingRules = $BasicLoadBalancer.LoadBalancingRules
     foreach ($loadBalancingRule in $loadBalancingRules) {
-        log -Message "[LoadBalacingRulesMigration] Adding LoadBalacing Rule $($loadBalancingRule.Name) to Standard Load Balancer"
+        log -Message "[LoadBalancingRulesMigration] Adding LoadBalancing Rule $($loadBalancingRule.Name) to Standard Load Balancer"
+
+        # set $probe if LBR has probe
+        if ($loadBalancingRule.Probe -ne $null) {
+            $probeName = ($loadBalancingRule.Probe.Id).split('/')[-1]
+            $probe = Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name $probeName
+        }
+        else {
+            $probe = $null
+        }
 
         try {
             $ErrorActionPreference = 'Stop'
@@ -25,26 +34,26 @@ function LoadBalacingRulesMigration {
                 EnableTcpReset          = $loadBalancingRule.EnableTcpReset
                 FrontendIPConfiguration = (Get-AzLoadBalancerFrontendIpConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.FrontendIpConfiguration.Id).split('/')[-1])
                 BackendAddressPool      = (Get-AzLoadBalancerBackendAddressPool -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.BackendAddressPool.Id).split('/')[-1])
-                Probe                   = (Get-AzLoadBalancerProbeConfig -LoadBalancer $StdLoadBalancer -Name ($loadBalancingRule.Probe.Id).split('/')[-1])
+                Probe                   = $probe
             }
             $StdLoadBalancer | Add-AzLoadBalancerRuleConfig @loadBalancingRuleConfig > $null
         }
         catch {
-            $message = "[LoadBalacingRulesMigration] An error occured when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, and follow the process at https://aka.ms/basiclbupgradefailure to retry migration. Error: $_"
+            $message = "[LoadBalancingRulesMigration] An error occurred when adding Load Balancing Rule '$($loadBalancingRule.Name)' to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover, address the following error, delete the standard LB, and follow the process at https://aka.ms/basiclbupgradefailure to retry migration. Error: $_"
             log "Error" $message -terminateOnError
         }
     }
-    log -Message "[LoadBalacingRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
+    log -Message "[LoadBalancingRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
 
     try {
         $ErrorActionPreference = 'Stop'
         Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
     }
     catch {
-        $message = "[LoadBalacingRulesMigration] An error occured when adding Load Balancing Rules configuration to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover address the following error, https://aka.ms/basiclbupgradefailure. `nError message: $_"
+        $message = "[LoadBalancingRulesMigration] An error occurred when adding Load Balancing Rules configuration to new Standard load balancer '$($StdLoadBalancer.Name)'. To recover address the following error, https://aka.ms/basiclbupgradefailure. `nError message: $_"
         log "Error" $message -terminateOnError
     }
-    log -Message "[LoadBalacingRulesMigration] LoadBalacing Rules Migration Completed"
+    log -Message "[LoadBalancingRulesMigration] LoadBalancing Rules Migration Completed"
 }
 
-Export-ModuleMember -Function LoadBalacingRulesMigration
+Export-ModuleMember -Function LoadBalancingRulesMigration
