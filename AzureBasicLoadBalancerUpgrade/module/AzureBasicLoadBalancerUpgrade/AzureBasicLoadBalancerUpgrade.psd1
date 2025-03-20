@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.20'
+    ModuleVersion = '2.4.21'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix bug where load balancing rule without probe would cause migration to fail.'
+            ReleaseNotes = 'Clarified downtime warning when running validation only'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
