@@ -199,15 +199,18 @@ function Start-AzBasicLoadBalancerUpgrade {
 
     # warn user about application downtime
     If (((!$skipDowntimeWarning) -and !$force) -and !(Test-Path -Path (Join-Path -Path $RecoveryBackupPath -ChildPath 'Start-AzBasicLoadBalancerUpgrade.log'))) {
-        $message = "This operation will cause downtime for the application(s) using the Basic Load Balancer--usually a few minutes--see https://aka.ms/BasicLBMigrateDowntime. Are you sure you want to continue? [y/N]"
-        $result = Read-Host -Prompt $message
-        If ($result -ne 'y' -and $result -ne 'yes') {
-            Write-Host "Operation cancelled by user"
-            return
-        }
-        Else {
-            Write-Host -ForegroundColor Green "`nSpecify parameter ``-confirm `$false`` to skip this prompt in the future`n"
-            Start-Sleep -Seconds 2
+        Write-Warning "Migration causes downtime for the application(s) using the Basic Load Balancer--usually a few minutes--see https://aka.ms/BasicLBMigrateDowntime."
+
+        if (!$validateScenarioOnly) {
+            $result = Read-Host -Prompt 'Are you sure you want to continue? [y/N]'
+            If ($result -ne 'y' -and $result -ne 'yes') {
+                Write-Host "Operation cancelled by user"
+                return
+            }
+            Else {
+                Write-Host -ForegroundColor Green "`nSpecify parameter `-skipDowntimeWarning` to skip this prompt in the future`n"
+                Start-Sleep -Seconds 2
+            }
         }
     }
 
