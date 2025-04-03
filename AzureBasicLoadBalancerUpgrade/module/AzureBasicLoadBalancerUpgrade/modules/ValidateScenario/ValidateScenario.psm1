@@ -528,6 +528,26 @@ Function Test-SupportedMigrationScenario {
                 log -Message $message -Severity 'Warning'
             }
         }
+
+        # check if load balancing rule has floating IP enabled and associated IP config is not primary
+        log -Message "[Test-SupportedMigrationScenario] Checking if load balancing rule has floating IP enabled and associated IP config is not primary..."
+        if ($floatingIPRules = $BasicLoadBalancer.LoadBalancingRules | Where-Object { $_.EnableFloatingIP -eq $true }) {
+            # check if floating IP rules contain non-primary IP configurations
+            ForEach ($rule in $floatingIPRules) {
+                log -message "[Test-SupportedMigrationScenario] Load balancing rule '$($rule.Name)' has floating IP enabled, checking for IP configuration which is not primary..."
+                $backendPool = $BasicLoadBalancer.BackendAddressPools | Where-Object { $_.Id -eq $rule.BackendAddressPool.Id }
+                $backendIpConfigs = $backendPool.BackendIpConfigurations
+                
+                ForEach ($nic in $basicLBVMNics) {
+                    Foreach ($ipConfig in $nic.IpConfigurations) {
+                        If ($ipConfig.Id -in $backendIpConfigs.id -and $ipConfig.Primary -eq $false) {
+                            $message = "[Test-SupportedMigrationScenario] Load balancing rule '$($rule.Name)' has floating IP enabled and associated IP configuration '$($ipConfig.Name)' from NIC '$($nic.Name)' is not primary. This is not supported for migration--change the IP config in the backend pool associated with the load balancing rule '$($rule.Name)' to a primary IP configuration and re-run the module."
+                            log -Message $message -Severity 'Error' -terminateOnError
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
