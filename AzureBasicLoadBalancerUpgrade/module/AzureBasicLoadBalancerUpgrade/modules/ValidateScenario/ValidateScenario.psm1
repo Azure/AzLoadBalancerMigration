@@ -225,6 +225,30 @@ Function Test-SupportedMigrationScenario {
                 log -Message "[Test-SupportedMigrationScenario] All VMSS load balancer associations are with the Basic LB(s) to be migrated." -Severity Information
             }
         }
+
+        # check if load balancing rule has floating IP enabled and associated NIC IP config is not primary. See: https://learn.microsoft.com/en-us/azure/load-balancer/load-balancer-floating-ip
+        log -Message "[Test-SupportedMigrationScenario] Checking if load balancing rule has floating IP enabled and associated VMSS IP config is not primary..."
+        if ($floatingIPRules = $BasicLoadBalancer.LoadBalancingRules | Where-Object { $_.EnableFloatingIP -eq $true }) {
+            # check if floating IP rules contain non-primary IP configurations
+            ForEach ($rule in $floatingIPRules) {
+                log -message "[Test-SupportedMigrationScenario] Load balancing rule '$($rule.Name)' has floating IP enabled, checking for IP configuration which is not primary..."
+                $backendPool = $BasicLoadBalancer.BackendAddressPools | Where-Object { $_.Id -eq $rule.BackendAddressPool.Id }
+                if ($null -ne $backendPool -and $null -ne $backendPool.BackendIpConfigurations) {
+                
+                    # check if ipconfig lb backend pools contains this backend pool
+                    ForEach ($vmssNic in $basicLBVMSSs.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations) {
+                        # ip config does not need to specify a .primary value unless there is more than one
+                        $isOnlyIpConfig = $vmssNic.IpConfigurations.Count -eq 1
+                        ForEach ($ipConfig in $vmssNic.IpConfigurations) {
+                            if ($ipConfig.LoadBalancerBackendAddressPools.id -contains $backendPool.id -and ($ipConfig.Primary -ne $true -and !$isOnlyIpConfig)) {
+                                $message = "[Test-SupportedMigrationScenario] Load balancing rule '$($rule.Name)' has floating IP enabled and associated IP configuration '$($ipConfig.Name)' from VMSS '$($vmssNic.Name)' is not primary. This is not supported for migration--change the IP config in the backend pool associated with the load balancing rule '$($rule.Name)' to a primary IP configuration and re-run the module. See: https://learn.microsoft.com/azure/load-balancer/load-balancer-floating-ip"
+                                log -Message $message -Severity 'Error' -terminateOnError
+                            }
+                        }
+                    }
+                }
+            }
+        }
     
         # check if any VMSS instances have instance protection enabled
         log -Message "[Test-SupportedMigrationScenario] Checking for instances in backend pool member VMSS '$($vmssIds.split('/')[-1])' with Instance Protection configured"
@@ -388,7 +412,7 @@ Function Test-SupportedMigrationScenario {
                 }
                 Else {      
                     # add VM resources to array for later validation
-                    try{
+                    try {
                         $basicLBVMs += Get-AzVM -ResourceId $nic.VirtualMachine.id -ErrorAction Stop
                     }
                     catch {
@@ -528,6 +552,28 @@ Function Test-SupportedMigrationScenario {
                 log -Message $message -Severity 'Warning'
             }
         }
+
+        # check if load balancing rule has floating IP enabled and associated NIC IP config is not primary. See: https://learn.microsoft.com/en-us/azure/load-balancer/load-balancer-floating-ip
+        log -Message "[Test-SupportedMigrationScenario] Checking if load balancing rule has floating IP enabled and associated IP config is not primary..."
+        if ($floatingIPRules = $BasicLoadBalancer.LoadBalancingRules | Where-Object { $_.EnableFloatingIP -eq $true }) {
+            # check if floating IP rules contain non-primary IP configurations
+            ForEach ($rule in $floatingIPRules) {
+                log -message "[Test-SupportedMigrationScenario] Load balancing rule '$($rule.Name)' has floating IP enabled, checking for IP configuration which is not primary..."
+                $backendPool = $BasicLoadBalancer.BackendAddressPools | Where-Object { $_.Id -eq $rule.BackendAddressPool.Id }
+                if ($null -ne $backendPool -and $null -ne $backendPool.BackendIpConfigurations) {
+                    $backendIpConfigs = $backendPool.BackendIpConfigurations
+                
+                    ForEach ($nic in $basicLBVMNics) {
+                        ForEach ($ipConfig in $nic.IpConfigurations) {
+                            If ($null -ne $backendIpConfigs -and $ipConfig.Id -in $backendIpConfigs.id -and ($ipConfig.Primary -eq $false)) {
+                                $message = "[Test-SupportedMigrationScenario] Load balancing rule '$($rule.Name)' has floating IP enabled and associated IP configuration '$($ipConfig.Name)' from NIC '$($nic.Name)' is not primary. This is not supported for migration--change the IP config in the backend pool associated with the load balancing rule '$($rule.Name)' to a primary IP configuration and re-run the module. See: https://learn.microsoft.com/azure/load-balancer/load-balancer-floating-ip"
+                                log -Message $message -Severity 'Error' -terminateOnError
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -623,7 +669,7 @@ Function Test-SupportedMultiLBScenario {
     If ($multiLBConfig[0].scenario.backendType -eq 'VMSS') {
         $basicLBBackends = @()
         ForEach ($config in $multiLBConfig) {
-            $basicLBBackends += $config.BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | ForEach-Object {$_.split('/virtualMachines/')[0]}
+            $basicLBBackends += $config.BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | ForEach-Object { $_.split('/virtualMachines/')[0] }
         }
         $groupedBackends = $basicLBBackends | Sort-Object | Get-Unique
 
@@ -684,7 +730,7 @@ Function Test-SupportedMultiLBScenario {
         }
 
         # VMs must share an availability set or the backend must be a single VM with no availability set ('NO_AVAILABILITY_SET')
-        If (($VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique).count -gt 1 -or ($VMAvailabilitySets.availabilitySetId | Where-Object {$_ -eq 'NO_AVAILABILITY_SET'}).count -gt 1) {
+        If (($VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique).count -gt 1 -or ($VMAvailabilitySets.availabilitySetId | Where-Object { $_ -eq 'NO_AVAILABILITY_SET' }).count -gt 1) {
             log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in different or no Availability Sets: '$($VMAvailabilitySets.availabilitySetId -join ',')'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
         }
         Else {

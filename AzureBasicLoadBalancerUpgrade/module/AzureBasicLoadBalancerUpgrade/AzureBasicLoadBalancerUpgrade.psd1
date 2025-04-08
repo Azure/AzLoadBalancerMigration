@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.21'
+    ModuleVersion = '2.4.22'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Clarified downtime warning when running validation only'
+            ReleaseNotes = 'Added validation check for customers using floating IP and non-primary IP configurations.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
