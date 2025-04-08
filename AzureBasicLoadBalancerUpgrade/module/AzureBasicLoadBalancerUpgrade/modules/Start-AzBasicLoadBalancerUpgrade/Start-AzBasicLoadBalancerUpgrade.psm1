@@ -18,6 +18,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupResources\BackupReso
     - Basic load balancers with IPV6 frontend IP configurations
     - Basic load balancers with a VMSS backend pool member where one or more VMSS instances have ProtectFromScaleSetActions Instance Protection policies enabled
     - Migrating a Basic load balancer to an existing Standard load balancer
+    - Migrating a Basic load balancer with floating IP enabled on load balancing rules, where the backend pool members are secondary IP configurations
 
     Multi-load balancer support:
     In a situation where multiple Basic load balancers are configured with the same backend pool members (internal and external load balancers), the migration can be performed in a single operation by specifying the 
