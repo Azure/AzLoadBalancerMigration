@@ -161,7 +161,29 @@ module vm '../modules/Microsoft.Compute/virtualMachines_custom/deploy.bicep' = {
             ]
           }
         ]
-        nicSuffix: 'nic'
+        nicSuffix: 'nic1'
+        enableAcceleratedNetworking: false
+      }
+      {
+        location: location
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerBackendAddressPools: [
+
+            ]
+          }
+        {
+            name: 'ipconfig2'
+            subnetResourceId: virtualNetworks.outputs.subnetResourceIds[0]
+            loadBalancerBackendAddressPools: [
+
+            ]
+          }
+        ]
+        nicSuffix: 'nic2'
+        enableAcceleratedNetworking: false
       }
     ]
     osDisk: {
