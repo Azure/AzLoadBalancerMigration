@@ -439,7 +439,18 @@ function Start-AzBasicLoadBalancerUpgrade {
                             RestoreExternalLBMigrationEmpty @standardScenarioParams
                         }
                     }
+                    'none' {
+                        if ((!$PSBoundParameters.ContainsKey("FailedMigrationRetryFilePathLB"))) {
+                            InternalLBMigrationEmpty @standardScenarioParams -RecoveryBackupPath $RecoveryBackupPath
+                        }
+                        else {
+                            RestoreInternalLBMigrationEmpty @standardScenarioParams
+                        }
+                    }
                 }
+            }
+            default {
+                log -Severity 'Error' -Message "[Start-AzBasicLoadBalancerUpgrade] Unexpected backend type '$($migrationConfig.scenario.ExternalOrInternal)' for Basic Load Balancer '$($migrationConfig.BasicLoadBalancer.Name)' in Resource Group '$($migrationConfig.BasicLoadBalancer.ResourceGroupName)'. Migration failed." -terminateOnError
             }
         }
 
