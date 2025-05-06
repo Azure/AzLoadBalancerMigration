@@ -156,7 +156,11 @@ Function Test-SupportedMigrationScenario {
 
     # detecting if source load balancer is internal or external-facing
     log -Message "[Test-SupportedMigrationScenario] Determining if LB is internal or external based on FrontEndIPConfiguration[0]'s IP configuration"
-    If (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)) {
+    If ([string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0])) {
+        log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is empty--this load balancer has no configuration (sigh)."
+        $scenario.ExternalOrInternal = 'None'
+    }
+    ElseIf (![string]::IsNullOrEmpty($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)) {
         log -Message "[Test-SupportedMigrationScenario] FrontEndIPConfiguiration[0] is assigned a private IP address '$($BasicLoadBalancer.FrontendIpConfigurations[0].PrivateIpAddress)', so this LB is Internal"
         $scenario.ExternalOrInternal = 'Internal'
     }
