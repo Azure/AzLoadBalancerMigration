@@ -578,6 +578,28 @@ Function Test-SupportedMigrationScenario {
                 }
             }
         }
+
+        # check if backend VMs are part of an Availability Set and if there are other members of the same availability set which are not part of the load balancer backend pool or inbound nat pools
+        log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs are part of an Availability Set and if there are other members of the same availability set which are not part of the load balancer backend pool..."
+        $availabilitySetVMs = @()
+        $availabilitySetReference = $basicLBVMs | Where-Object { $_.AvailabilitySetReference -ne $null } | Select-Object -ExpandProperty AvailabilitySetReference 
+        
+        If (![string]::IsNullOrEmpty($availabilitySetReference)) {
+            $availabilitySetVMs = $availabilitySetReference | Get-Unique | Get-AzResource | Get-AzAvailabilitySet | Select-Object -expand VirtualMachinesReferences | Select-Object -ExpandProperty Id
+            $availabilitySetVMs = $availabilitySetVMs | Sort-Object | Get-Unique
+            $extraAvailabilitySetVMs = $availabilitySetVMs | Where-Object { $_ -notin $basicLBVMs.Id } | Sort-Object | Get-Unique
+
+            If ($extraAvailabilitySetVMs) {
+                $message = "[Test-SupportedMigrationScenario] VMs ('$($extraAvailabilitySetVMs -join ';')') are part of an Availability Set and there are other members of the same Availability Set which are part of the load balancer backend pools. This is not supported for migration. To work around this, create a new backend pool on the basic LB which is not associated with a load balancing rule and add the extra VMs to it temporarily, then retry migration."
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
+            Else {
+                log -Message "[Test-SupportedMigrationScenario] No extra Availability Set VMs found" -Severity Information
+            }
+        }
+        Else {
+            log -Message "[Test-SupportedMigrationScenario] No Availability Sets found" -Severity Information
+        }
     }
 
 
