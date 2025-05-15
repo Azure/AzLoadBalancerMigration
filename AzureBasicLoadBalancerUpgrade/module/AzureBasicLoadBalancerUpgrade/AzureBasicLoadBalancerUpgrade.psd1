@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.4.23'
+    ModuleVersion = '2.4.24'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Added support for basic LBs with no child resources.'
+            ReleaseNotes = 'Added validation check for VM mixed LB backend pool and availability set membership.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
