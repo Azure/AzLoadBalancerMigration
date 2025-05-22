@@ -11,7 +11,7 @@ Import-Module ((Split-Path $PSScriptRoot -Parent) + "\BackupResources\BackupReso
 
 .DESCRIPTION
     This module consists of a number of child modules which abstract the operations required to successfully migrate a Basic to a Standard load balancer.
-    A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore this module creates a new Standard laod balancer based on the configuration of the existing Basic load balancer.
+    A Basic Load Balancer cannot be natively migrate to a Standard SKU, therefore this module creates a new Standard load balancer based on the configuration of the existing Basic load balancer.
 
     Unsupported scenarios:
     - Basic load balancers with backend pool members which are not VMs or a VMSS
