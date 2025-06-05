@@ -79,6 +79,31 @@ function _GetScenarioBackendType {
     return $backendType
 }
 
+function _GetBackendMemberNicAndVM {
+    param(
+        [Parameter(Mandatory = $true)]
+        $backendIpConfigurationId
+    )
+       
+    $nic = Get-AzNetworkInterface -ResourceId ($backendIpConfigurationId -split '/ipconfigurations/')[0]
+
+    If (!$nic.VirtualMachineText) {
+        log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' backend pool member network interface '$($nic.id)' does not have an associated Virtual Machine. Backend pool members must be either a VMSS NIC or a NIC attached to a VM!"
+        return
+    }
+    Else {      
+        # add VM resources to array for later validation
+        try {
+            $vm = Get-AzVM -ResourceId $nic.VirtualMachine.id -ErrorAction Stop
+        }
+        catch {
+            log -terminateOnError -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Error getting VM from NIC '$($nic.id)'. Error: $($_.Exception.Message)"
+        }
+
+        return $vm,$nic
+    }
+}
+
 Function Test-SupportedMigrationScenario {
     [CmdletBinding()]
     param (
@@ -406,28 +431,64 @@ Function Test-SupportedMigrationScenario {
         # create array of VMs associated with the load balancer for following checks and verify that NICs are associated to VMs
         $basicLBVMs = @()
         $basicLBVMNics = @()
+        $backendPoolVMs = @()
+        $natRuleOnlyVMs = @()
         foreach ($backendAddressPool in $BasicLoadBalancer.BackendAddressPools) {
             foreach ($backendIpConfiguration in $backendAddressPool.BackendIpConfigurations) {        
-                $nic = Get-AzNetworkInterface -ResourceId ($backendIpConfiguration.Id -split '/ipconfigurations/')[0]
-        
-                If (!$nic.VirtualMachineText) {
-                    log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Load balancer '$($BasicLoadBalancer.Name)' backend pool member network interface '$($nic.id)' does not have an associated Virtual Machine. Backend pool members must be either a VMSS NIC or a NIC attached to a VM!"
-                    return
-                }
-                Else {      
-                    # add VM resources to array for later validation
-                    try {
-                        $basicLBVMs += Get-AzVM -ResourceId $nic.VirtualMachine.id -ErrorAction Stop
-                    }
-                    catch {
-                        log -terminateOnError -Severity 'Error' -Message "[Test-SupportedMigrationScenario] Error getting VM from NIC '$($nic.id)'. Error: $($_.Exception.Message)"
-                    }
+                $vm,$nic = _GetBackendMemberNicAndVM -backendIpConfigurationId $backendIpConfiguration.Id
 
-                    # add VM nics to array for later validation
-                    $basicLBVMNics += $nic
-                }
+                $basicLBVMs += $vm
+                $backendPoolVMs += $vm
+                $basicLBVMNics += $nic
             }
         }
+        ## add VMs associcated directly to inbound NAT rules
+        foreach ($natRule in $BasicLoadBalancer.InboundNatRules) {
+            foreach ($natRuleBackendIpConfiguration in $natRule.BackendIpConfiguration) {
+                $vm,$nic = _GetBackendMemberNicAndVM -backendIpConfigurationId $natRuleBackendIpConfiguration.Id
+                
+                If ($vm.id -notin $backendPoolVMs.id) {
+                    $natRuleOnlyVMs += $vm
+                }
+
+                $basicLBVMs += $vm
+                $basicLBVMNics += $nic
+            }
+        }
+
+        # check if LB backend VMs does not have public IPs
+        log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs have public IPs..."
+        $AnyVMsHavePublicIP = $false
+        $AllVMsHavePublicIPs = $true
+        ForEach ($VM in $basicLBVMs) {
+            $VMHasPublicIP = $false
+            :vmNICs ForEach ($nicId in $VM.NetworkProfile.NetworkInterfaces.Id) {
+                $nicConfig = Get-AzResource -Id $nicId | Get-AzNetworkInterface
+                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
+                    If ($ipConfig.PublicIPAddress.Id) {
+                        $AnyVMsHavePublicIP = $true
+                        $VMHasPublicIP = $true
+
+                        break :vmNICs
+                    }
+                }
+            }
+            If (!$VMHasPublicIP) {
+                $AllVMsHavePublicIPs = $false
+            }
+        }
+
+        # check that all NAT Rule associated VMs are also in backend pools for external LBs
+        log -Message "[Test-SupportedMigrationScenario] Checking that all NAT Rule associated VMs are also in backend pools for external LBs or have Public IPs"
+        If ($scenario.ExternalOrInternal -eq 'External' -and $natRuleOnlyVMs -and !$AllVMsHavePublicIPs) {
+
+            $message = "[Test-SupportedMigrationScenario] The following VMs are associated with Inbound NAT Rules but not in the backend pool of the Basic Load Balancer: '$($natRuleOnlyVMs.Id -join ', ')' and not all VMs have Public IP addresses. All NAT Rule associated VMs must have public IPs associated or be in the backend pool of the Basic Load Balancer to have outbound network connectivity post-migration. Either add Public IPs to all VMs or re-run with the -Force parameter and configure outbound connectivity post-migration."
+            log -Message $message -Severity 'Error' -terminateOnError:$(!$force)
+
+            if ($force) {
+                log -Message "[Test-SupportedMigrationScenario] -Force or -ValidateOnly parameter was used, so continuing with migration validation"
+            }
+        }  
 
         # check if load balancer backend pool contains VMs which are part of another LBs backend pools
         log -Message "[Test-SupportedMigrationScenario] Checking if backend pools contain members which are members of another load balancer's backend pools..."
@@ -463,28 +524,6 @@ Function Test-SupportedMigrationScenario {
         Else {
             log -Message "[Test-SupportedMigrationScenario] All VM load balancer associations are with the Basic LB(s) to be migrated." -Severity Information
         }        
-
-        # check if internal LB backend VMs does not have public IPs
-        log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs have public IPs..."
-        $AnyVMsHavePublicIP = $false
-        $AllVMsHavePublicIPs = $true
-        ForEach ($VM in $basicLBVMs) {
-            $VMHasPublicIP = $false
-            :vmNICs ForEach ($nicId in $VM.NetworkProfile.NetworkInterfaces.Id) {
-                $nicConfig = Get-AzResource -Id $nicId | Get-AzNetworkInterface
-                ForEach ($ipConfig in $nicConfig.ipConfigurations) {
-                    If ($ipConfig.PublicIPAddress.Id) {
-                        $AnyVMsHavePublicIP = $true
-                        $VMHasPublicIP = $true
-
-                        break :vmNICs
-                    }
-                }
-            }
-            If (!$VMHasPublicIP) {
-                $AllVMsHavePublicIPs = $false
-            }
-        }
 
         # check if some backend VMs have ILIPs but not others
         If ($AnyVMsHavePublicIP -and !$AllVMsHavePublicIPs -and $Scenario.ExternalOrInternal -eq 'External') {
@@ -580,7 +619,7 @@ Function Test-SupportedMigrationScenario {
         }
 
         # check if backend VMs are part of an Availability Set and if there are other members of the same availability set which are not part of the load balancer backend pool or inbound nat pools
-        log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs are part of an Availability Set and if there are other members of the same availability set which are not part of the load balancer backend pool..."
+        log -Message "[Test-SupportedMigrationScenario] Checking if backend VMs are part of an Availability Set and if there are other members of the same availability set which are not part of the load balancer backend pool, NAT pool, or associated with NAT Rules..."
         $availabilitySetVMs = @()
         $availabilitySetReference = $basicLBVMs | Where-Object { $_.AvailabilitySetReference -ne $null } | Select-Object -ExpandProperty AvailabilitySetReference 
         
@@ -590,7 +629,7 @@ Function Test-SupportedMigrationScenario {
             $extraAvailabilitySetVMs = $availabilitySetVMs | Where-Object { $_ -notin $basicLBVMs.Id } | Sort-Object | Get-Unique
 
             If ($extraAvailabilitySetVMs) {
-                $message = "[Test-SupportedMigrationScenario] VMs ('$($extraAvailabilitySetVMs -join ';')') are part of an Availability Set and there are other members of the same Availability Set which are part of the load balancer backend pools. This is not supported for migration. To work around this, create a new backend pool on the basic LB which is not associated with a load balancing rule and add the extra VMs to it temporarily, then retry migration."
+                $message = "[Test-SupportedMigrationScenario] VMs ('$($extraAvailabilitySetVMs -join ';')') belong(s) to an Availability Set and there are other members of the same Availability Set which are part of the load balancer backend pools, NAT pools, or associated with NAT Rules. This is not supported for migration. To work around this, create a new backend pool on the basic LB which is not associated with a load balancing rule and add the extra VMs to it temporarily, then retry migration."
                 log -Message $message -Severity 'Error' -terminateOnError
             }
             Else {
