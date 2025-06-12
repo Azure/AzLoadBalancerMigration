@@ -447,7 +447,7 @@ Function Test-SupportedMigrationScenario {
             foreach ($natRuleBackendIpConfiguration in $natRule.BackendIpConfiguration) {
                 $vm,$nic = _GetBackendMemberNicAndVM -backendIpConfigurationId $natRuleBackendIpConfiguration.Id
                 
-                If ($vm.id -notin $backendPoolVMs.id) {
+                If ($vm.id -notin $backendPoolVMs.id -and $vm.id -notin $natRuleOnlyVMs.id) {
                     $natRuleOnlyVMs += $vm
                 }
 
@@ -482,7 +482,7 @@ Function Test-SupportedMigrationScenario {
         log -Message "[Test-SupportedMigrationScenario] Checking that all NAT Rule associated VMs are also in backend pools for external LBs or have Public IPs"
         If ($scenario.ExternalOrInternal -eq 'External' -and $natRuleOnlyVMs -and !$AllVMsHavePublicIPs) {
 
-            $message = "[Test-SupportedMigrationScenario] The following VMs are associated with Inbound NAT Rules but not in the backend pool of the Basic Load Balancer: '$($natRuleOnlyVMs.Id -join ', ')' and not all VMs have Public IP addresses. All NAT Rule associated VMs must have public IPs associated or be in the backend pool of the Basic Load Balancer to have outbound network connectivity post-migration. Either add Public IPs to all VMs or re-run with the -Force parameter and configure outbound connectivity post-migration."
+            $message = "[Test-SupportedMigrationScenario] The following VMs are associated with Inbound NAT Rules but not in the backend pool of the Basic Load Balancer: '$($natRuleOnlyVMs.Id -join ', ')' and not all VMs have Public IP addresses. All NAT Rule associated VMs must have public IPs associated or be in the backend pool of the Basic Load Balancer to have outbound network connectivity post-migration. `n`nEither add Public IPs to all VMs or re-run with the -Force parameter and configure outbound connectivity post-migration."
             log -Message $message -Severity 'Error' -terminateOnError:$(!$force)
 
             if ($force) {

@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.0'
+    ModuleVersion = '2.5.1'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Add check for NAT Rule member VMs outside backend pools on external LBs.'
+            ReleaseNotes = 'Improve NAT Rule/BE validation message, fix AvSet detection.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
