@@ -736,7 +736,9 @@ Function Test-SupportedMultiLBScenario {
         ForEach ($config in $multiLBConfig) {
             $basicLBBackends += $config.BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | ForEach-Object { $_.split('/virtualMachines/')[0] }
         }
-        $groupedBackends = $basicLBBackends | Sort-Object | Get-Unique
+        
+        $groupedBackends = $basicLBBackends | ForEach-Object { $_.id.ToLower() } | Sort-Object | Get-Unique
+
 
         If ($groupedBackends.Count -gt 1) {
             log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (more than one backend VMSS found: '$($groupedBackends)'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
