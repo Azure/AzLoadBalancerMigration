@@ -66,12 +66,12 @@ The Azure Powershell module must be installed. See [Install the latest Az PowerS
 
 When a migration fails due to a transient issue, such as a network outage or client system crash, the migration can be re-run to configure the VM and Public IPs in the goal state. At execution, the script outputs a recovery log file which is used to ensure the VM is properly reconfigured. Review the log file `PublicIPUpgrade.log` created in the location where the script was executed.
 
-To recover from a failed upgrade, pass the recovery log file path to the script with the `-recoverFromFile` parameter and identify the VM to recover with the `-VMName` and `-VMResourceGroup` or `-VMResourceID` parameters. 
+To recover from a failed upgrade, pass the recovery log file path to the script with the `-recoverFromFile` parameter and identify the VM to recover with the `-VMName` and `-ResourceGroupName` or `-VMResourceID` parameters. 
 
 **EXAMPLE: Recover from a failed migration, passing the name and resource group of the VM to recover, along with the recovery log file**
 
 ```powershell
-    Start-VMPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName myVM -VMResourceGroup -rg-myrg
+    Start-VMPublicIPUpgrade -RecoverFromFile ./PublicIPUpgrade_Recovery_2020-01-01-00-00.csv -VMName 'myVM' -ResourceGroupName 'myRG'
 ```
 
 ## Frequently Asked Questions
