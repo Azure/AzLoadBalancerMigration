@@ -117,7 +117,7 @@ function PublicLBMigrationVmss {
     RemoveVmssPublicIPConfig -BasicLoadBalancer $BasicLoadBalancer
 
     # Migrate public IP addresses on Basic LB to static (if dynamic)
-    Write-Progress -Activity "Migrating public IP addresses on Basic LB to static (if dynamic)" -PercentComplete ((2 / 14) * 100) @progressParams
+    Write-Progress -Status "Migrating public IP addresses on Basic LB to static (if dynamic)" -PercentComplete ((2 / 14) * 100) @progressParams
     PublicIPToStatic -BasicLoadBalancer $BasicLoadBalancer
     
     # Add Public IP Configurations to VMSS (with Standard SKU)
