@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.1'
+    ModuleVersion = '2.5.2'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Improve NAT Rule/BE validation message, fix AvSet detection.'
+            ReleaseNotes = 'Fix Write-Progress error when running in PowerShell 5.1 (bad param)'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
