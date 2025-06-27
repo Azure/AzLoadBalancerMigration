@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.2'
+    ModuleVersion = '2.5.3'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix Write-Progress error when running in PowerShell 5.1 (bad param)'
+            ReleaseNotes = 'Check for and fail on VMSSes with no instances.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
