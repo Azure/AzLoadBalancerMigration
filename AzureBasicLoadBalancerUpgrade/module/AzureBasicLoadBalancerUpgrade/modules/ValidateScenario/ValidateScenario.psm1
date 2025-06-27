@@ -54,7 +54,6 @@ function _GetScenarioBackendType {
         }
     }
 
-
     If (($backendMemberTypes | Sort-Object | Get-Unique).count -gt 1) {
         log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'" -Severity 'Error'
         return
@@ -69,7 +68,43 @@ function _GetScenarioBackendType {
     }
     ElseIf ([string]::IsNullOrEmpty($backendMemberTypes[0])) {
         log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools are empty"
-        $backendType = 'Empty'
+
+        # check that there are no VMSSes associated with the Basic Load Balancer which have no instances
+        log -Message "[Test-SupportedMigrationScenario] Checking if there are any VMSSes associated with the Basic Load Balancer but which have no instances..."
+        $graphQuery = @"
+        resources
+        | where type =~ 'microsoft.compute/virtualmachinescalesets' and location =~ '$($BasicLoadBalancer.Location)'
+        | where tostring(properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations) has '$($BasicLoadBalancer.id)'
+        | count as vmssCount
+"@
+
+        log -Severity Verbose -Message "[Test-SupportedMigrationScenario]Graph Query Text: `n$graphQuery"
+        $waitingForARG = $false
+        $timeoutStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        do {        
+            If (!$waitingForARG) {
+                log -Message "[Test-SupportedMigrationScenario] Querying Resource Graph for VMSSes which reference this Load Balancer in their network profiles..."
+            }
+            Else {
+                log -Message "[Test-SupportedMigrationScenario] Waiting 15 seconds before querying ARG again..."
+                Start-Sleep 15
+            }
+
+            $associatedVMSSCount = Search-AzGraph -Query $graphQuery
+
+            $waitingForARG = $true
+        } while ($associatedVMSSCount.count -eq 0 -and $env:LBMIG_WAIT_FOR_ARG -and $timeoutStopwatch.Elapsed.Minutes -lt 15)
+
+        If ($timeoutStopwatch.Elapsed.Minutes -gt 15) {
+            log -Severity Error -Message "[Test-SupportedMigrationScenario] Resource Graph query timed out before results were returned! The Resource Graph lags behind ARM by several minutes--if the resources to migrate were just created (as in a test), test the query from the log to determine if this was an ingestion lag or synax failure. Once the issue has been corrected, follow the documented migration recovery steps here: https://learn.microsoft.com/azure/load-balancer/upgrade-basic-standard-virtual-machine-scale-sets#what-happens-if-my-upgrade-fails-mid-migration" -terminateOnError
+        }
+
+        If ($associatedVMSSCount.vmssCount -gt 0) {
+            log -Message "[Test-SupportedMigrationScenario] Basic Load Balancer has a VMSS associated with it which has no instances. This scenario is not currently supported. WORKAROUND: scale your VMSS to at least one instance or remove the VMSS from the LB in the VMSS profile." -Severity 'Error' -terminateOnError
+        }
+        Else {
+            $backendType = 'Empty'
+        }
     }
     Else {
         log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'" -Severity 'Error'
