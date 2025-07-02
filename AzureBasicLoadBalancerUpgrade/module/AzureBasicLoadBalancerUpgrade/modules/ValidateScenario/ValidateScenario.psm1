@@ -837,7 +837,7 @@ Function Test-SupportedMultiLBScenario {
             log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in different or no Availability Sets: '$($uniqueAvailabilitySets -join ',')'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
         }
         Else {
-            log -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers share '$(($uniqueAvailabilitySets).count)' availability set"
+            log -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers share '$($uniqueAvailabilitySets.count)' availability set"
         }
     }
 
