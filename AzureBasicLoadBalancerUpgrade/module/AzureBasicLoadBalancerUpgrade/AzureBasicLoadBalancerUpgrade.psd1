@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.3'
+    ModuleVersion = '2.5.34'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Check for and fail on VMSSes with no instances.'
+            ReleaseNotes = 'Improve multi-LB scenario AV set membership validation error message.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
