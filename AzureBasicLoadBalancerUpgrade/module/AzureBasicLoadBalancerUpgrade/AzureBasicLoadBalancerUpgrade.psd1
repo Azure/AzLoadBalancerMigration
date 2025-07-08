@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.34'
+    ModuleVersion = '2.5.35'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Improve multi-LB scenario AV set membership validation error message.'
+            ReleaseNotes = 'Fix multi-LB scenario validation to handle inconsistent casing on availability set IDs.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
