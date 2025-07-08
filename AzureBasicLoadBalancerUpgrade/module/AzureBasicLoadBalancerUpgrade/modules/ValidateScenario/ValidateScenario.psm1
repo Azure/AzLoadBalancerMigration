@@ -606,7 +606,7 @@ Function Test-SupportedMigrationScenario {
             }
         }
 
-        # warn that internal LB backends will have no outbound connectivity
+        # warn that internal load balancer backends will have no outbound connectivity
         If (!$AllVMsHavePublicIPs -and $scenario.ExternalOrInternal -eq 'Internal') {
             $message = "[Test-SupportedMigrationScenario] Internal load balancer backend VMs do not have Public IPs and will not have outbound internet connectivity after migration to a Standard LB."
             log -Message $message -Severity 'Warning'
@@ -805,7 +805,7 @@ Function Test-SupportedMultiLBScenario {
         resources |
             where type =~ 'microsoft.network/networkinterfaces' and id in~ ($joinedNicIDs) | 
             project lbNicVMId = tolower(tostring(properties.virtualMachine.id)) |
-            join ( resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), availabilitySetId = coalesce(properties.availabilitySet.id, 'NO_AVAILABILITY_SET')) on `$left.lbNicVMId == `$right.vmId |
+            join ( resources | where type =~ 'microsoft.compute/virtualmachines' | project vmId = tolower(id), availabilitySetId = coalesce(tolower(properties.availabilitySet.id), 'NO_AVAILABILITY_SET')) on `$left.lbNicVMId == `$right.vmId |
             project availabilitySetId
 "@
 
@@ -832,7 +832,7 @@ Function Test-SupportedMultiLBScenario {
         }
 
         # VMs must share an availability set or the backend must be a single VM with no availability set ('NO_AVAILABILITY_SET')
-        $uniqueAvailabilitySets = $VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique
+        $uniqueAvailabilitySets = $VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique -CaseInsensitive
         If (($uniqueAvailabilitySets.count -gt 1 -or ($VMAvailabilitySets.availabilitySetId | Where-Object { $_ -eq 'NO_AVAILABILITY_SET' }).count -gt 1)) {
             log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in different or no Availability Sets: '$($uniqueAvailabilitySets -join ',')'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
         }
