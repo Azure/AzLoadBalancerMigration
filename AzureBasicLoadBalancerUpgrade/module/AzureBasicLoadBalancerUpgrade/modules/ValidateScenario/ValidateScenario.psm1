@@ -832,7 +832,7 @@ Function Test-SupportedMultiLBScenario {
         }
 
         # VMs must share an availability set or the backend must be a single VM with no availability set ('NO_AVAILABILITY_SET')
-        $uniqueAvailabilitySets = $VMAvailabilitySets.availabilitySetId | Sort-Object | Get-Unique -CaseInsensitive
+        $uniqueAvailabilitySets = $VMAvailabilitySets.availabilitySetId | Sort-Object -Unique
         If (($uniqueAvailabilitySets.count -gt 1 -or ($VMAvailabilitySets.availabilitySetId | Where-Object { $_ -eq 'NO_AVAILABILITY_SET' }).count -gt 1)) {
             log -Severity Error -Message "[Test-SupportedMultiLBScenario] The provided Basic Load Balancers do not share backend pool members (VMs are in different or no Availability Sets: '$($uniqueAvailabilitySets -join ',')'). Using -multiLBConfig when backend is not shared adds risk and complexity in recovery." -terminateOnError
         }
