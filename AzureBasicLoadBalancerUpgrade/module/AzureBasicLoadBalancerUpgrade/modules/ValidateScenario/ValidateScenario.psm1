@@ -659,7 +659,7 @@ Function Test-SupportedMigrationScenario {
         $availabilitySetReference = $basicLBVMs | Where-Object { $_.AvailabilitySetReference -ne $null } | Select-Object -ExpandProperty AvailabilitySetReference 
         
         If (![string]::IsNullOrEmpty($availabilitySetReference)) {
-            log -Message "[Test-SupportedMigrationScenario] Getting Availbility Sets and associated VMs" -Severity Verbose
+            log -Message "[Test-SupportedMigrationScenario] Getting Availability Sets and associated VMs" -Severity Verbose
             try {
                 $availabilitySetVMs = $availabilitySetReference | Get-Unique | Get-AzResource | Get-AzAvailabilitySet | Select-Object -expand VirtualMachinesReferences | Select-Object -ExpandProperty Id
             }
