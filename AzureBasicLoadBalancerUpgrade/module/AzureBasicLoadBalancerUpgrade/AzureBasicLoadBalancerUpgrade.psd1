@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.36'
+    ModuleVersion = '2.5.37'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix multi-LB scenario validation to handle inconsistent casing on availability set IDs - Windows Powershell compatibility.'
+            ReleaseNotes = 'Added error handling to Availability Set query. Moved to Sort-Object -Unique (case insensitive) in validation.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
