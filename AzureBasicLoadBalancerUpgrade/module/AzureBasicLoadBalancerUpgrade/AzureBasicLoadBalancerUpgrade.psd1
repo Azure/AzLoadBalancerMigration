@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.37'
+    ModuleVersion = '2.5.38'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Added error handling to Availability Set query. Moved to Sort-Object -Unique (case insensitive) in validation.'
+            ReleaseNotes = 'Add note for -multiLBConfig internal LB outbound connectivity warning.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
