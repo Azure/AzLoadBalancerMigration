@@ -612,6 +612,9 @@ Function Test-SupportedMigrationScenario {
             log -Message $message -Severity 'Warning'
 
             Write-Host "In order for your VMs to access the internet, you'll need to take additional action before or after migration. To address this pre-migration, either add a secondary external Basic SKU Load Balancer with no inbound rules to your backend VMs or add Public IPs to each VM. Post-migration, a NAT Gateway can be added to the VMs' subnet (see: https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/default-outbound-access)--if an interim external Load Balancer or instance-level public IP addresses were added pre-migration they can be removed once the NAT Gateway is deployed." -ForegroundColor Yellow
+            
+            Write-Host "If you are performing a multi-LB migration using the -multiLBConfig parameter and you also have an external load balancer which will provide outbound connectivity for the internal load balancer backend VMs, you can ignore this warning." -ForegroundColor Yellow
+
             If (!$force.IsPresent) {
                 $response = $null
                 while ($response -ne 'y' -and $response -ne 'n') {
