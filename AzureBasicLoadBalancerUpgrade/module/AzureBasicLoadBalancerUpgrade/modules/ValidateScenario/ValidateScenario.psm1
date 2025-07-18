@@ -54,7 +54,7 @@ function _GetScenarioBackendType {
         }
     }
 
-    If (($backendMemberTypes | Sort-Object | Get-Unique).count -gt 1) {
+    If (($backendMemberTypes | Sort-Object -Unique).count -gt 1) {
         log -ErrorAction Stop -Message "[Test-SupportedMigrationScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'" -Severity 'Error'
         return
     }
@@ -268,7 +268,7 @@ Function Test-SupportedMigrationScenario {
 
             try {
                 $nicBackendPoolMembershipsIds = @()
-                $nicBackendPoolMembershipsIds += $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipCOnfigurations.LoadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
+                $nicBackendPoolMembershipsIds += $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations.ipCOnfigurations.LoadBalancerBackendAddressPools.id | Sort-Object -Unique
                 $differentMembership = Compare-Object $nicBackendPoolMembershipsIds $basicLBBackendIds
             }
             catch {
@@ -532,7 +532,7 @@ Function Test-SupportedMigrationScenario {
         try {
             $nicBackendPoolMembershipsIds = @()
 
-            $nicBackendPoolMembershipsIds += $basicLBVMNics.IpConfigurations.loadBalancerBackendAddressPools.id | Sort-Object | Get-Unique
+            $nicBackendPoolMembershipsIds += $basicLBVMNics.IpConfigurations.loadBalancerBackendAddressPools.id | Sort-Object -Unique
 
             If ([string]::IsNullOrEmpty($basicLBBackendIds)) {
                 # handle LBs with no backend pools
@@ -659,9 +659,17 @@ Function Test-SupportedMigrationScenario {
         $availabilitySetReference = $basicLBVMs | Where-Object { $_.AvailabilitySetReference -ne $null } | Select-Object -ExpandProperty AvailabilitySetReference 
         
         If (![string]::IsNullOrEmpty($availabilitySetReference)) {
-            $availabilitySetVMs = $availabilitySetReference | Get-Unique | Get-AzResource | Get-AzAvailabilitySet | Select-Object -expand VirtualMachinesReferences | Select-Object -ExpandProperty Id
-            $availabilitySetVMs = $availabilitySetVMs | Sort-Object | Get-Unique
-            $extraAvailabilitySetVMs = $availabilitySetVMs | Where-Object { $_ -notin $basicLBVMs.Id } | Sort-Object | Get-Unique
+            log -Message "[Test-SupportedMigrationScenario] Getting Availbility Sets and associated VMs" -Severity Verbose
+            try {
+                $availabilitySetVMs = $availabilitySetReference | Get-Unique | Get-AzResource | Get-AzAvailabilitySet | Select-Object -expand VirtualMachinesReferences | Select-Object -ExpandProperty Id
+            }
+            catch {
+                $message = "[Test-SupportedMigrationScenario] Error retrieving Availability Set VMs: $($_.Exception.Message)"
+                log -Message $message -Severity 'Error' -terminateOnError
+            }
+
+            $availabilitySetVMs = $availabilitySetVMs | Sort-Object -Unique
+            $extraAvailabilitySetVMs = $availabilitySetVMs | Where-Object { $_ -notin $basicLBVMs.Id } | Sort-Object -Unique
 
             If ($extraAvailabilitySetVMs) {
                 $message = "[Test-SupportedMigrationScenario] VMs ('$($extraAvailabilitySetVMs -join ';')') belong(s) to an Availability Set but is not associated with the LB. There are other members of the same Availability Set which are part of the load balancer backend pools, NAT pools, or associated with NAT Rules. This is not supported for migration. To work around this, create a new backend pool on the basic LB which is not associated with a load balancing rule and add the extra VMs to it temporarily, then retry migration."
@@ -728,7 +736,7 @@ Function Test-SupportedMultiLBScenario {
 
     # check that all backend pool members are VMs or VMSSes
     log -Message "[Test-SupportedMultiLBScenario] Checking that all backend pool members are VMs or VMSSes"
-    $backendMemberTypes = ($multiLBConfig.scenario.BackendType | Sort-Object | Get-Unique)
+    $backendMemberTypes = ($multiLBConfig.scenario.BackendType | Sort-Object -Unique)
 
     If ($backendMemberTypes.count -gt 1) {
         log -ErrorAction Stop -Severity 'Error' -Message "[Test-SupportedMultiLBScenario] Basic Load Balancer backend pools can contain only VMs or VMSSes, contains: '$($backendMemberTypes -join ',')'"
@@ -772,7 +780,7 @@ Function Test-SupportedMultiLBScenario {
             $basicLBBackends += $config.BasicLoadBalancer.BackendAddressPools.BackendIpConfigurations.id | ForEach-Object { $_.split('/virtualMachines/')[0] }
         }
         
-        $groupedBackends = $basicLBBackends | ForEach-Object { $_.id.ToLower() } | Sort-Object | Get-Unique
+        $groupedBackends = $basicLBBackends | ForEach-Object { $_.id.ToLower() } | Sort-Object -Unique
 
 
         If ($groupedBackends.Count -gt 1) {
