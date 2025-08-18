@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.38'
+    ModuleVersion = '2.5.39'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Add note for -multiLBConfig internal LB outbound connectivity warning.'
+            ReleaseNotes = 'Improve NAT Rule migration logging and error handling.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
