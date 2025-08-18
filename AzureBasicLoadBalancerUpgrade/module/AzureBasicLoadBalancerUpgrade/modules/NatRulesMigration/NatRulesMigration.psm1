@@ -145,13 +145,15 @@ function NatRulesMigration {
             log "Error" $message
         }
     }
-    log -Message "[NatRulesMigration] Saving Standard Load Balancer $($StdLoadBalancer.Name)"
+    log -Message "[NatRulesMigration] Starting saving Standard Load Balancer $($StdLoadBalancer.Name)..."
 
     if ($StdLoadBalancer.InboundNatRules.Count -eq 0) {
         log -Message "[NatRulesMigration] No NAT Rules to migrate. Skipping save."
         return
     }
     else {
+        log -Message "[NatRulesMigration] $($StdLoadBalancer.InboundNatRules.Count) NAT Rules migrated. Saving Standard Load Balancer '$($StdLoadBalancer.Name)'..."
+
         try {
             $ErrorActionPreference = 'Stop'
 
@@ -163,7 +165,7 @@ function NatRulesMigration {
             }
 
             If ($UpdateLBNATRulesJob.Error -or $UpdateLBNATRulesJob.State -eq 'Failed') {
-                Write-Error $UpdateLBNATRulesJob.Error 
+                log -Severity Error -Message "Saving Standard Load Balancer $($StdLoadBalancer.Name) failed with the following errors: $($UpdateLBNATRulesJob.error; $UpdateLBNATRulesJob | Receive-Job). Migration will continue--to recover, manually add the NAT rules to the load balancer, then correct NAT Rule NIC membership after the script completes."
             }
         }
         catch {
