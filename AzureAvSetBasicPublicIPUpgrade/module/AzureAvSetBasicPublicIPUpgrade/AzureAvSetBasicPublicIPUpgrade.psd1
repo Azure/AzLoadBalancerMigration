@@ -12,7 +12,7 @@
 RootModule = 'AzureAvSetBasicPublicIPUpgrade'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.0.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'NSG detection improvements, recovery fixes'
+        ReleaseNotes = 'Fix mixed VM/PIP scenario handling'
 
         # Prerelease string of this module
         # Prerelease = ''
