@@ -220,8 +220,9 @@ Function Start-AzAvSetPublicIPUpgrade {
                 }
 
                 If ($VM.publicIPIPConfigAssociations.count -lt 1) {
-                    Add-LogEntry "VM '$($VM.vmObject.Name)' does not have any public IP addresses attached. Skipping upgrade." -severity WARNING
-                    return
+                    Add-LogEntry "VM '$($VM.vmObject.Name)' does not have any public IP addresses attached. Skipping upgrading this VM." -severity INFO
+                    $VMs = $VMs | Where-Object { $_.vmObject.Id -ne $VM.vmObject.Id }
+                    continue
                 }
                 Else {
                     Add-LogEntry "VM '$($VM.vmObject.Name)' has $($VM.publicIPIPConfigAssociations.count) public IP addresses attached."
