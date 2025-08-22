@@ -159,7 +159,7 @@ function NatRulesMigration {
             Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
         }
         catch {
-            $message = "[NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
+            $message = "[NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)' after attempting to apply NAT Rules to LB config. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
             log "Error" $message
         }
     }
