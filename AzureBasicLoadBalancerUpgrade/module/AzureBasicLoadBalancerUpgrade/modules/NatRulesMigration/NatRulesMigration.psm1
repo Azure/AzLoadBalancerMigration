@@ -152,21 +152,11 @@ function NatRulesMigration {
         return
     }
     else {
-        log -Message "[NatRulesMigration] $($StdLoadBalancer.InboundNatRules.Count) NAT Rules migrated. Saving Standard Load Balancer '$($StdLoadBalancer.Name)'..."
+        log -Message "[NatRulesMigration] $($StdLoadBalancer.InboundNatRules.Count) NAT Rules applied to LB config. Saving Standard Load Balancer '$($StdLoadBalancer.Name)'..."
 
         try {
             $ErrorActionPreference = 'Stop'
-
-            $UpdateLBNATRulesJob = Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer -AsJob
-
-            While ($UpdateLBNATRulesJob.State -eq 'Running') {
-                Start-Sleep -Seconds 15
-                log -Message "[NatRulesMigration] Waiting for saving standard load balancer $($StdLoadBalancer.Name) job to complete..."
-            }
-
-            If ($UpdateLBNATRulesJob.Error -or $UpdateLBNATRulesJob.State -eq 'Failed') {
-                log -Severity Error -Message "Saving Standard Load Balancer $($StdLoadBalancer.Name) failed with the following errors: $($UpdateLBNATRulesJob.error; $UpdateLBNATRulesJob | Receive-Job). Migration will continue--to recover, manually add the NAT rules to the load balancer, then correct NAT Rule NIC membership after the script completes."
-            }
+            Set-AzLoadBalancer -LoadBalancer $StdLoadBalancer > $null
         }
         catch {
             $message = "[NatRulesMigration] Failed to update new standard load balancer '$($stdLoadBalancer.Name)' in resource group '$($StdLoadBalancer.ResourceGroupName)' after attempting to add migrated inbound NAT rule configurations. Migration will continue, INBOUND NAT RULES WILL NEED TO BE MANUALLY ADDED to the load balancer. Error: $_"
