@@ -12,7 +12,7 @@
     RootModule = 'AzureBasicLoadBalancerUpgrade'
 
     # Version number of this module.
-    ModuleVersion = '2.5.39'
+    ModuleVersion = '2.5.40'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Improve NAT Rule migration logging and error handling.'
+            ReleaseNotes = 'Simplify NAT Rule migration.'
 
             # Prerelease string of this module
             # Prerelease = 'beta'
